@@ -1,4 +1,5 @@
-use crate::{ByteCode, ErrString};
+use crate::ByteCode;
+use anyhow::{anyhow, Result};
 use std::borrow::BorrowMut;
 
 pub struct ConstantPoolInfo {
@@ -144,7 +145,7 @@ impl ConstantPoolTag {
         }
     }
 
-    pub fn new(tag: u8, byte_code: &ByteCode) -> Result<Self, ErrString> {
+    pub fn new(tag: u8, byte_code: &ByteCode) -> Result<Self> {
         match tag {
             1 => Ok(ConstantPoolTag::Utf8),
             3 => Ok(ConstantPoolTag::Integer),
@@ -163,10 +164,7 @@ impl ConstantPoolTag {
             18 => Ok(ConstantPoolTag::InvokeDynamic),
             19 => Ok(ConstantPoolTag::Module),
             20 => Ok(ConstantPoolTag::Package),
-            _ => {
-                let fmt = format!("unknown constant pool tag {}", tag);
-                Err(fmt)
-            }
+            _ => Err(anyhow!("unknown constant pool tag {}", tag)),
         }
     }
 
