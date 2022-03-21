@@ -1,17 +1,17 @@
-mod classfile;
-mod machine;
+mod parse;
 mod types;
+mod vm;
 
 use std::borrow::Borrow;
 use std::env;
 
-use crate::classfile::{invalid_format, ClassFile};
-use crate::machine::Bootstrapper;
-use crate::types::classfile_type::ByteCode;
+use crate::parse::bytecode::ByteCode;
+use crate::parse::classfile::RawClassFile;
+use crate::types::ErrString;
 use std::fs::File;
 use std::io::Read;
 
-fn main() {
+fn main() -> Result<(), ErrString> {
     let args: Vec<String> = env::args().collect();
 
     match args.len() {
@@ -21,31 +21,41 @@ fn main() {
     }
 }
 
-fn start(class_path: &str) {
-    let mut f = File::open(class_path).unwrap_or_else(|e| {
-        quit(format!("Failed to open file {} because of error {}", class_path, e).borrow())
-    });
+fn start(class_path: &str) -> Result<(), ErrString> {
+    let f = File::open(class_path);
+
+    if let Err(e) = f {
+        return Err(format!(
+            "Failed to open file {} because of error {}",
+            class_path, e
+        ));
+    }
 
     let mut buffer = Vec::new();
 
     // read the whole file
-    f.read_to_end(&mut buffer).unwrap_or_else(|e| {
-        quit(
-            format!(
-                "Failed to open file '{}' because of error {}",
-                class_path, e
-            )
-            .borrow(),
-        )
-    });
+    if let Err(e) = f.unwrap().read_to_end(&mut buffer) {
+        return Err(format!(
+            "failed to open file '{}' because of error {}",
+            class_path, e
+        ));
+    }
 
-    let class_file = ClassFile::new(&mut ByteCode::new(buffer, class_path), class_path);
+    let mut class_file = RawClassFile::new(&mut ByteCode::new(buffer, class_path), class_path)?;
 
-    let valid = class_file.validate();
+    let prepared_class_file = class_file.prepare();
+
+    if let Err(msg) = prepared_class_file {
+        return Err(format!("preparation failed ({})", msg));
+    }
+
+    let valid = prepared_class_file.unwrap().validate();
 
     if let Err(msg) = valid {
-        invalid_format(class_path, format!("validation failed {}", msg).borrow())
+        return Err(format!("validation failed ({})", msg));
     }
+
+    Ok(())
 }
 
 fn quit(msg: &str) -> ! {
