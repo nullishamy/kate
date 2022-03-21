@@ -10,7 +10,7 @@ impl<'a> BootstrapClassLoader<'a> {
         Self { classes: vec![] }
     }
 
-    pub fn load_class(&self, class_file: ClassFile) -> LoadedClass {
+    pub fn load_class(&self, class_file: ClassFile<'a>) -> LoadedClass {
         LoadedClass::new(class_file)
     }
 }

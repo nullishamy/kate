@@ -5,7 +5,7 @@ pub struct LoadedClass<'a> {
 }
 
 impl<'a> LoadedClass<'a> {
-    pub fn new(class_file: ClassFile) -> Self {
+    pub fn new(class_file: ClassFile<'a>) -> Self {
         Self { class_file }
     }
 }
