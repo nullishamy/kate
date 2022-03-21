@@ -1,0 +1,22 @@
+# TODO
+
+- [ ] Unit testing
+- [ ] Bootstrapping & VM setup
+- [ ] Native method support & linking
+- [ ] Refactors to Rust idioms
+- [ ] Required attributes
+- [ ] Types for opcodes
+- [ ] Types for flags (Access, Privacy)
+- [ ] Heap & GC
+- [ ] Bytecode validation
+- [ ] Error handling
+- [ ] Graceful shutdown
+- [ ] Improve CLI UX
+- [ ] Code optimisation
+- [ ] Method descriptors
+- [ ] Modules
+- [ ] Packages
+- [ ] JAR file support
+- [ ] Dynamic dispatch
+- [ ] Custom classloaders
+- [ ] Debugging tools
