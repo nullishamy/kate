@@ -1,4 +1,5 @@
-use crate::ErrString;
+use anyhow::anyhow;
+use anyhow::Result;
 use bytes::Bytes;
 use std::borrow::BorrowMut;
 
@@ -7,45 +8,31 @@ pub struct ByteCode<'a> {
     file_name: &'a str,
 }
 
-pub enum ByteSize {
-    U8,
-    U16,
-    U32,
-    U64,
-    U128,
-    I8,
-    I16,
-    I32,
-    I64,
-    I128,
-    F8,
-    F16,
-    F32,
-    F64,
-    F128,
-}
-
-impl ByteSize {
-    pub fn raw(&self) -> usize {
-        match self {
-            ByteSize::U8 => 1,
-            ByteSize::U16 => 2,
-            ByteSize::U32 => 4,
-            ByteSize::U64 => 8,
-            ByteSize::U128 => 16,
-            ByteSize::I8 => 1,
-            ByteSize::I16 => 2,
-            ByteSize::I32 => 4,
-            ByteSize::I64 => 8,
-            ByteSize::I128 => 16,
-            ByteSize::F8 => 1,
-            ByteSize::F16 => 2,
-            ByteSize::F32 => 4,
-            ByteSize::F64 => 8,
-            ByteSize::F128 => 16,
+/**
+    This macro builds a set of try_get_{number_type} functions for safe reading of
+    bytes from a Bytes object. They return Result<T, ErrString> instead of panicking
+**/
+macro_rules! impl_safebuf {
+    ( $($type:ty),* ) => {
+        pub trait SafeBuf: bytes::Buf {
+            paste::paste! {
+                $(
+                fn [<try_get_ $type>](&mut self) -> anyhow::Result<$type>{
+                    if self.remaining() >= std::mem::size_of::<$type>() {
+                        Ok(self.[<get_ $type>]())
+                    } else {
+                        Err(anyhow!("out of bytes"))
+                    }
+                }
+                )*
+            }
         }
+
+        impl<T: bytes::Buf> SafeBuf for T { }
     }
 }
+
+impl_safebuf!(u8, u16, u32, u64, i8, i16, i32, i64, f32, f64);
 
 impl<'a> ByteCode<'a> {
     pub fn new(data: Vec<u8>, file_name: &'a str) -> ByteCode<'a> {
@@ -61,14 +48,5 @@ impl<'a> ByteCode<'a> {
 
     pub fn file_name(&self) -> &'a str {
         self.file_name
-    }
-
-    pub fn require_size(&mut self, size: ByteSize) -> Result<(), ErrString> {
-        // length decreases as bytes are consumed, so we can 0 check for safety
-        if (self.data.len() as isize) - (size.raw() as isize) < 0 {
-            return Err("no more bytes".to_string());
-        }
-
-        Ok(())
     }
 }
