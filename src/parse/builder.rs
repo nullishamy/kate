@@ -3,9 +3,10 @@ use crate::types::classfile::{
     AttributeInfo, AttributeInfoEntry, ConstantPoolData, ConstantPoolEntry, ConstantPoolInfo,
     ConstantPoolTag, FieldInfo, FieldInfoEntry, InterfaceInfo, MethodInfo, MethodInfoEntry,
 };
-use crate::types::ErrString;
 use crate::ByteCode;
 use anyhow::{anyhow, Result};
+use std::borrow::{Borrow, BorrowMut};
+use std::collections::HashMap;
 
 pub fn make_utf8_string(byte_code: &mut ByteCode) -> Result<ConstantPoolData> {
     let length = byte_code.data().try_get_u16()?;
@@ -150,19 +151,22 @@ pub fn make_const_pool_data(
 }
 
 pub fn make_const_pool(byte_code: &mut ByteCode, pool_size: u16) -> Result<ConstantPoolInfo> {
-    let mut const_pool = ConstantPoolInfo::new(pool_size);
+    let mut pool_data: HashMap<u16, ConstantPoolEntry> = HashMap::with_capacity(pool_size as usize);
 
     //TODO: figure out what index 0 should have in the const pool and alter this
 
+    let mut idx = 1;
     // -1 because the const pool is indexed from 1 -> len - 1
-    while const_pool.data().len() < (pool_size - 1) as usize {
+    while (pool_data.len()) < (pool_size - 1) as usize {
         let tag = ConstantPoolTag::new(byte_code.data().try_get_u8()?, byte_code)?;
         let data = make_const_pool_data(byte_code, &tag)?;
-        let entry = ConstantPoolEntry::new(tag, data);
+        let entry: ConstantPoolEntry = ConstantPoolEntry::new(tag, data);
 
-        const_pool.data().push(entry);
+        pool_data.insert(idx as u16, entry);
+        idx += 1;
     }
-    Ok(const_pool)
+
+    Ok(ConstantPoolInfo::new(pool_data))
 }
 
 pub fn make_interface_info(byte_code: &mut ByteCode, length: u16) -> Result<InterfaceInfo> {

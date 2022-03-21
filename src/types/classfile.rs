@@ -1,26 +1,29 @@
 use crate::ByteCode;
 use anyhow::{anyhow, Result};
-use std::borrow::BorrowMut;
+use std::collections::HashMap;
 
 pub struct ConstantPoolInfo {
-    size: u16,
-    data: Vec<ConstantPoolEntry>,
+    data: HashMap<u16, ConstantPoolEntry>,
 }
 
 impl ConstantPoolInfo {
-    pub fn new(size: u16) -> Self {
-        Self {
-            size,
-            data: Vec::with_capacity(size as usize),
+    pub fn new(data: HashMap<u16, ConstantPoolEntry>) -> Self {
+        Self { data }
+    }
+
+    pub fn data(&self) -> &HashMap<u16, ConstantPoolEntry> {
+        &self.data
+    }
+
+    pub fn get(&self, idx: u16) -> Result<&ConstantPoolEntry> {
+        if let Some(v) = self.data.get(&idx) {
+            return Ok(v);
         }
+        Err(anyhow!("constant pool key {} does not exist", idx))
     }
 
-    pub fn data(&mut self) -> &mut Vec<ConstantPoolEntry> {
-        self.data.borrow_mut()
-    }
-
-    pub fn size(&self) -> u16 {
-        self.size
+    pub fn has(&self, idx: u16) -> bool {
+        self.data.contains_key(&idx)
     }
 }
 
@@ -32,6 +35,14 @@ pub struct ConstantPoolEntry {
 impl ConstantPoolEntry {
     pub fn new(tag: ConstantPoolTag, data: ConstantPoolData) -> Self {
         Self { tag, data }
+    }
+
+    pub fn data(&self) -> &ConstantPoolData {
+        &self.data
+    }
+
+    pub fn tag(&self) -> &ConstantPoolTag {
+        &self.tag
     }
 }
 
@@ -169,25 +180,18 @@ impl ConstantPoolTag {
     }
 
     fn loadable(&self) -> bool {
-        match self {
-            ConstantPoolTag::Utf8 => false,
-            ConstantPoolTag::Integer => true,
-            ConstantPoolTag::Float => true,
-            ConstantPoolTag::Long => true,
-            ConstantPoolTag::Double => true,
-            ConstantPoolTag::Class => true,
-            ConstantPoolTag::String => true,
-            ConstantPoolTag::FieldRef => false,
-            ConstantPoolTag::MethodRef => false,
-            ConstantPoolTag::InterfaceMethodRef => false,
-            ConstantPoolTag::NameAndType => false,
-            ConstantPoolTag::MethodHandle => true,
-            ConstantPoolTag::MethodType => true,
-            ConstantPoolTag::Dynamic => true,
-            ConstantPoolTag::InvokeDynamic => false,
-            ConstantPoolTag::Module => false,
-            ConstantPoolTag::Package => false,
-        }
+        matches!(
+            self,
+            ConstantPoolTag::Integer
+                | ConstantPoolTag::Float
+                | ConstantPoolTag::Long
+                | ConstantPoolTag::Double
+                | ConstantPoolTag::Class
+                | ConstantPoolTag::String
+                | ConstantPoolTag::MethodHandle
+                | ConstantPoolTag::MethodType
+                | ConstantPoolTag::Dynamic
+        )
     }
 }
 pub struct FieldInfo {
@@ -232,6 +236,10 @@ impl MethodInfo {
     pub fn new(data: Vec<MethodInfoEntry>) -> Self {
         Self { data }
     }
+
+    pub fn data(&self) -> &Vec<MethodInfoEntry> {
+        &self.data
+    }
 }
 
 pub struct MethodInfoEntry {
@@ -258,6 +266,14 @@ impl MethodInfoEntry {
             attribute_info,
         }
     }
+    
+    pub fn name_index(&self) -> u16 {
+        self.name_index
+    }
+
+    pub fn attributes(&self) -> &AttributeInfo {
+        return &self.attribute_info;
+    }
 }
 pub struct AttributeInfo {
     data: Vec<AttributeInfoEntry>,
@@ -266,6 +282,10 @@ pub struct AttributeInfo {
 impl AttributeInfo {
     pub fn new(data: Vec<AttributeInfoEntry>) -> Self {
         Self { data }
+    }
+
+    pub fn data(&self) -> &Vec<AttributeInfoEntry> {
+        &self.data
     }
 }
 
@@ -282,6 +302,18 @@ impl AttributeInfoEntry {
             attribute_length,
             data,
         }
+    }
+
+    pub fn name_index(&self) -> u16 {
+        self.attribute_name_index
+    }
+
+    pub fn len(&self) -> u32 {
+        self.attribute_length
+    }
+
+    pub fn data(&self) -> &Vec<u8> {
+        &self.data
     }
 }
 pub struct InterfaceInfo {
