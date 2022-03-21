@@ -1,6 +1,6 @@
 mod parse;
+mod runtime;
 mod types;
-mod vm;
 
 use std::borrow::Borrow;
 use std::env;
@@ -8,9 +8,11 @@ use std::env;
 use crate::parse::bytecode::ByteCode;
 use crate::parse::classfile::RawClassFile;
 
+use crate::types::classfile::{AttributeInfoEntry, ConstantPoolData};
 use anyhow::{anyhow, Result};
 use std::fs::File;
 use std::io::Read;
+use std::ops::Deref;
 
 fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
@@ -27,7 +29,7 @@ fn start(class_path: &str) -> Result<()> {
 
     if let Err(e) = f {
         return Err(anyhow!(
-            "Failed to open file {} because of error {}",
+            "failed to open file {} because of error {}",
             class_path,
             e
         ));
@@ -52,11 +54,14 @@ fn start(class_path: &str) -> Result<()> {
         return Err(anyhow!("preparation failed ({})", msg));
     }
 
-    let valid = prepared_class_file.unwrap().validate();
+    let prepared_class_file = prepared_class_file.unwrap();
+    let valid = prepared_class_file.validate();
 
     if let Err(msg) = valid {
         return Err(anyhow!("validation failed ({})", msg));
     }
+
+    let valid = valid.unwrap();
 
     Ok(())
 }
