@@ -1,15 +1,14 @@
 use crate::parse::builder::{
     make_attribute_info, make_const_pool, make_field_info, make_interface_info, make_method_info,
 };
-use crate::parse::bytecode::ByteSize;
+use crate::parse::bytecode::SafeBuf;
 use crate::types::classfile::{
     AttributeInfo, ConstantPoolEntry, ConstantPoolInfo, FieldInfo, InterfaceInfo, MethodInfo,
-    MethodInfoEntry,
 };
 use crate::types::flag::ClassFileAccessFlags;
 use crate::types::ErrString;
 use crate::ByteCode;
-use bytes::Buf;
+use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 
 pub const MAGIC: u32 = 0xCAFEBABE;
@@ -36,56 +35,44 @@ pub struct RawClassFile {
 }
 
 impl RawClassFile {
-    pub fn new(byte_code: &mut ByteCode, class_file: &str) -> Result<Self, ErrString> {
-        byte_code.require_size(ByteSize::U32)?;
-
-        let magic = byte_code.data().get_u32();
+    pub fn new(byte_code: &mut ByteCode, class_file: &str) -> Result<Self> {
+        let magic = byte_code.data().try_get_u32()?;
 
         if magic != MAGIC {
-            return Err("magic value not present or not matching".to_string());
+            return Err(anyhow!("magic value not present or not matching"));
         }
 
-        byte_code.require_size(ByteSize::U16)?;
-        let minor = byte_code.data().get_u16();
+        let minor = byte_code.data().try_get_u16()?;
 
         if minor > MAX_SUPPORTED_MINOR {
-            return Err("minor version not supported".to_string());
+            return Err(anyhow!("minor version not supported"));
         }
 
-        byte_code.require_size(ByteSize::U16)?;
-        let major = byte_code.data().get_u16();
+        let major = byte_code.data().try_get_u16()?;
 
         if major > MAX_SUPPORTED_MAJOR {
-            return Err("major version not supported".to_string());
+            return Err(anyhow!("major version not supported"));
         }
 
-        byte_code.require_size(ByteSize::U16)?;
-        let const_pool_count = byte_code.data().get_u16();
+        let const_pool_count = byte_code.data().try_get_u16()?;
         let const_pool_info = make_const_pool(byte_code, const_pool_count)?;
 
-        byte_code.require_size(ByteSize::U16)?;
-        let access_flags = byte_code.data().get_u16();
+        let access_flags = byte_code.data().try_get_u16()?;
 
-        byte_code.require_size(ByteSize::U16)?;
-        let this_class = byte_code.data().get_u16();
+        let this_class = byte_code.data().try_get_u16()?;
 
-        byte_code.require_size(ByteSize::U16)?;
-        let super_class = byte_code.data().get_u16();
+        let super_class = byte_code.data().try_get_u16()?;
 
-        byte_code.require_size(ByteSize::U16)?;
-        let interface_count = byte_code.data().get_u16();
+        let interface_count = byte_code.data().try_get_u16()?;
         let interface_info = make_interface_info(byte_code, interface_count)?;
 
-        byte_code.require_size(ByteSize::U16)?;
-        let field_count = byte_code.data().get_u16();
+        let field_count = byte_code.data().try_get_u16()?;
         let field_info = make_field_info(byte_code, field_count)?;
 
-        byte_code.require_size(ByteSize::U16)?;
-        let method_count = byte_code.data().get_u16();
+        let method_count = byte_code.data().try_get_u16()?;
         let method_info = make_method_info(byte_code, method_count)?;
 
-        byte_code.require_size(ByteSize::U16)?;
-        let attribute_count = byte_code.data().get_u16();
+        let attribute_count = byte_code.data().try_get_u16()?;
         let attribute_info = make_attribute_info(byte_code, attribute_count)?;
 
         Ok(Self {
@@ -108,7 +95,7 @@ impl RawClassFile {
         })
     }
 
-    pub fn prepare(&mut self) -> Result<ClassFile, ErrString> {
+    pub fn prepare(&mut self) -> Result<ClassFile> {
         //TODO: prepare the classfile for validation
         /*
            1) convert const pool into a hashmap
@@ -118,7 +105,7 @@ impl RawClassFile {
 
         for (idx, entry) in self.const_pool_info.data().iter().enumerate() {
             if const_pool.contains_key(&idx) {
-                return Err(format!("duplicate const pool entry {}", idx));
+                return Err(anyhow!("duplicate const pool entry {}", idx));
             }
 
             const_pool.insert(idx, entry);

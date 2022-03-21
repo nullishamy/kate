@@ -1,4 +1,4 @@
-use crate::ErrString;
+use anyhow::{anyhow, Result};
 use bitflags::bitflags;
 
 bitflags! {
@@ -20,11 +20,11 @@ pub struct ClassFileAccessFlags {
 }
 
 impl ClassFileAccessFlags {
-    pub fn from_bits(raw: u16) -> Result<Self, ErrString> {
+    pub fn from_bits(raw: u16) -> Result<Self> {
         let flags = ClassFileAccessFlag::from_bits(raw as u32);
 
-        if let None = flags {
-            return Err("invalid class access flags".to_string());
+        if flags.is_none() {
+            return Err(anyhow!("invalid class access flags {:b}", raw));
         }
         Ok(Self {
             flags: flags.unwrap(),
