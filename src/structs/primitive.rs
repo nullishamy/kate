@@ -1,4 +1,4 @@
-use crate::types::JVMPointer;
+use crate::structs::JVMPointer;
 
 pub type Boolean = bool;
 pub type Byte = i8;
@@ -10,6 +10,7 @@ pub type Float = f32;
 pub type Double = f64;
 pub type ReturnAddress = JVMPointer;
 
+#[derive(PartialEq, Clone)]
 pub enum PrimitiveWithValue {
     Boolean(Boolean),
     Byte(Byte),
@@ -20,7 +21,8 @@ pub enum PrimitiveWithValue {
     Float(Float),
     Double(Double),
 }
-#[derive(Debug)]
+
+#[derive(Clone, PartialEq)]
 pub enum PrimitiveType {
     Boolean,
     Byte,
