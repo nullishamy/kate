@@ -1,8 +1,9 @@
-use crate::types::primitive::PrimitiveType;
-use anyhow::{anyhow, Result};
 use std::iter::Peekable;
-use std::ops::Index;
 use std::str::Chars;
+
+use anyhow::{anyhow, Result};
+
+use crate::structs::primitive::PrimitiveType;
 
 pub mod notation {
     // i8
@@ -33,6 +34,9 @@ pub mod notation {
     // bool
     pub const BOOLEAN: char = 'Z';
 
+    // void
+    pub const VOID: char = 'V';
+
     // Array type, who's reference type is
     // described by an 'internal class name'
     // preceding the token. Ends with a ';'
@@ -61,6 +65,8 @@ impl<'a> Parser<'a> {
             parameters.push(self.parse_descriptor_type()?);
         }
 
+        self.expect_next(')')?;
+
         let return_type = self.parse_descriptor_type()?;
 
         Ok(MethodDescriptor {
@@ -86,6 +92,8 @@ impl<'a> Parser<'a> {
 
     fn parse_reference_type(&mut self) -> Result<ReferenceType> {
         let mut out = String::new();
+        self.expect_next(notation::CLASS)?;
+
         while self.peek_next()? != notation::END_REFERENCE {
             out.push(self.consume_next()?);
         }
@@ -94,7 +102,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_descriptor_type(&mut self) -> Result<DescriptorType> {
-        let next = self.consume_next()?;
+        let next = self.peek_next()?;
 
         return match next {
             notation::BYTE => Ok(DescriptorType::Primitive(PrimitiveType::Byte)),
@@ -105,6 +113,7 @@ impl<'a> Parser<'a> {
             notation::SHORT => Ok(DescriptorType::Primitive(PrimitiveType::Short)),
             notation::BOOLEAN => Ok(DescriptorType::Primitive(PrimitiveType::Boolean)),
             notation::LONG => Ok(DescriptorType::Primitive(PrimitiveType::Long)),
+            notation::VOID => Ok(DescriptorType::Void),
 
             notation::CLASS => Ok(DescriptorType::Reference(self.parse_reference_type()?)),
             notation::ARRAY => Ok(DescriptorType::Array(self.parse_array_type()?)),
@@ -152,40 +161,83 @@ impl<'a> Parser<'a> {
     (IDLjava/lang/Thread;)Ljava/lang/Object; - 3 parameters, int, double and reference type java/lang/Thread
     with a return type of reference type java/lang/Object
 */
-#[derive(Debug)]
+
+#[derive(Clone)]
 pub struct MethodDescriptor {
-    parameters: Vec<DescriptorType>,
-    return_type: DescriptorType,
+    pub parameters: Vec<DescriptorType>,
+    pub return_type: DescriptorType,
 }
 
 impl MethodDescriptor {
     pub fn parse(descriptor: &str) -> Result<Self> {
         let mut parser = Parser::new(descriptor);
 
-        todo!();
         parser.parse_method_descriptor()
     }
 }
-#[derive(Debug)]
+
+#[derive(Clone)]
+pub struct FieldDescriptor {
+    _type: DescriptorType,
+}
+
+impl FieldDescriptor {
+    pub fn parse(descriptor: &str) -> Result<Self> {
+        let mut parser = Parser::new(descriptor);
+
+        let _type = parser.parse_descriptor_type()?;
+
+        Ok(Self { _type })
+    }
+}
+
+#[derive(PartialEq, Clone)]
 pub enum DescriptorType {
     Reference(ReferenceType),
     Primitive(PrimitiveType),
     Array(ArrayType),
     Void,
 }
-#[derive(Debug)]
+
+#[derive(PartialEq, Clone)]
 pub struct ArrayType {
-    _type: Box<DescriptorType>,
-    dimensions: u16,
+    pub _type: Box<DescriptorType>,
+    pub dimensions: u16,
 }
 
-#[derive(Debug)]
+#[derive(PartialEq, Clone)]
 pub struct ReferenceType {
-    internal_name: String,
+    pub internal_name: String,
 }
 
+#[derive(Clone)]
+pub enum Descriptor {
+    Field(FieldDescriptor),
+    Method(MethodDescriptor),
+}
 pub fn test_descriptor_parsing() {
-    let descriptor = "([[Ljava/lang/String;)V";
-    let parsed = MethodDescriptor::parse(descriptor).unwrap();
-    println!("parsed {:?}", parsed)
+    /*
+        oneArrayParam:([Ljava/lang/String;)V
+        twoArrayParams:([Ljava/lang/String;[Ljava/lang/String;)V
+        oneTwoDArrayParam:([[Ljava/lang/String;)V
+        oneThreeDArrayParam:([[[Ljava/lang/String;)V
+        oneRefParam:(Ljava/lang/String;)V
+        twoRefParams:(Ljava/lang/String;Ljava/lang/String;)V
+    */
+
+    let oneArrayParam = "([Ljava/lang/String;)V";
+    let twoArrayParams = "([Ljava/lang/String;[Ljava/lang/String;)V";
+    let oneTwoDArrayParam = "([[Ljava/lang/String;)V";
+    let oneThreeDArrayParam = "([[[Ljava/lang/String;)V";
+    let oneRefParam = "(Ljava/lang/String;)V";
+    let twoRefParams = "(Ljava/lang/String;Ljava/lang/String;)V";
+
+    let _all_valid = [
+        MethodDescriptor::parse(oneArrayParam).unwrap(),
+        MethodDescriptor::parse(twoArrayParams).unwrap(),
+        MethodDescriptor::parse(oneTwoDArrayParam).unwrap(),
+        MethodDescriptor::parse(oneThreeDArrayParam).unwrap(),
+        MethodDescriptor::parse(oneRefParam).unwrap(),
+        MethodDescriptor::parse(twoRefParams).unwrap(),
+    ];
 }
