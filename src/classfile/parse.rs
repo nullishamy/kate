@@ -18,9 +18,14 @@ pub struct ClassFileParser {
 impl ClassFileParser {
     pub fn from_path(path: String) -> Result<Self> {
         let buffer = ClassFileParser::bytes(path.to_owned())?;
-        let bytes = Bytes::copy_from_slice(&buffer);
+        Ok(ClassFileParser::from_bytes(path, buffer))
+    }
 
-        Ok(Self { name: path, bytes })
+    pub fn from_bytes(name: String, bytes: Vec<u8>) -> Self {
+        Self {
+            name,
+            bytes: Bytes::copy_from_slice(&bytes),
+        }
     }
 
     pub fn bytes(path: String) -> Result<Vec<u8>> {
@@ -46,13 +51,6 @@ impl ClassFileParser {
         }
 
         Ok(buffer)
-    }
-
-    pub fn from_bytes(name: String, bytes: Vec<u8>) -> Self {
-        Self {
-            name,
-            bytes: Bytes::copy_from_slice(&bytes),
-        }
     }
 
     pub fn parse(&mut self) -> Result<RawClassFile> {
@@ -94,6 +92,12 @@ impl ClassFileParser {
 
         let attribute_count = self.bytes.try_get_u16()?;
         let attribute_info = parse_attribute_info(self, attribute_count)?;
+
+        if !self.bytes.is_empty() {
+            return Err(anyhow!(
+                "invalid classfile detected, trailing bytes were present"
+            ));
+        }
 
         Ok(RawClassFile {
             magic,
