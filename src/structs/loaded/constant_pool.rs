@@ -2,6 +2,7 @@ use anyhow::{anyhow, Result};
 
 use crate::structs::descriptor::{Descriptor, MethodDescriptor};
 use crate::structs::raw::constant_pool::Tag;
+use enum_as_inner::EnumAsInner;
 use std::collections::HashMap;
 use std::rc::Rc;
 
@@ -158,7 +159,7 @@ pub struct PackageData {
     pub name: Rc<Utf8Data>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, EnumAsInner)]
 pub enum Data {
     Utf8(Rc<Utf8Data>),
     Integer(IntegerData),
@@ -167,7 +168,7 @@ pub enum Data {
     Double(DoubleData),
     Class(Rc<ClassData>),
     String(StringData),
-    FieldRef(FieldRefData),
+    FieldRef(Rc<FieldRefData>),
     MethodRef(MethodRefData),
     InterfaceMethodRef(InterfaceMethodRefData),
     NameAndType(Rc<NameAndTypeData>),
