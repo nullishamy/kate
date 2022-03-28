@@ -8,6 +8,7 @@ use crate::structs::loaded::constant_pool::{
 use crate::structs::loaded::method::Methods;
 use anyhow::{anyhow, Result};
 use std::collections::HashMap;
+use std::ops::Deref;
 use std::rc::Rc;
 
 use crate::structs::loaded::method::MethodEntry as LoadedMethodEntry;
@@ -16,13 +17,16 @@ use crate::structs::raw::method::MethodEntry as RawMethodEntry;
 use crate::structs::loaded::field::{FieldEntry as LoadedFieldEntry, Fields};
 use crate::structs::raw::field::FieldEntry as RawFieldEntry;
 
-use crate::structs::loaded::attribute::{AttributeEntry as LoadedAttributeEntry, Attributes};
+use crate::structs::loaded::attribute::Attributes;
 use crate::structs::raw::attribute::AttributeEntry as RawAttributeEntry;
 
 use crate::structs::loaded::constant_pool::PoolEntry as LoadedPoolEntry;
 use crate::structs::raw::constant_pool::{PoolEntry as RawPoolEntry, Tag};
 
 use crate::structs::loaded::constant_pool::Data as LoadedPoolData;
+use crate::structs::loaded::default_attributes::{
+    AttributeEntry, CodeData, CustomData as LoadedAttributeEntry, CustomData,
+};
 use crate::structs::loaded::interface::Interfaces;
 use crate::structs::raw::constant_pool::Data as RawPoolData;
 
@@ -197,10 +201,10 @@ impl ConstantPoolBuilder {
             )),
             RawPoolData::FieldRef(data) => Ok(self.make_entry(
                 entry.tag,
-                LoadedPoolData::FieldRef(FieldRefData {
+                LoadedPoolData::FieldRef(Rc::new(FieldRefData {
                     class: self.class(data.class_index)?,
                     name_and_type: self.name_and_type(data.name_and_type_index)?,
-                }),
+                })),
             )),
             RawPoolData::MethodRef(data) => Ok(self.make_entry(
                 entry.tag,
@@ -289,7 +293,7 @@ pub fn create_interfaces(raw: Vec<u16>, const_pool: &ConstantPool) -> Result<Int
         let entry = const_pool.class(idx as usize)?;
 
         //TODO: attach a classloader here and load the entries class so that we can validate it is an interface
-        out.entries.push(Rc::clone(entry))
+        out.entries.push(Rc::clone(&entry))
     }
 
     Ok(out)
@@ -300,10 +304,8 @@ pub fn create_fields(raw: Vec<RawFieldEntry>, const_pool: &ConstantPool) -> Resu
 
     for entry in raw {
         let access_flags = FieldAccessFlags::from_bits(entry.access_flags)?;
-        let name = const_pool
-            .utf8(entry.name_index as usize)?
-            .as_str
-            .to_owned();
+        let name = const_pool.utf8(entry.name_index as usize)?;
+        let name = Rc::clone(&name);
         let descriptor =
             FieldDescriptor::parse(&const_pool.utf8(entry.descriptor_index as usize)?.as_str)?;
         let attributes = create_attributes(entry.attribute_info, const_pool)?;
@@ -323,10 +325,8 @@ pub fn create_methods(raw: Vec<RawMethodEntry>, const_pool: &ConstantPool) -> Re
 
     for entry in raw {
         let access_flags = MethodAccessFlags::from_bits(entry.access_flags)?;
-        let name = const_pool
-            .utf8(entry.name_index as usize)?
-            .as_str
-            .to_owned();
+        let name = const_pool.utf8(entry.name_index as usize)?;
+        let name = Rc::clone(&name);
         let descriptor =
             MethodDescriptor::parse(&const_pool.utf8(entry.descriptor_index as usize)?.as_str)?;
         let attributes = create_attributes(entry.attribute_info, const_pool)?;
@@ -347,12 +347,25 @@ pub fn create_attributes(
     let mut out = Attributes { entries: vec![] };
 
     for entry in raw {
-        let name = const_pool
-            .utf8(entry.attribute_name_index as usize)?
-            .as_str
-            .to_owned();
-        let data = entry.attribute_data;
-        out.entries.push(LoadedAttributeEntry { name, data })
+        let name = const_pool.utf8(entry.attribute_name_index as usize)?;
+        let name = Rc::clone(&name);
+
+        let data = match name.as_str.as_str() {
+            "Code" => AttributeEntry::Code(CodeData::from_bytes(
+                name,
+                entry.attribute_data,
+                const_pool,
+            )?),
+            _ => {
+                // TODO: replace this with a proper logger
+                println!("unrecognised attribute '{}'", name.as_str);
+
+                // ignore attributes we dont recognise
+                continue;
+            }
+        };
+
+        out.entries.push(data)
     }
     Ok(out)
 }
