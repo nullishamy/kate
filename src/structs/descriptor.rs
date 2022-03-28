@@ -4,6 +4,7 @@ use std::str::Chars;
 use anyhow::{anyhow, Result};
 
 use crate::structs::primitive::PrimitiveType;
+use enum_as_inner::EnumAsInner;
 
 pub mod notation {
     // i8
@@ -191,7 +192,7 @@ impl FieldDescriptor {
     }
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, EnumAsInner)]
 pub enum DescriptorType {
     Reference(ReferenceType),
     Primitive(PrimitiveType),
