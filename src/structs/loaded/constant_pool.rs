@@ -21,22 +21,34 @@ impl ConstantPool {
         Ok(res.unwrap())
     }
 
-    pub fn class(&self, idx: usize) -> Result<&Rc<ClassData>> {
-        let entry = self.get(idx)?;
+    pub fn class(&self, idx: usize) -> Result<Rc<ClassData>> {
+        let entry = self.get(idx)?.data.as_class();
 
-        match &entry.data {
-            Data::Class(data) => Ok(data),
-            _ => Err(anyhow!("constant pool entry {} was not a class", idx)),
+        if entry.is_none() {
+            return Err(anyhow!("constant pool entry {} was not a class", idx));
         }
+
+        Ok(Rc::clone(entry.unwrap()))
     }
 
-    pub fn utf8(&self, idx: usize) -> Result<&Rc<Utf8Data>> {
-        let entry = self.get(idx)?;
+    pub fn utf8(&self, idx: usize) -> Result<Rc<Utf8Data>> {
+        let entry = self.get(idx)?.data.as_utf8();
 
-        match &entry.data {
-            Data::Utf8(data) => Ok(data),
-            _ => Err(anyhow!("constant pool entry {} was not utf8", idx)),
+        if entry.is_none() {
+            return Err(anyhow!("constant pool entry {} was not a class", idx));
         }
+
+        Ok(Rc::clone(entry.unwrap()))
+    }
+
+    pub fn field(&self, idx: usize) -> Result<Rc<FieldRefData>> {
+        let entry = self.get(idx)?.data.as_field_ref();
+
+        if entry.is_none() {
+            return Err(anyhow!("constant pool entry {} was not a class", idx));
+        }
+
+        Ok(Rc::clone(entry.unwrap()))
     }
 
     pub fn has(&self, idx: usize) -> bool {
