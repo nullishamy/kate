@@ -1,6 +1,7 @@
 pub mod attribute;
 pub mod classfile;
 pub mod constant_pool;
+pub mod default_attributes;
 pub mod field;
 pub mod interface;
 pub mod method;
