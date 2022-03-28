@@ -8,7 +8,8 @@ use std::borrow::BorrowMut;
 use std::ops::{Deref, DerefMut};
 use std::rc::Rc;
 
-pub type ClassLoaderImpl<'a> = Rc<dyn ClassLoader>;
+pub type ClassLoaderImpl = Rc<dyn ClassLoader>;
+pub type MutatedLoader<SelfT, T> = (SelfT, T);
 
 pub struct PackageDefinition {
     pub internal_name: String,
@@ -27,22 +28,26 @@ pub struct ClassDefinition {
     pub protection_domain: Option<ProtectionDomain>,
 }
 
+pub trait MutableClassLoader: ClassLoader {
+    fn define_class(
+        &self,
+        data: &ClassDefinition,
+    ) -> Result<MutatedLoader<Rc<Self>, Rc<LoadedClassFile>>>;
+    fn define_package(
+        &self,
+        data: &PackageDefinition,
+    ) -> Result<MutatedLoader<Rc<Self>, Rc<Package>>>;
+}
+
 pub trait ClassLoader {
-    fn parent(&self) -> Option<&ClassLoaderImpl>;
-
-    fn define_class(&mut self, data: &ClassDefinition) -> Result<&LoadedClassFile>;
-
-    fn define_package(&mut self, data: &PackageDefinition) -> Result<Package>;
+    fn parent(&self) -> Option<ClassLoaderImpl>;
 
     fn find_class(&self, internal_name: &str) -> Result<ClassDefinition>;
+    fn find_loaded_class(&self, internal_name: &str) -> Option<Rc<LoadedClassFile>>;
+    fn get_package(&self, internal_name: &str) -> Result<Rc<Package>>;
+    fn get_packages(&self) -> Result<Vec<Rc<Package>>>;
 
-    fn find_loaded_class(&self, internal_name: &str) -> Option<&LoadedClassFile>;
-
-    fn get_package(&self, internal_name: &str) -> Result<&Package>;
-
-    fn get_packages(&self) -> Result<Vec<&Package>>;
-
-    fn load_class(&mut self, internal_name: &str) -> Result<&LoadedClassFile> {
+    fn load_class(self: Rc<Self>, internal_name: &str) -> Result<Rc<LoadedClassFile>> {
         // let found = self.find_loaded_class(internal_name);
         //
         // if let Some(found) = found {

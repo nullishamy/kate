@@ -1,13 +1,15 @@
 use crate::runtime::classload::loader::{
-    ClassDefinition, ClassLoader, ClassLoaderImpl, PackageDefinition,
+    ClassDefinition, ClassLoader, ClassLoaderImpl, MutableClassLoader, MutatedLoader,
+    PackageDefinition,
 };
 use crate::structs::loaded::package::Package;
 use crate::{ClassFileParser, LoadedClassFile};
 use anyhow::{anyhow, Result};
 use std::collections::HashMap;
+use std::rc::Rc;
 
 pub struct SystemClassLoader {
-    classes: HashMap<String, LoadedClassFile>,
+    classes: HashMap<String, Rc<LoadedClassFile>>,
 }
 
 impl SystemClassLoader {
@@ -18,12 +20,11 @@ impl SystemClassLoader {
     }
 }
 
-impl ClassLoader for SystemClassLoader {
-    fn parent(&self) -> Option<&ClassLoaderImpl> {
-        None
-    }
-
-    fn define_class(&mut self, data: &ClassDefinition) -> Result<&LoadedClassFile> {
+impl MutableClassLoader for SystemClassLoader {
+    fn define_class(
+        &self,
+        data: &ClassDefinition,
+    ) -> Result<MutatedLoader<Rc<Self>, Rc<LoadedClassFile>>> {
         let name = data.internal_name.to_owned();
 
         if name.is_none() {
@@ -38,14 +39,33 @@ impl ClassLoader for SystemClassLoader {
             ClassFileParser::from_bytes(name.to_string(), data.data.to_owned()).parse()?,
         )?;
 
-        self.classes.insert(name.to_string(), res);
+        let res = Rc::new(res);
+        let mut old_classes = HashMap::with_capacity(self.classes.len());
 
-        // TODO: investigate a better way to do this
-        Ok(self.classes.get(&*name.to_string()).unwrap())
+        old_classes.clone_from(&self.classes);
+        old_classes.insert(name.to_owned(), res);
+
+        let new_loader = SystemClassLoader {
+            classes: old_classes,
+        };
+
+        let new_loader = &Rc::new(new_loader);
+        let _ref = new_loader.classes.get(&name).unwrap();
+
+        Ok((Rc::clone(new_loader), Rc::clone(_ref)))
     }
 
-    fn define_package(&mut self, data: &PackageDefinition) -> Result<Package> {
-        unimplemented!()
+    fn define_package(
+        &self,
+        data: &PackageDefinition,
+    ) -> Result<MutatedLoader<Rc<Self>, Rc<Package>>> {
+        todo!()
+    }
+}
+
+impl ClassLoader for SystemClassLoader {
+    fn parent(&self) -> Option<ClassLoaderImpl> {
+        None
     }
 
     fn find_class(&self, internal_name: &str) -> Result<ClassDefinition> {
@@ -57,15 +77,15 @@ impl ClassLoader for SystemClassLoader {
         })
     }
 
-    fn find_loaded_class(&self, internal_name: &str) -> Option<&LoadedClassFile> {
-        self.classes.get(internal_name)
+    fn find_loaded_class(&self, internal_name: &str) -> Option<Rc<LoadedClassFile>> {
+        self.classes.get(internal_name).map(|c| Rc::clone(c))
     }
 
-    fn get_package(&self, internal_name: &str) -> Result<&Package> {
-        unimplemented!()
+    fn get_package(&self, internal_name: &str) -> Result<Rc<Package>> {
+        todo!()
     }
 
-    fn get_packages(&self) -> Result<Vec<&Package>> {
-        unimplemented!()
+    fn get_packages(&self) -> Result<Vec<Rc<Package>>> {
+        todo!()
     }
 }
