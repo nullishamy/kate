@@ -44,12 +44,12 @@ impl LoadedClassFile {
 
         let access_flags = ClassFileAccessFlags::from_bits(raw.access_flags)?;
         let const_pool = create_constant_pool(raw.const_pool_info, meta.major_version)?;
-        let this_class = Rc::clone(const_pool.class(raw.this_class as usize)?);
+        let this_class = Rc::clone(&const_pool.class(raw.this_class as usize)?);
         let mut super_class: Option<Rc<ClassData>> = None;
 
         if const_pool.has(raw.super_class as usize) {
             let entry = const_pool.class(raw.super_class as usize)?;
-            super_class = Some(Rc::clone(entry));
+            super_class = Some(Rc::clone(&entry));
         }
 
         let interfaces = create_interfaces(raw.interface_info, &const_pool)?;
