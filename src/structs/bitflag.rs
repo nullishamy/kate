@@ -5,7 +5,7 @@ macro_rules! impl_flags {
     ( $flag_type:ident, $impl_type:ident ) => {
         #[derive(Clone)]
         pub struct $impl_type {
-            flags: $flag_type,
+            pub flags: $flag_type,
         }
 
         impl $impl_type {
