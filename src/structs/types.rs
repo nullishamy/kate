@@ -1,4 +1,6 @@
+use crate::structs::loaded::constant_pool::ClassData as LoadedClassData;
 use crate::structs::JVMPointer;
+use std::rc::Rc;
 
 pub type Boolean = bool;
 pub type Byte = i8;
@@ -32,4 +34,19 @@ pub enum PrimitiveType {
     Char,
     Float,
     Double,
+}
+
+pub struct ClassData {
+    pub class: Rc<LoadedClassData>,
+    pub ptr: JVMPointer,
+}
+
+pub enum ReferenceType {
+    Class(ClassData),
+    Null,
+}
+
+pub enum Type {
+    Reference(ReferenceType),
+    Primitive(PrimitiveWithValue),
 }
