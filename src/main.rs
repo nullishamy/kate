@@ -16,6 +16,8 @@ use anyhow::{anyhow, Result};
 mod classfile;
 mod runtime;
 mod structs;
+mod error;
+mod interface;
 
 fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
