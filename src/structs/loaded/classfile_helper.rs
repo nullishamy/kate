@@ -10,6 +10,7 @@ use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 use std::ops::Deref;
 use std::rc::Rc;
+use tracing::warn;
 
 use crate::structs::loaded::method::MethodEntry as LoadedMethodEntry;
 use crate::structs::raw::method::MethodEntry as RawMethodEntry;
@@ -357,8 +358,7 @@ pub fn create_attributes(
                 const_pool,
             )?),
             _ => {
-                // TODO: replace this with a proper logger
-                println!("unrecognised attribute '{}'", name.as_str);
+                warn!("unrecognised attribute '{}'", name.as_str);
 
                 // ignore attributes we dont recognise
                 continue;

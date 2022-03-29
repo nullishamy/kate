@@ -9,6 +9,7 @@ use anyhow::{anyhow, Result};
 use bytes::Bytes;
 use std::fs::File;
 use std::io::Read;
+use tracing::info;
 
 pub struct ClassFileParser {
     pub name: String,
@@ -17,11 +18,15 @@ pub struct ClassFileParser {
 
 impl ClassFileParser {
     pub fn from_path(path: String) -> Result<Self> {
+        info!("opening classfile '{}' for parsing", path);
+
         let buffer = ClassFileParser::bytes(path.to_owned())?;
         Ok(ClassFileParser::from_bytes(path, buffer))
     }
 
     pub fn from_bytes(name: String, bytes: Vec<u8>) -> Self {
+        info!("parsing bytes from class '{}'", name);
+
         Self {
             name,
             bytes: Bytes::copy_from_slice(&bytes),
@@ -29,6 +34,8 @@ impl ClassFileParser {
     }
 
     pub fn bytes(path: String) -> Result<Vec<u8>> {
+        info!("loading bytes from '{}'", path);
+
         let file_handle = File::open(&path);
 
         if let Err(e) = file_handle {

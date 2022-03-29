@@ -3,6 +3,8 @@ use std::env;
 use std::rc::Rc;
 
 use crate::classfile::parse::ClassFileParser;
+use crate::interface::cli::{CLICommand, CLI};
+use crate::interface::tui::TUI;
 use crate::runtime::classload::loader::{ClassLoader, MutableClassLoader};
 use crate::runtime::classload::system::SystemClassLoader;
 use crate::runtime::context::Context;
@@ -12,20 +14,47 @@ use crate::structs::bitflag::MethodAccessFlag;
 use crate::structs::descriptor::{DescriptorType, ReferenceType};
 use crate::structs::loaded::classfile::LoadedClassFile;
 use anyhow::{anyhow, Result};
+use clap::Parser;
+use tracing::{error, info, Level};
+use tracing_subscriber::fmt;
 
 mod classfile;
-mod runtime;
-mod structs;
 mod error;
 mod interface;
+mod runtime;
+mod structs;
 
-fn main() -> Result<()> {
-    let args: Vec<String> = env::args().collect();
+fn main() {
+    let args = CLI::parse();
+    let cmd = args.command;
 
-    match args.len() {
-        1 => quit("No class file passed"),
-        2 => start(args[1].borrow()),
-        _ => quit("Too many args passed"),
+    let format = fmt::format()
+        .with_ansi(true)
+        .with_level(true)
+        .with_target(false)
+        .with_thread_names(true)
+        .compact();
+
+    if args.tui {
+        let tui = TUI::new();
+
+        if let Err(err) = tui {
+            error!("tui returned error `{}`", err)
+        }
+
+        info!("tui selected and loaded");
+    }
+
+    tracing_subscriber::fmt().event_format(format).init();
+
+    match cmd {
+        CLICommand::Run { file } => {
+            let res = start(&file);
+
+            if let Err(err) = res {
+                error!("runtime returned error `{}`", err)
+            }
+        }
     }
 }
 
@@ -70,8 +99,4 @@ fn start(class_path: &str) -> Result<()> {
     )?;
 
     Ok(())
-}
-fn quit(msg: &str) -> ! {
-    eprintln!("[ERROR] {}", msg);
-    std::process::exit(1);
 }
