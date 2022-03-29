@@ -5,16 +5,26 @@
 - [ ] Native method support & linking
 - [ ] Refactors to Rust idioms
 - [ ] Required attributes
-- [ ] Types for opcodes
-- [ ] Types for flags
-  - [x] Method
-  - [x] Class
-  - [ ] Field
+- [x] Types for opcodes
+    - [x] Enum
+    - [ ] Match bytecod value to enum
+- [x] Types for flags
+    - [x] Method
+    - [x] Class
+    - [x] Field
 - [ ] Heap & GC
 - [ ] Bytecode validation
 - [ ] Error handling
 - [ ] Graceful shutdown
 - [ ] Improve CLI UX
+    - [ ] Opt parsing with clap
+- [ ] Create TUI dashboard
+    - [ ] tracing logs
+    - [ ] Heap status and usage
+    - [ ] CPU usage
+    - [ ] Interpreter status
+    - [ ] Class loader status
+    - [ ] Thread status
 - [ ] Code optimisation
 - [x] Method descriptors
 - [ ] Modules
@@ -24,9 +34,8 @@
 - [ ] Custom classloaders
 - [ ] Debugging tools
 - [ ] Add spec links to docs
-- [ ] Move all index types to struct references in
-      the const pool
-- [ ] Improve classfile loading and validation structs
-      and functions
-- [ ] Create raw / loaded types for all classfile entries
+- [x] Move all index types to struct references in the const pool
+- [ ] Improve classfile loading and validation structs and functions
+- [x] Create raw / loaded types for all classfile entries
 - [ ] Traits for classloaders
+- [ ] Stdlib loading
