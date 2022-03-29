@@ -4,12 +4,13 @@ use crate::runtime::context::Context;
 use crate::runtime::threading::thread::VMThread;
 use crate::structs::loaded::default_attributes::AttributeEntry;
 use crate::structs::loaded::method::MethodEntry;
-use crate::SystemClassLoader;
+use crate::{Level, SystemClassLoader};
 use anyhow::{anyhow, Result};
 use bytes::Bytes;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Mutex;
+use tracing::span;
 
 //TODO: when we implement the move based loader system, consider how we will redefine the root loader (system)
 pub struct VM {
@@ -141,8 +142,6 @@ impl VM {
                         }
 
                         let mut stack = stack.unwrap();
-
-                        stack.push(OperandType::)
                     }
                 }
                 Instruction::GOTO => todo!("unimplemented instruction "),

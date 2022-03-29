@@ -3,7 +3,7 @@ use std::str::Chars;
 
 use anyhow::{anyhow, Result};
 
-use crate::structs::primitive::PrimitiveType;
+use crate::structs::types::PrimitiveType;
 use enum_as_inner::EnumAsInner;
 
 pub mod notation {

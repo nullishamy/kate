@@ -10,12 +10,11 @@ pub struct Attributes {
 
 impl Attributes {
     pub fn get(&self, key: &str) -> Option<&AttributeEntry> {
-        // deref one layer, the vec lookup
         self.entries
             .iter()
             .filter(|a| a.name().as_str == key)
             .collect::<Vec<&AttributeEntry>>()
             .first()
-            .map(|r| *r)
+            .copied()
     }
 }
