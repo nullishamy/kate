@@ -1,7 +1,7 @@
 pub mod bitflag;
 pub mod descriptor;
 pub mod loaded;
-pub mod primitive;
 pub mod raw;
+pub mod types;
 
 pub type JVMPointer = isize;

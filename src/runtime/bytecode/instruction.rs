@@ -1,4 +1,4 @@
-use crate::structs::primitive::PrimitiveWithValue;
+use crate::structs::types::PrimitiveWithValue;
 use anyhow::{anyhow, Result};
 use std::fmt::{Display, Formatter};
 
