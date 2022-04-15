@@ -2,6 +2,7 @@ extern crate core;
 
 use std::borrow::BorrowMut;
 use std::sync::Arc;
+use std::time::Duration;
 
 use anyhow::{anyhow, Result};
 use clap::Parser;
@@ -12,12 +13,13 @@ use tracing_subscriber::fmt;
 
 use crate::classfile::parse::ClassFileParser;
 use crate::interface::cli::{Cli, CliCommand};
-use crate::interface::tui::{start_tui, TuiCommand};
+use crate::interface::tui::{start_tui, TUIWriter, TuiCommand};
 use crate::runtime::classload::loader::ClassLoader;
 use crate::runtime::classload::system::SystemClassLoader;
+use crate::runtime::config::VMConfig;
 use crate::runtime::context::Context;
 use crate::runtime::threading::thread::VMThread;
-use crate::runtime::vm::VM;
+use crate::runtime::vm::{VMState, VM};
 use crate::structs::bitflag::MethodAccessFlag;
 use crate::structs::descriptor::DescriptorType;
 use crate::structs::loaded::classfile::LoadedClassFile;
@@ -47,8 +49,10 @@ async fn main() -> Result<()> {
     //TODO: start runtime with these channels to pass messages to tui
     //this will no-op if TUI is not enabled as nothing is listening
 
+    let mut tui: Option<TUIWriter> = None;
+
     if args.tui {
-        start_tui(write.clone(), read)?;
+        tui = Some(start_tui(write.clone(), read)?);
     } else {
         tracing_subscriber::fmt()
             .with_max_level(Level::TRACE)
@@ -56,36 +60,47 @@ async fn main() -> Result<()> {
             .init();
     }
 
+    let mut vm = VM::new(VMConfig { tui });
+
     match cmd {
         CliCommand::Run { file } => {
-            let res = start(&file);
+            let res = start(&mut vm, &file);
 
             if let Err(err) = res {
+                vm.state(VMState::Shutdown);
                 error!("runtime returned error `{}`", err);
             }
         }
     }
 
-    if args.tui {
+    // start up an event stream listener after we boot the VM
+    // this will listen for terminal inputs and react accordingly
+    if let Some(tui) = &vm.tui {
         let mut events = EventStream::new();
 
         while let Some(event) = events.next().await {
             if let Ok(event) = event {
                 match event {
                     Event::Key(k) => {
+                        // if we hit ctrl+c, send the quit signal
                         if k.modifiers.contains(KeyModifiers::CONTROL)
                             && k.code == KeyCode::Char('c')
                         {
-                            write.clone().borrow_mut().send(TuiCommand::Close).unwrap();
+                            tui.send(TuiCommand::Close)?;
                         }
+
+                        match &k.code {
+                            KeyCode::Char('L') | KeyCode::Char('l') => tui.send(TuiCommand::Tab(0)),
+                            KeyCode::Char('C') | KeyCode::Char('c') => tui.send(TuiCommand::Tab(1)),
+                            KeyCode::Char('H') | KeyCode::Char('h') => tui.send(TuiCommand::Tab(2)),
+                            KeyCode::Char('G') | KeyCode::Char('g') => tui.send(TuiCommand::Tab(3)),
+                            KeyCode::Char('R') | KeyCode::Char('r') => tui.send(TuiCommand::Tab(4)),
+                            _ => Ok(()),
+                        }?;
                     }
                     Event::Mouse(_) => {}
                     Event::Resize(_, _) => {
-                        write
-                            .clone()
-                            .borrow_mut()
-                            .send(TuiCommand::Refresh)
-                            .unwrap();
+                        tui.send(TuiCommand::Refresh)?;
                     }
                 }
             } else {
@@ -97,11 +112,9 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-fn start(class_path: &str) -> Result<()> {
-    let mut vm = VM::new();
-
+fn start(vm: &mut VM, main_class_path: &String) -> Result<()> {
     let mut loader = vm.system_classloader.write();
-    let main_class = loader.find_class(class_path)?;
+    let main_class = loader.find_class(main_class_path)?;
     let main_class = loader.define_class(main_class)?;
 
     let lock = main_class.methods.read();
@@ -136,7 +149,7 @@ fn start(class_path: &str) -> Result<()> {
         &main_method,
         Context {
             class: Arc::clone(&main_class),
-            thread: VMThread::new("main".to_string()),
+            thread: Arc::new(VMThread::new("main".to_string())),
         },
     )?;
 
