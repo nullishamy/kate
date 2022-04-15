@@ -1,11 +1,12 @@
 use anyhow::{anyhow, Result};
 use bytes::Bytes;
+use std::sync::Arc;
 
 use crate::classfile::parse_helper::SafeBuf;
 use crate::runtime::stack::OperandType;
 use crate::structs::loaded::constant_pool::Data;
 use crate::structs::types::{Float, Int, PrimitiveType, PrimitiveWithValue};
-use crate::{ClassLoader, Context, VM};
+use crate::{ClassLoader, Context, VMThread, VM};
 
 pub fn ldc(vm: &mut VM, ctx: &mut Context, bytes: &mut Bytes) -> Result<()> {
     let idx = bytes.try_get_u8()?;
@@ -21,8 +22,8 @@ pub fn ldc(vm: &mut VM, ctx: &mut Context, bytes: &mut Bytes) -> Result<()> {
     let data = match &entry.data {
         Data::Integer(data) => OperandType::Primitive(PrimitiveWithValue::Int(data.bytes as Int)),
         Data::Float(data) => OperandType::Primitive(PrimitiveWithValue::Float(data.bytes as Float)),
-        Data::Long(_data) => OperandType::Primitive(PrimitiveWithValue::Long(todo!())),
-        Data::Double(_data) => OperandType::Primitive(PrimitiveWithValue::Double(todo!())),
+        Data::Long(_data) => OperandType::Primitive(PrimitiveWithValue::Long(todo!("longs"))),
+        Data::Double(_data) => OperandType::Primitive(PrimitiveWithValue::Double(todo!("doubles"))),
         Data::Class(_) => todo!(),
         Data::String(_data) => {
             let mut loader = vm.system_classloader.write();
@@ -49,7 +50,14 @@ pub fn ldc(vm: &mut VM, ctx: &mut Context, bytes: &mut Bytes) -> Result<()> {
                     .is_some()
             });
 
-            if let Some(_c) = cons {
+            if let Some(c) = cons {
+                vm.interpret(
+                    &*c.method,
+                    Context {
+                        class: Arc::clone(&ctx.class),
+                        thread: Arc::clone(&ctx.thread),
+                    },
+                )?;
             } else {
                 return Err(anyhow!(
                     "char[] constructor for String could not be located "
@@ -67,5 +75,5 @@ pub fn ldc(vm: &mut VM, ctx: &mut Context, bytes: &mut Bytes) -> Result<()> {
     let mut stack = ctx.thread.operand_stack.lock();
 
     stack.push(data);
-    Err(anyhow!("not implemented"))
+    Ok(())
 }
