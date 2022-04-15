@@ -212,6 +212,8 @@ impl Instruction {
             0xBB => Instruction::NEW,
             0x12 => Instruction::LDC,
             0xB2 => Instruction::GETSTATIC,
+            0xB6 => Instruction::INVOKEVIRTUAL,
+            0x2A => Instruction::ALOAD_0,
             _ => return Err(anyhow!("unknown instruction 0x{:X}", byte)),
         })
     }
