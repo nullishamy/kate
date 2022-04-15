@@ -1,5 +1,6 @@
 pub mod bytecode;
 pub mod classload;
+pub mod config;
 pub mod context;
 pub mod heap;
 mod instruction;
