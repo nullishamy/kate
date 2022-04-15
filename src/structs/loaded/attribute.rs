@@ -12,7 +12,7 @@ impl Attributes {
     pub fn get(&self, key: &str) -> Option<&AttributeEntry> {
         self.entries
             .iter()
-            .filter(|a| a.name().as_str == key)
+            .filter(|a| a.name().str == key)
             .collect::<Vec<&AttributeEntry>>()
             .first()
             .copied()
