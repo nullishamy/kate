@@ -1,6 +1,8 @@
 use anyhow::{anyhow, Result};
+use tracing::trace;
 
 use crate::structs::raw::attribute::AttributeEntry;
+use crate::structs::raw::constant_pool::InterfaceMethodRefData;
 use crate::structs::raw::constant_pool::{
     ClassData, Data, DoubleData, FieldRefData, FloatData, IntegerData, LongData, MethodRefData,
     NameAndTypeData, PoolEntry, StringData, Tag, Utf8Data,
@@ -12,13 +14,16 @@ use crate::ClassFileParser;
 pub fn parse_utf8_string(parser: &mut ClassFileParser) -> Result<Utf8Data> {
     let length = parser.bytes.try_get_u16()?;
 
-    let mut bytes: Vec<u8> = Vec::with_capacity(length as usize);
-    let mut idx = 0;
+    let mut bytes = Vec::with_capacity(length as usize);
 
-    while idx < length {
+    for _ in 0..length {
         bytes.push(parser.bytes.try_get_u8()?);
-        idx += 1;
     }
+
+    trace!(
+        "parsed utf has string {:?}",
+        String::from_utf8(bytes.clone())?
+    );
 
     Ok(Utf8Data { length, bytes })
 }
@@ -82,6 +87,15 @@ pub fn parse_name_and_type_data(parser: &mut ClassFileParser) -> Result<NameAndT
     })
 }
 
+pub fn parse_interface_method_ref_data(
+    parser: &mut ClassFileParser,
+) -> Result<InterfaceMethodRefData> {
+    Ok(InterfaceMethodRefData {
+        class_index: parser.bytes.try_get_u16()?,
+        name_and_type_index: parser.bytes.try_get_u16()?,
+    })
+}
+
 pub fn parse_pool_data(parser: &mut ClassFileParser, tag: &Tag) -> Result<Data> {
     Ok(match tag {
         Tag::Utf8 => Data::Utf8(parse_utf8_string(parser)?),
@@ -93,7 +107,9 @@ pub fn parse_pool_data(parser: &mut ClassFileParser, tag: &Tag) -> Result<Data> 
         Tag::String => Data::String(parse_string_data(parser)?),
         Tag::FieldRef => Data::FieldRef(parse_field_ref_data(parser)?),
         Tag::MethodRef => Data::MethodRef(parse_method_ref_data(parser)?),
-        Tag::InterfaceMethodRef => todo!(),
+        Tag::InterfaceMethodRef => {
+            Data::InterfaceMethodRef(parse_interface_method_ref_data(parser)?)
+        }
         Tag::NameAndType => Data::NameAndType(parse_name_and_type_data(parser)?),
         Tag::MethodHandle => todo!(),
         Tag::MethodType => todo!(),
@@ -109,23 +125,54 @@ pub fn parse_const_pool(
     pool_size: u16,
 ) -> Result<Vec<Option<PoolEntry>>> {
     let mut pool_data: Vec<Option<PoolEntry>> = Vec::with_capacity(pool_size as usize);
+
     pool_data.push(None);
 
-    // -1 because the const pool is indexed from 1 -> len - 1
-    while (pool_data.len() - 1) < (pool_size - 1) as usize {
-        let tag = Tag::from_tag_byte(parser.bytes.try_get_u8()?)?;
+    // pool is indexed from 1 -> size -1
+    // we add "None" at the start to account for this
+    // while loop because some entries take up 2 slots
+    // thus, a ranged loop would not work
+
+    let mut i = 1;
+    while pool_data.len() < pool_size as usize {
+        trace!("parsing const pool entry {i}");
+        let tag_byte = parser.bytes.try_get_u8()?;
+
+        trace!("const pool entry has tag byte {:?}", tag_byte);
+        let tag = Tag::from_tag_byte(tag_byte)?;
+
+        trace!("const pool entry has tag {:?}", tag);
         let data = parse_pool_data(parser, &tag)?;
         let entry = PoolEntry { tag, data };
 
-        pool_data.push(Some(entry));
+        trace!("pushing entry {:?}", entry);
+
+        match tag {
+            Tag::Long => {
+                trace!("special casing Tag::Long by pushing 2 entries");
+                pool_data.push(Some(entry));
+                pool_data.push(None);
+                i += 2;
+            }
+            Tag::Double => {
+                trace!("special casing Tag::Double by pushing 2 entries");
+                pool_data.push(Some(entry));
+                pool_data.push(None);
+                i += 2;
+            }
+            _ => {
+                pool_data.push(Some(entry));
+                i += 1;
+            }
+        }
     }
 
     Ok(pool_data)
 }
 
 pub fn parse_interface_info(parser: &mut ClassFileParser, length: u16) -> Result<Vec<u16>> {
-    let mut out: Vec<u16> = Vec::with_capacity(length as usize);
-    while out.len() < length as usize {
+    let mut out = Vec::with_capacity(length as usize);
+    for _ in 0..length {
         out.push(parser.bytes.try_get_u16()?);
     }
     Ok(out)
@@ -137,7 +184,7 @@ pub fn parse_attribute_info(
 ) -> Result<Vec<AttributeEntry>> {
     let mut out: Vec<AttributeEntry> = Vec::with_capacity(length as usize);
 
-    while out.len() < length as usize {
+    for _ in 0..length {
         let attribute_name_index = parser.bytes.try_get_u16()?;
         let attribute_length = parser.bytes.try_get_u32()?;
 
@@ -157,9 +204,9 @@ pub fn parse_attribute_info(
 }
 
 pub fn parse_field_info(parser: &mut ClassFileParser, length: u16) -> Result<Vec<FieldEntry>> {
-    let mut out: Vec<FieldEntry> = Vec::with_capacity(length as usize);
+    let mut out = Vec::with_capacity(length as usize);
 
-    while out.len() < length as usize {
+    for _ in 0..length {
         let access_flags = parser.bytes.try_get_u16()?;
         let name_index = parser.bytes.try_get_u16()?;
         let descriptor_index = parser.bytes.try_get_u16()?;
@@ -179,8 +226,8 @@ pub fn parse_field_info(parser: &mut ClassFileParser, length: u16) -> Result<Vec
 }
 
 pub fn parse_method_info(parser: &mut ClassFileParser, length: u16) -> Result<Vec<MethodEntry>> {
-    let mut out: Vec<MethodEntry> = Vec::with_capacity(length as usize);
-    while out.len() < length as usize {
+    let mut out = Vec::with_capacity(length as usize);
+    for _ in 0..length {
         let access_flags = parser.bytes.try_get_u16()?;
         let name_index = parser.bytes.try_get_u16()?;
         let descriptor_index = parser.bytes.try_get_u16()?;
