@@ -1,6 +1,6 @@
 use crate::runtime::heap::object::JVMObject;
 use crate::structs::bitflag::ClassFileAccessFlags;
-use anyhow::{anyhow, Result};
+use anyhow::{Result};
 use parking_lot::RwLock;
 use std::sync::Arc;
 use tracing::{debug, info};

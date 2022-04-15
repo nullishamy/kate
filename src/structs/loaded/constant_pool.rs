@@ -1,10 +1,10 @@
 use anyhow::{anyhow, Result};
 
-use crate::structs::descriptor::{Descriptor, MethodDescriptor};
+use crate::structs::descriptor::{MethodDescriptor};
 use crate::structs::raw::constant_pool::Tag;
 use enum_as_inner::EnumAsInner;
 use std::collections::HashMap;
-use std::ops::Deref;
+
 use std::sync::Arc;
 
 #[derive(Clone)]

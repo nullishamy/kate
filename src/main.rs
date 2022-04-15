@@ -1,12 +1,12 @@
 extern crate core;
 
-use std::borrow::{Borrow, BorrowMut};
-use std::io::stdout;
+use std::borrow::{BorrowMut};
+
 use std::io::Write;
-use std::rc::Rc;
+
 use std::sync::Arc;
-use std::time::Duration;
-use std::{env, io, thread};
+
+
 
 use crate::classfile::parse::ClassFileParser;
 use crate::interface::cli::{CLICommand, CLI};
@@ -16,21 +16,21 @@ use crate::runtime::classload::system::SystemClassLoader;
 use crate::runtime::context::Context;
 use crate::runtime::threading::thread::VMThread;
 use crate::runtime::vm::VM;
-use crate::structs::bitflag::{FieldAccessFlag, FieldAccessFlags, MethodAccessFlag};
-use crate::structs::descriptor::{DescriptorType, ReferenceType};
+use crate::structs::bitflag::{MethodAccessFlag};
+use crate::structs::descriptor::{DescriptorType};
 use crate::structs::loaded::classfile::LoadedClassFile;
 use anyhow::{anyhow, Result};
 use clap::Parser;
-use crossterm::event::{read, Event, EventStream, KeyCode, KeyModifiers};
-use crossterm::execute;
-use crossterm::terminal::disable_raw_mode;
-use tokio::task::{spawn_blocking, JoinHandle};
-use tokio::time::interval;
+use crossterm::event::{Event, EventStream, KeyCode, KeyModifiers};
+
+
+
+
 use tokio_stream::StreamExt;
-use tracing::{error, info, warn, Level};
+use tracing::{error, Level};
 use tracing_subscriber::fmt;
-use tui::backend::CrosstermBackend;
-use tui::Terminal;
+
+
 
 mod classfile;
 mod error;

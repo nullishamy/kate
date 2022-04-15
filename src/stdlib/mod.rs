@@ -3,7 +3,7 @@ mod visitors;
 use crate::stdlib::visitors::visit_system;
 use crate::LoadedClassFile;
 use std::collections::HashMap;
-use std::rc::Rc;
+
 use std::sync::Arc;
 
 type VisitFunc = fn(Arc<LoadedClassFile>);

@@ -8,9 +8,9 @@ use crate::structs::loaded::constant_pool::{
 use crate::structs::loaded::method::Methods;
 use anyhow::{anyhow, Result};
 use std::collections::HashMap;
-use std::ops::Deref;
+
 use std::sync::Arc;
-use tracing::{debug, info, warn};
+use tracing::{debug, warn};
 
 use crate::structs::loaded::method::MethodEntry as LoadedMethodEntry;
 use crate::structs::raw::method::MethodEntry as RawMethodEntry;
@@ -26,7 +26,7 @@ use crate::structs::raw::constant_pool::{PoolEntry as RawPoolEntry, Tag};
 
 use crate::structs::loaded::constant_pool::Data as LoadedPoolData;
 use crate::structs::loaded::default_attributes::{
-    AttributeEntry, CodeData, CustomData as LoadedAttributeEntry, CustomData,
+    AttributeEntry, CodeData,
 };
 use crate::structs::loaded::interface::Interfaces;
 use crate::structs::raw::constant_pool::Data as RawPoolData;
@@ -145,8 +145,8 @@ impl ConstantPoolBuilder {
     fn method_handle_reference(
         &self,
         kind: u8,
-        reference: u16,
-        major: u16,
+        _reference: u16,
+        _major: u16,
     ) -> Result<MethodHandleReference> {
         match kind {
             1 | 2 | 3 | 4 => Ok(todo!()),

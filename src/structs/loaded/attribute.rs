@@ -1,7 +1,7 @@
-use crate::structs::loaded::constant_pool::Utf8Data;
-use crate::structs::loaded::default_attributes::{AttributeEntry, CustomData};
-use anyhow::{anyhow, Result};
-use std::rc::Rc;
+
+use crate::structs::loaded::default_attributes::{AttributeEntry};
+
+
 
 #[derive(Clone)]
 pub struct Attributes {

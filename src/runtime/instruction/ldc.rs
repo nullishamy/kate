@@ -5,7 +5,7 @@ use crate::structs::types::{Float, Int, PrimitiveType, PrimitiveWithValue};
 use crate::{ClassLoader, Context, VM};
 use anyhow::{anyhow, Result};
 use bytes::Bytes;
-use std::rc::Rc;
+
 
 pub fn ldc(vm: &mut VM, ctx: &mut Context, bytes: &mut Bytes) -> Result<()> {
     let idx = bytes.try_get_u8()?;
@@ -21,10 +21,10 @@ pub fn ldc(vm: &mut VM, ctx: &mut Context, bytes: &mut Bytes) -> Result<()> {
     let data = match &entry.data {
         Data::Integer(data) => OperandType::Primitive(PrimitiveWithValue::Int(data.bytes as Int)),
         Data::Float(data) => OperandType::Primitive(PrimitiveWithValue::Float(data.bytes as Float)),
-        Data::Long(data) => OperandType::Primitive(PrimitiveWithValue::Long(todo!())),
-        Data::Double(data) => OperandType::Primitive(PrimitiveWithValue::Double(todo!())),
+        Data::Long(_data) => OperandType::Primitive(PrimitiveWithValue::Long(todo!())),
+        Data::Double(_data) => OperandType::Primitive(PrimitiveWithValue::Double(todo!())),
         Data::Class(_) => todo!(),
-        Data::String(data) => {
+        Data::String(_data) => {
             let mut loader = vm.system_classloader.write();
 
             let string_class = loader.load_class("java/lang/String")?;
@@ -49,7 +49,7 @@ pub fn ldc(vm: &mut VM, ctx: &mut Context, bytes: &mut Bytes) -> Result<()> {
                     .is_some()
             });
 
-            if let Some(c) = cons {
+            if let Some(_c) = cons {
             } else {
                 return Err(anyhow!(
                     "char[] constructor for String could not be located "

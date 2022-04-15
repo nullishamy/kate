@@ -1,6 +1,6 @@
 use crate::structs::loaded::constant_pool::ClassData as LoadedClassData;
 use crate::structs::JVMPointer;
-use std::rc::Rc;
+
 use std::sync::Arc;
 
 pub type Boolean = bool;

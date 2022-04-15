@@ -1,12 +1,12 @@
 use crate::runtime::security::protection_domain::ProtectionDomain;
-use crate::runtime::vm::VM;
+
 use crate::structs::loaded::package::Package;
-use crate::structs::raw::classfile::RawClassFile;
+
 use crate::LoadedClassFile;
-use anyhow::{anyhow, Result};
-use std::borrow::BorrowMut;
-use std::cell::RefCell;
-use std::ops::{Deref, DerefMut};
+use anyhow::{Result};
+
+
+
 use std::sync::{Arc, RwLock};
 
 pub struct PackageDefinition {

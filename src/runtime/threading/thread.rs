@@ -1,8 +1,8 @@
 use crate::runtime::stack::{OperandType, Stack};
 use crate::runtime::threading::result::ThreadResult;
-use crate::runtime::threading::thread_manager::ThreadManager;
+
 use crate::structs::types::{PrimitiveWithValue, Type};
-use crate::structs::JVMPointer;
+
 use parking_lot::Mutex;
 use tokio::sync::oneshot;
 
