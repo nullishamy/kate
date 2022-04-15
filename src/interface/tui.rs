@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 use std::io;
 use std::io::{Stdout, Write};
 
+use crate::runtime::vm::VMState;
 use anyhow::Result;
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
@@ -9,18 +10,19 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use tokio::sync::mpsc;
+use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tracing::{info, Level};
 use tracing_subscriber::fmt;
 use tracing_subscriber::fmt::MakeWriter;
 use tui::backend::Backend;
-use tui::layout::Rect;
+use tui::layout::{Alignment, Direction, Rect};
 use tui::style::{Color, Style};
 use tui::text::{Span, Spans};
-use tui::widgets::{List, ListItem, Tabs};
+use tui::widgets::{Block, List, ListItem, Paragraph, Tabs};
 use tui::{
     backend::CrosstermBackend,
     layout::{Constraint, Layout},
-    widgets::{Block, Borders},
+    widgets::Borders,
     Frame, Terminal,
 };
 
@@ -29,11 +31,24 @@ pub enum TuiCommand {
     Log(String),
     Close,
     Refresh,
+    VMState(VMState),
+    Tab(usize),
 }
 
 #[derive(Clone)]
 struct LogWriter {
     pub log_writer: mpsc::UnboundedSender<TuiCommand>,
+}
+
+#[derive(Clone)]
+pub struct TUIWriter {
+    write: UnboundedSender<TuiCommand>,
+}
+
+impl TUIWriter {
+    pub fn send(&self, cmd: TuiCommand) -> Result<()> {
+        Ok(self.write.send(cmd)?)
+    }
 }
 
 impl Write for LogWriter {
@@ -60,14 +75,13 @@ impl MakeWriter<'_> for LogWriter {
 struct TUIState {
     log_lines: VecDeque<String>,
     current_tab: usize,
+    vm_state: VMState,
 }
 
 pub fn start_tui(
     write: mpsc::UnboundedSender<TuiCommand>,
     read: mpsc::UnboundedReceiver<TuiCommand>,
-) -> Result<()> {
-    let mut term = Terminal::new(CrosstermBackend::new(io::stdout()))?;
-
+) -> Result<TUIWriter> {
     let format = fmt::format()
         .with_ansi(false)
         .without_time()
@@ -78,21 +92,27 @@ pub fn start_tui(
         .compact();
 
     tracing_subscriber::fmt()
-        .with_writer(LogWriter { log_writer: write })
+        .with_writer(LogWriter {
+            log_writer: write.clone(),
+        })
         .with_max_level(Level::INFO)
         .event_format(format)
         .init();
 
     info!("tui selected and loaded");
 
-    tokio::spawn(async move {
+    tokio::spawn(async {
+        let mut term = Terminal::new(CrosstermBackend::new(io::stdout())).unwrap();
+
         enable_raw_mode().unwrap();
         execute!(io::stdout(), EnterAlternateScreen, EnableMouseCapture).unwrap();
 
         let mut cmds = read;
+
         let mut state = TUIState {
             log_lines: VecDeque::new(),
             current_tab: 0,
+            vm_state: VMState::Shutdown,
         };
 
         fn close(mut term: Terminal<CrosstermBackend<Stdout>>) {
@@ -116,6 +136,7 @@ pub fn start_tui(
             }
 
             term.draw(|f| {
+                // side effect if needed
                 match cmd {
                     TuiCommand::Log(msg) => {
                         state.log_lines.push_back(msg);
@@ -123,17 +144,23 @@ pub fn start_tui(
                     TuiCommand::Refresh => {
                         //no-op, this just causes a re-render
                     }
+                    TuiCommand::VMState(new_status) => {
+                        state.vm_state = new_status;
+                    }
+                    TuiCommand::Tab(new_tab) => {
+                        state.current_tab = new_tab;
+                    }
                     c => unimplemented!("unimplemented cmd {:?}", c),
                 };
 
-                // render the UI:
+                // render the UI
                 do_render(f, &mut state);
             })
             .unwrap();
         }
     });
 
-    Ok(())
+    Ok(TUIWriter { write })
 }
 
 fn do_render<B>(f: &mut Frame<B>, state: &mut TUIState)
@@ -144,7 +171,94 @@ where
         .constraints([Constraint::Length(3), Constraint::Min(0)])
         .split(f.size());
 
-    let titles = ["Logs", "Classes", "Heap", "GC"]
+    let tab_bar = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(80), Constraint::Percentage(20)])
+        .split(chunks[0]);
+
+    // render the top bar
+    render_tabs(f, state, tab_bar[0]);
+    render_status(f, state, tab_bar[1]);
+
+    // render the main body
+    match state.current_tab {
+        0 => render_log(f, state, chunks[1]),
+        1 => render_classes(f, state, chunks[1]),
+        2 => render_heap(f, state, chunks[1]),
+        3 => render_gc(f, state, chunks[1]),
+        4 => render_resources(f, state, chunks[1]),
+        _ => unreachable!(),
+    }
+}
+
+fn render_resources<B>(f: &mut Frame<B>, state: &mut TUIState, area: Rect)
+where
+    B: Backend,
+{
+    let block = Block::default().borders(Borders::ALL);
+    let para = Paragraph::new("Unimplemented").block(block);
+    f.render_widget(para, area);
+}
+
+fn render_gc<B>(f: &mut Frame<B>, state: &mut TUIState, area: Rect)
+where
+    B: Backend,
+{
+    let block = Block::default().borders(Borders::ALL);
+    let para = Paragraph::new("Unimplemented").block(block);
+    f.render_widget(para, area);
+}
+
+fn render_heap<B>(f: &mut Frame<B>, state: &mut TUIState, area: Rect)
+where
+    B: Backend,
+{
+    let block = Block::default().borders(Borders::ALL);
+    let para = Paragraph::new("Unimplemented").block(block);
+    f.render_widget(para, area);
+}
+
+fn render_classes<B>(f: &mut Frame<B>, state: &mut TUIState, area: Rect)
+where
+    B: Backend,
+{
+    let block = Block::default().borders(Borders::ALL);
+    let para = Paragraph::new("Unimplemented").block(block);
+    f.render_widget(para, area);
+}
+
+fn render_status<B>(f: &mut Frame<B>, state: &mut TUIState, area: Rect)
+where
+    B: Backend,
+{
+    let block = Block::default().borders(Borders::ALL).title("Status");
+    let paused = Style::default().fg(Color::LightYellow);
+    let booting = Style::default().fg(Color::Yellow);
+    let shutdown = Style::default().fg(Color::Red);
+    let gc = Style::default().fg(Color::Magenta);
+    let online = Style::default().fg(Color::Green);
+
+    let style = match state.vm_state {
+        VMState::Shutdown => shutdown,
+        VMState::Booting => booting,
+        VMState::Online => online,
+        VMState::Paused => paused,
+        VMState::ShuttingDown => booting,
+        VMState::GC => gc,
+    };
+    let status = Paragraph::new(format!("{:?}", state.vm_state))
+        .block(block)
+        .style(style)
+        .alignment(Alignment::Center);
+
+    f.render_widget(status, area);
+}
+
+fn render_tabs<B>(f: &mut Frame<B>, state: &mut TUIState, area: Rect)
+where
+    B: Backend,
+{
+    let titles = ["(L)ogs", "(C)lasses", "(H)eap", "(G)C", "(R)resources"]
         .iter()
         .map(|t| Spans::from(Span::styled(*t, Style::default().fg(Color::Gray))))
         .collect();
@@ -154,8 +268,7 @@ where
         .highlight_style(Style::default().fg(Color::Yellow))
         .select(state.current_tab);
 
-    f.render_widget(tabs, chunks[0]);
-    render_log(f, state, chunks[1]);
+    f.render_widget(tabs, area);
 }
 
 fn render_log<B>(f: &mut Frame<B>, state: &mut TUIState, area: Rect)
@@ -165,11 +278,13 @@ where
     let info_style = Style::default().fg(Color::Blue);
     let warning_style = Style::default().fg(Color::Yellow);
     let error_style = Style::default().fg(Color::Red);
+    let unknown_style = Style::default().fg(Color::White);
 
     let logs: Vec<ListItem> = state
         .log_lines
         .iter()
         .map(|msg| {
+            //TODO: make this more robust
             let msg = msg.strip_prefix(' ').unwrap_or(msg);
             let (level, style) = if msg.starts_with("INFO") {
                 ("INFO", info_style)
@@ -178,7 +293,7 @@ where
             } else if msg.starts_with("ERROR") {
                 ("ERROR", error_style)
             } else {
-                ("???", Style::default().fg(Color::White))
+                ("????", unknown_style)
             };
 
             let content = vec![Spans::from(vec![
