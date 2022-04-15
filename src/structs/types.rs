@@ -1,7 +1,7 @@
+use std::sync::Arc;
+
 use crate::structs::loaded::constant_pool::ClassData as LoadedClassData;
 use crate::structs::JVMPointer;
-
-use std::sync::Arc;
 
 pub type Boolean = bool;
 pub type Byte = i8;

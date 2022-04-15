@@ -1,11 +1,11 @@
-use anyhow::{anyhow, Result};
-
-use crate::structs::descriptor::{MethodDescriptor};
-use crate::structs::raw::constant_pool::Tag;
-use enum_as_inner::EnumAsInner;
 use std::collections::HashMap;
-
 use std::sync::Arc;
+
+use anyhow::{anyhow, Result};
+use enum_as_inner::EnumAsInner;
+
+use crate::structs::descriptor::MethodDescriptor;
+use crate::structs::raw::constant_pool::Tag;
 
 #[derive(Clone)]
 pub struct ConstantPool {
@@ -63,9 +63,9 @@ pub struct Utf8Data {
     pub str: String,
 }
 
-impl Into<String> for Utf8Data {
-    fn into(self) -> String {
-        self.str
+impl From<String> for Utf8Data {
+    fn from(str: String) -> Self {
+        Self { str }
     }
 }
 
@@ -127,9 +127,9 @@ pub struct NameAndTypeData {
 
 #[derive(Clone)]
 pub enum MethodHandleReference {
-    FieldRef(FieldRefData),
-    MethodRef(MethodRefData),
-    InterfaceMethodRef(InterfaceMethodRefData),
+    Field(FieldRefData),
+    Method(MethodRefData),
+    InterfaceMethod(InterfaceMethodRefData),
 }
 
 #[derive(Clone)]
@@ -144,13 +144,15 @@ pub struct MethodTypeData {
 
 #[derive(Clone)]
 pub struct DynamicData {
-    pub bootstrap_method_attr_index: u16, //TODO: resolve this when attribute parsing is implemented
+    pub bootstrap_method_attr_index: u16,
+    //TODO: resolve this when attribute parsing is implemented
     pub name_and_type: Arc<NameAndTypeData>,
 }
 
 #[derive(Clone)]
 pub struct InvokeDynamicData {
-    pub bootstrap_method_attr_index: u16, //TODO: resolve this when attribute parsing is implemented
+    pub bootstrap_method_attr_index: u16,
+    //TODO: resolve this when attribute parsing is implemented
     pub name_and_type: Arc<NameAndTypeData>,
 }
 

@@ -1,4 +1,4 @@
-use anyhow::{Result};
+use anyhow::Result;
 use bitflags::bitflags;
 use tracing::warn;
 

@@ -1,8 +1,9 @@
+use std::sync::Arc;
+
 use crate::structs::bitflag::MethodAccessFlags;
 use crate::structs::descriptor::MethodDescriptor;
 use crate::structs::loaded::attribute::Attributes;
 use crate::structs::loaded::constant_pool::Utf8Data;
-use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct MethodEntry {

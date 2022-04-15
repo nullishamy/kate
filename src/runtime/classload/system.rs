@@ -1,10 +1,12 @@
+use std::collections::HashMap;
+use std::sync::{Arc, RwLock};
+
+use anyhow::{anyhow, Result};
+
 use crate::runtime::classload::loader::{ClassDefinition, ClassLoader, PackageDefinition};
 use crate::stdlib::VISITORS;
 use crate::structs::loaded::package::Package;
 use crate::{ClassFileParser, LoadedClassFile};
-use anyhow::{anyhow, Result};
-use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
 
 pub struct SystemClassLoader {
     classes: HashMap<String, Arc<LoadedClassFile>>,

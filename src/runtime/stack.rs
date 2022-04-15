@@ -1,8 +1,7 @@
+use std::sync::Arc;
+
 use crate::runtime::heap::object::JVMObject;
 use crate::structs::types::PrimitiveWithValue;
-
-
-use std::sync::Arc;
 
 pub struct Stack<T> {
     items: Vec<T>,

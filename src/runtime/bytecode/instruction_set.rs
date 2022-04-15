@@ -1,26 +1,7 @@
-
 use anyhow::{anyhow, Result};
 
-
-//TODO: for each instruction with >1 variants, macro their definitions
-/*
-   ALOAD_N,
-   ASTORE_N,
-   DCONST_D,
-   DLOAD_N,
-   DSTORE_N,
-   FCONST_N,
-   FLOAD_N,
-   FSTORE_N,
-   ICONST_N,
-   ILOAD_N,
-   ISTORE_N
-   LCONST_N,
-   LLOAD_N,
-   LSTORE_N
-*/
-
 #[derive(Debug)]
+#[allow(non_camel_case_types, clippy::upper_case_acronyms)]
 pub enum Instruction {
     AALOAD,
     AASTORE,

@@ -1,13 +1,10 @@
-use crate::runtime::security::protection_domain::ProtectionDomain;
-
-use crate::structs::loaded::package::Package;
-
-use crate::LoadedClassFile;
-use anyhow::{Result};
-
-
-
 use std::sync::{Arc, RwLock};
+
+use anyhow::Result;
+
+use crate::runtime::security::protection_domain::ProtectionDomain;
+use crate::structs::loaded::package::Package;
+use crate::LoadedClassFile;
 
 pub struct PackageDefinition {
     pub internal_name: String,

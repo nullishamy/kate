@@ -1,12 +1,11 @@
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use crate::runtime::heap::object::JVMObject;
 use crate::structs::bitflag::FieldAccessFlags;
 use crate::structs::descriptor::FieldDescriptor;
 use crate::structs::loaded::attribute::Attributes;
 use crate::structs::loaded::constant_pool::Utf8Data;
-
-use crate::runtime::heap::object::JVMObject;
-
-use std::collections::HashMap;
-use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct FieldEntry {

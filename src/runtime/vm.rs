@@ -1,24 +1,16 @@
+use anyhow::{anyhow, Result};
+use bytes::Bytes;
+use parking_lot::RwLock;
+
 use crate::classfile::parse_helper::SafeBuf;
 use crate::runtime::bytecode::instruction_set::Instruction;
 use crate::runtime::context::Context;
 use crate::runtime::heap::Heap;
-
-
-
 use crate::runtime::instruction::getstatic::get_static;
 use crate::runtime::instruction::ldc::ldc;
-
 use crate::runtime::threading::thread_manager::ThreadManager;
-
 use crate::structs::loaded::method::MethodEntry;
-
-use crate::{SystemClassLoader};
-use anyhow::{anyhow, Result};
-use bytes::Bytes;
-use parking_lot::{RwLock};
-
-
-
+use crate::SystemClassLoader;
 
 pub struct VM {
     pub system_classloader: RwLock<SystemClassLoader>,

@@ -1,9 +1,11 @@
-use crate::classfile::parse_helper::SafeBuf;
-use crate::structs::loaded::constant_pool::{ConstantPool, Utf8Data};
+use std::sync::Arc;
+
 use anyhow::Result;
 use bytes::Bytes;
 use enum_as_inner::EnumAsInner;
-use std::sync::Arc;
+
+use crate::classfile::parse_helper::SafeBuf;
+use crate::structs::loaded::constant_pool::{ConstantPool, Utf8Data};
 
 #[derive(Clone)]
 pub struct CodeData {

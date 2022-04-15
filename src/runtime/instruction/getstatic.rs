@@ -1,10 +1,11 @@
-use crate::classfile::parse_helper::SafeBuf;
-use crate::runtime::stack::OperandType;
-use crate::{ClassLoader, Context, VM};
+use std::sync::Arc;
+
 use anyhow::{anyhow, Result};
 use bytes::Bytes;
 
-use std::sync::Arc;
+use crate::classfile::parse_helper::SafeBuf;
+use crate::runtime::stack::OperandType;
+use crate::{ClassLoader, Context, VM};
 
 pub fn get_static(vm: &mut VM, ctx: &mut Context, bytes: &mut Bytes) -> Result<()> {
     let idx = bytes.try_get_u16()?;

@@ -1,11 +1,11 @@
+use anyhow::{anyhow, Result};
+use bytes::Bytes;
+
 use crate::classfile::parse_helper::SafeBuf;
 use crate::runtime::stack::OperandType;
 use crate::structs::loaded::constant_pool::Data;
 use crate::structs::types::{Float, Int, PrimitiveType, PrimitiveWithValue};
 use crate::{ClassLoader, Context, VM};
-use anyhow::{anyhow, Result};
-use bytes::Bytes;
-
 
 pub fn ldc(vm: &mut VM, ctx: &mut Context, bytes: &mut Bytes) -> Result<()> {
     let idx = bytes.try_get_u8()?;

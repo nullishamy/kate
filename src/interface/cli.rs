@@ -6,16 +6,16 @@ use clap::{Parser, Subcommand};
     version = "0.1",
     about = "A simple JVM build in Rust"
 )]
-pub struct CLI {
+pub struct Cli {
     #[clap(short, long)]
     pub tui: bool,
 
     #[clap(subcommand)]
-    pub command: CLICommand,
+    pub command: CliCommand,
 }
 
 #[derive(Subcommand)]
-pub enum CLICommand {
+pub enum CliCommand {
     #[clap(about = "Runs a single class file")]
     Run {
         #[clap(value_name = "FILE")]

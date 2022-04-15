@@ -1,20 +1,20 @@
 public class Signatures {
 	public static void main(String[] args) {
-		oneArrayParam(null);
-		twoArrayParams(null, null);
+		one_array_param(null);
+		two_array_params(null, null);
 
-		oneTwoDArrayParam(null);
-		oneThreeDArrayParam(null);
+		one_two_darray_param(null);
+		one_three_darray_param(null);
 
-		oneRefParam(null);
-		twoRefParams(null, null);
+		one_ref_param(null);
+		two_ref_params(null, null);
 	}
-	static void oneArrayParam(String[] arr) { }
-	static void twoArrayParams(String[] arr, String[] arrTwo) { }
+	static void one_array_param(String[] arr) { }
+	static void two_array_params(String[] arr, String[] arrTwo) { }
 
-	static void oneTwoDArrayParam(String[][] arr) { }
-	static void oneThreeDArrayParam(String[][][] arr) { }
+	static void one_two_darray_param(String[][] arr) { }
+	static void one_three_darray_param(String[][][] arr) { }
 
-	static void oneRefParam(String arr) { }
-	static void twoRefParams(String arr, String arrTwo) { }
+	static void one_ref_param(String arr) { }
+	static void two_ref_params(String arr, String arrTwo) { }
 }

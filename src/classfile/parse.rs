@@ -1,3 +1,10 @@
+use std::fs::File;
+use std::io::Read;
+
+use anyhow::{anyhow, Result};
+use bytes::Bytes;
+use tracing::{debug, info};
+
 use crate::classfile::parse_helper::{
     parse_attribute_info, parse_const_pool, parse_field_info, parse_interface_info,
     parse_method_info, SafeBuf,
@@ -5,11 +12,6 @@ use crate::classfile::parse_helper::{
 use crate::structs::raw::classfile::{
     RawClassFile, MAGIC, MAX_SUPPORTED_MAJOR, MAX_SUPPORTED_MINOR,
 };
-use anyhow::{anyhow, Result};
-use bytes::Bytes;
-use std::fs::File;
-use std::io::Read;
-use tracing::{debug, info};
 
 pub struct ClassFileParser {
     pub name: String,
