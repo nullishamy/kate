@@ -1,3 +1,9 @@
+use crate::runtime::heap::object::JVMObject;
+use crate::structs::types::PrimitiveWithValue;
+use crate::structs::JVMPointer;
+use std::rc::Rc;
+use std::sync::Arc;
+
 pub struct Stack<T> {
     items: Vec<T>,
 }
@@ -16,4 +22,9 @@ impl<T> Stack<T> {
             items: Vec::with_capacity(capacity),
         }
     }
+}
+
+pub enum OperandType {
+    Primitive(PrimitiveWithValue),
+    Reference(Arc<JVMObject>),
 }
