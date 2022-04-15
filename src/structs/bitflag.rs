@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use bitflags::bitflags;
+use tracing::warn;
 
 macro_rules! impl_flags {
     ( $flag_type:ident, $impl_type:ident ) => {
@@ -10,10 +11,11 @@ macro_rules! impl_flags {
 
         impl $impl_type {
             pub fn from_bits(raw: u16) -> Result<Self> {
-                let flags = <$flag_type>::from_bits(raw as u32);
+                let mut flags = <$flag_type>::from_bits(raw);
 
                 if flags.is_none() {
-                    return Err(anyhow!("invalid {} flags {:b}", "$impl_type", raw));
+                    warn!("unrecognised bits {:b} for {}", raw, stringify!($flag_type));
+                    flags = Some(<$flag_type>::from_bits_truncate(raw));
                 }
 
                 Ok(Self {
@@ -29,7 +31,7 @@ macro_rules! impl_flags {
 }
 
 bitflags! {
-    pub struct ClassFileAccessFlag: u32 {
+    pub struct ClassFileAccessFlag: u16 {
          const PUBLIC = 0x0001;
          const FINAL = 0x0010;
          const SUPER = 0x0020;
@@ -43,9 +45,9 @@ bitflags! {
 }
 
 bitflags! {
-    pub struct MethodAccessFlag: u32 {
+    pub struct MethodAccessFlag: u16 {
          const PUBLIC = 0x0001;
-         const PRIVATE = 0x0020;
+         const PRIVATE = 0x0002;
          const PROTECTED = 0x0004;
          const STATIC = 0x0008;
          const FINAL = 0x0010;
@@ -60,9 +62,9 @@ bitflags! {
 }
 
 bitflags! {
-    pub struct FieldAccessFlag: u32 {
+    pub struct FieldAccessFlag: u16 {
          const PUBLIC = 0x0001;
-         const PRIVATE = 0x0020;
+         const PRIVATE = 0x0002;
          const PROTECTED = 0x0004;
          const STATIC = 0x0008;
          const FINAL = 0x0010;
