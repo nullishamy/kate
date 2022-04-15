@@ -3,11 +3,11 @@ use crate::structs::loaded::constant_pool::{ConstantPool, Utf8Data};
 use anyhow::Result;
 use bytes::Bytes;
 use enum_as_inner::EnumAsInner;
-use std::rc::Rc;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct CodeData {
-    pub name: Rc<Utf8Data>,
+    pub name: Arc<Utf8Data>,
     pub max_stack: u16,
     pub max_locals: u16,
     pub code: Vec<u8>,
@@ -25,19 +25,16 @@ pub struct ExceptionHandler {
 
 impl CodeData {
     pub fn from_bytes(
-        name: Rc<Utf8Data>,
+        name: Arc<Utf8Data>,
         bytes: Vec<u8>,
         const_pool: &ConstantPool,
     ) -> Result<Self> {
         let mut bytes = Bytes::copy_from_slice(&bytes);
 
-        // unsure what this is for
-        let _attribute_length = bytes.try_get_u16()?;
-
         let max_stack = bytes.try_get_u16()?;
         let max_locals = bytes.try_get_u16()?;
 
-        let code_length = bytes.try_get_u16()?;
+        let code_length = bytes.try_get_u32()?;
         let mut code = Vec::with_capacity(code_length as usize);
 
         for _ in 0..code_length {
@@ -60,8 +57,8 @@ impl CodeData {
         let mut attributes = Vec::with_capacity(attribute_count as usize);
 
         for _ in 0..attribute_count {
-            let name = Rc::clone(&const_pool.utf8(bytes.try_get_u16()? as usize)?);
-            let data_length = bytes.try_get_u16()?;
+            let name = Arc::clone(&const_pool.utf8(bytes.try_get_u16()? as usize)?);
+            let data_length = bytes.try_get_u32()?;
             let mut data = Vec::with_capacity(data_length as usize);
 
             for _ in 0..data_length {
@@ -84,14 +81,14 @@ impl CodeData {
 
 #[derive(Clone)]
 pub struct CustomData {
-    pub name: Rc<Utf8Data>,
+    pub name: Arc<Utf8Data>,
     pub data: Vec<u8>,
 }
 
 impl CustomData {
     pub fn from_bytes(bytes: Vec<u8>, const_pool: &ConstantPool) -> Result<Self> {
         let mut bytes = Bytes::copy_from_slice(&bytes);
-        let name = Rc::clone(&const_pool.utf8(bytes.try_get_u16()? as usize)?);
+        let name = Arc::clone(&const_pool.utf8(bytes.try_get_u16()? as usize)?);
         let data_length = bytes.try_get_u16()?;
         let mut data = Vec::with_capacity(data_length as usize);
 
@@ -110,10 +107,10 @@ pub enum AttributeEntry {
 }
 
 impl AttributeEntry {
-    pub fn name(&self) -> Rc<Utf8Data> {
+    pub fn name(&self) -> Arc<Utf8Data> {
         match self {
-            AttributeEntry::Code(data) => Rc::clone(&data.name),
-            AttributeEntry::Custom(data) => Rc::clone(&data.name),
+            AttributeEntry::Code(data) => Arc::clone(&data.name),
+            AttributeEntry::Custom(data) => Arc::clone(&data.name),
         }
     }
 }
