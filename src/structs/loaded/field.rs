@@ -4,7 +4,7 @@ use crate::structs::loaded::attribute::Attributes;
 use crate::structs::loaded::constant_pool::Utf8Data;
 
 use crate::runtime::heap::object::JVMObject;
-use crate::structs::JVMPointer;
+
 use std::collections::HashMap;
 use std::sync::Arc;
 

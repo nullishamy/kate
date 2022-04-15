@@ -42,7 +42,7 @@ impl Heap {
             .refs
             .iter()
             .enumerate()
-            .filter(|(i, e)| e.strong_count() == 0)
+            .filter(|(_i, e)| e.strong_count() == 0)
             .map(|(i, _)| i)
             .rev()
             .collect();

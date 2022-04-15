@@ -2,23 +2,23 @@ use crate::classfile::parse_helper::SafeBuf;
 use crate::runtime::bytecode::instruction_set::Instruction;
 use crate::runtime::context::Context;
 use crate::runtime::heap::Heap;
-use crate::runtime::stack::OperandType;
-use std::borrow::Borrow;
+
+
 
 use crate::runtime::instruction::getstatic::get_static;
 use crate::runtime::instruction::ldc::ldc;
 
 use crate::runtime::threading::thread_manager::ThreadManager;
-use crate::structs::loaded::constructors::Constructor;
+
 use crate::structs::loaded::method::MethodEntry;
-use crate::structs::types::{Int, PrimitiveType, PrimitiveWithValue};
-use crate::{ClassLoader, SystemClassLoader};
+
+use crate::{SystemClassLoader};
 use anyhow::{anyhow, Result};
 use bytes::Bytes;
-use parking_lot::{Mutex, RwLock};
-use std::rc::Rc;
-use tracing::debug;
-use tracing::field::debug;
+use parking_lot::{RwLock};
+
+
+
 
 pub struct VM {
     pub system_classloader: RwLock<SystemClassLoader>,

@@ -1,29 +1,29 @@
 use anyhow::Result;
-use crossterm::event::{read, KeyEvent, KeyModifiers};
+
 use crossterm::{
-    event::{DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
+    event::{DisableMouseCapture, EnableMouseCapture},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use std::borrow::Borrow;
+
 use std::collections::VecDeque;
-use std::io::{stdin, Stdout, Write};
-use std::panic::catch_unwind;
-use std::{io, thread, time::Duration};
+use std::io::{Stdout, Write};
+
+use std::{io};
 use tokio::sync::mpsc;
-use tokio::task::{spawn_blocking, JoinHandle};
+
 use tracing::{info, Level};
 use tracing_subscriber::fmt;
 use tracing_subscriber::fmt::MakeWriter;
 use tui::backend::Backend;
 use tui::layout::Rect;
 use tui::style::{Color, Style};
-use tui::text::{Span, Spans, Text};
-use tui::widgets::{BarChart, List, ListItem, Paragraph, Tabs, Wrap};
+use tui::text::{Span, Spans};
+use tui::widgets::{List, ListItem, Tabs};
 use tui::{
     backend::CrosstermBackend,
-    layout::{Constraint, Direction, Layout},
-    widgets::{Block, Borders, Widget},
+    layout::{Constraint, Layout},
+    widgets::{Block, Borders},
     Frame, Terminal,
 };
 

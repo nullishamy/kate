@@ -3,7 +3,7 @@ use crate::runtime::stack::OperandType;
 use crate::{ClassLoader, Context, VM};
 use anyhow::{anyhow, Result};
 use bytes::Bytes;
-use std::rc::Rc;
+
 use std::sync::Arc;
 
 pub fn get_static(vm: &mut VM, ctx: &mut Context, bytes: &mut Bytes) -> Result<()> {

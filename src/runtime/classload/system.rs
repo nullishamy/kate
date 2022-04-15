@@ -27,7 +27,7 @@ impl ClassLoader<SystemClassLoader> for SystemClassLoader {
         let bytes = ClassFileParser::bytes(internal_name.to_owned())?;
         Ok(ClassDefinition {
             internal_name: Some(internal_name.to_owned()),
-            bytes: bytes,
+            bytes,
             protection_domain: None,
         })
     }
@@ -36,7 +36,7 @@ impl ClassLoader<SystemClassLoader> for SystemClassLoader {
         self.classes.get(internal_name).map(Arc::clone)
     }
 
-    fn get_package(&self, internal_name: &str) -> Result<Arc<Package>> {
+    fn get_package(&self, _internal_name: &str) -> Result<Arc<Package>> {
         todo!()
     }
 
@@ -72,7 +72,7 @@ impl ClassLoader<SystemClassLoader> for SystemClassLoader {
         Ok(res)
     }
 
-    fn define_package(&self, data: PackageDefinition) -> Result<Arc<Package>> {
+    fn define_package(&self, _data: PackageDefinition) -> Result<Arc<Package>> {
         todo!()
     }
 }
