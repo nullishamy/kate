@@ -10,24 +10,44 @@ use crate::runtime::instruction::getstatic::get_static;
 use crate::runtime::instruction::ldc::ldc;
 use crate::runtime::threading::thread_manager::ThreadManager;
 use crate::structs::loaded::method::MethodEntry;
-use crate::SystemClassLoader;
+use crate::{SystemClassLoader, TUIWriter, TuiCommand, VMConfig};
 
 pub struct VM {
     pub system_classloader: RwLock<SystemClassLoader>,
     pub threads: RwLock<ThreadManager>,
     pub heap: RwLock<Heap>,
+    pub tui: Option<TUIWriter>,
+
+    state: VMState,
 }
 
 impl VM {
-    pub fn new() -> Self {
-        Self {
+    pub fn new(config: VMConfig) -> Self {
+        let mut s = Self {
             system_classloader: RwLock::new(SystemClassLoader::new()),
             threads: RwLock::new(ThreadManager::new()),
             heap: RwLock::new(Heap::new()),
+            tui: config.tui,
+            state: VMState::Shutdown,
+        };
+
+        s.state(VMState::Shutdown); // make sure we render this state, this should never fail
+        s.state(VMState::Booting);
+
+        s
+    }
+
+    pub fn state(&mut self, new_state: VMState) {
+        self.state = new_state.clone();
+        if let Some(t) = &self.tui {
+            // sending stuff to TUI should never fail
+            t.send(TuiCommand::VMState(new_state)).unwrap();
         }
     }
 
     pub fn interpret(&mut self, method: &MethodEntry, mut ctx: Context) -> Result<()> {
+        self.state(VMState::Online);
+
         let instructions = method.attributes.get("Code");
 
         if instructions.is_none() {
@@ -55,10 +75,20 @@ impl VM {
             match instruction {
                 Instruction::LDC => ldc(self, &mut ctx, &mut instructions),
                 Instruction::GETSTATIC => get_static(self, &mut ctx, &mut instructions),
-                i => todo!("unimplemented instruction {:#?}", i),
+                i => return Err(anyhow!("unimplemented instruction {:#?}", i)),
             }?
         }
 
         Ok(())
     }
+}
+
+#[derive(Debug, Clone)]
+pub enum VMState {
+    Shutdown,
+    Booting,
+    Online,
+    Paused,
+    ShuttingDown,
+    GC,
 }
