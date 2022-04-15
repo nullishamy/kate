@@ -1,6 +1,8 @@
+use crate::runtime::heap::object::JVMObject;
 use crate::structs::bitflag::ClassFileAccessFlags;
 use anyhow::{anyhow, Result};
-use std::rc::Rc;
+use parking_lot::RwLock;
+use std::sync::Arc;
 use tracing::{debug, info};
 
 use crate::structs::loaded::attribute::Attributes;
@@ -8,11 +10,13 @@ use crate::structs::loaded::classfile_helper::{
     create_attributes, create_constant_pool, create_fields, create_interfaces, create_methods,
 };
 use crate::structs::loaded::constant_pool::{ClassData, ConstantPool};
+use crate::structs::loaded::constructors::Constructors;
 use crate::structs::loaded::field::Fields;
 use crate::structs::loaded::interface::Interfaces;
 use crate::structs::loaded::method::Methods;
 use crate::structs::loaded::package::Package;
 use crate::structs::raw::classfile::RawClassFile;
+use crate::VM;
 
 #[derive(Copy, Clone)]
 pub struct MetaData {
@@ -20,32 +24,32 @@ pub struct MetaData {
     major_version: u16,
 }
 
-#[derive(Clone)]
 pub struct LoadedClassFile {
     pub const_pool: ConstantPool,
     pub meta: MetaData,
 
     pub access_flags: ClassFileAccessFlags,
-    pub this_class: Rc<ClassData>,
-    pub super_class: Option<Rc<ClassData>>,
+    pub this_class: Arc<ClassData>,
+    pub super_class: Option<Arc<ClassData>>,
 
     pub interfaces: Interfaces,
-    pub fields: Fields,
-    pub methods: Methods,
+    pub fields: RwLock<Fields>,
+    pub methods: RwLock<Methods>,
+    pub constructors: Constructors,
     pub attributes: Attributes,
     pub package: Option<Package>,
 }
 
 impl LoadedClassFile {
     pub fn from_raw(raw: RawClassFile) -> Result<Self> {
-        info!("loading class...");
+        debug!("loading class...");
 
         let meta = MetaData {
             minor_version: raw.minor_version,
             major_version: raw.major_version,
         };
 
-        info!(
+        debug!(
             "class was compiled with version: {major}.{minor}",
             major = meta.major_version,
             minor = meta.minor_version
@@ -53,49 +57,52 @@ impl LoadedClassFile {
 
         let access_flags = ClassFileAccessFlags::from_bits(raw.access_flags)?;
 
-        info!("class has access flags {:?}", access_flags.flags);
+        debug!("class has access flags {:?}", access_flags.flags);
 
         let const_pool = create_constant_pool(raw.const_pool_info, meta.major_version)?;
 
-        info!("constant pool has {} entries", const_pool.entries.len());
+        debug!("constant pool has {} entries", const_pool.entries.len());
 
-        let this_class = Rc::clone(&const_pool.class(raw.this_class as usize)?);
+        let this_class = Arc::clone(&const_pool.class(raw.this_class as usize)?);
 
-        info!("class has compiled name {}", this_class.name.as_str);
+        debug!("class has compiled name {}", this_class.name.str);
 
-        let mut super_class: Option<Rc<ClassData>> = None;
+        let mut super_class: Option<Arc<ClassData>> = None;
 
         if const_pool.has(raw.super_class as usize) {
             let entry = const_pool.class(raw.super_class as usize)?;
-            super_class = Some(Rc::clone(&entry));
+            super_class = Some(Arc::clone(&entry));
 
-            info!("class has a superclass, {}", entry.name.as_str);
+            debug!("class has a superclass, {}", entry.name.str);
         } else {
-            info!("class has no superclass")
+            debug!("class has no superclass")
         }
 
         let interfaces = create_interfaces(raw.interface_info, &const_pool)?;
 
         if !interfaces.entries.is_empty() {
-            info!("class as {} superinterfaces", interfaces.entries.len());
+            debug!("class as {} superinterfaces", interfaces.entries.len());
 
             for interface in &interfaces.entries {
-                info!("\t{}", interface.name.as_str)
+                debug!("\t{}", interface.name.str)
             }
         } else {
-            info!("class has no superinterfaces")
+            debug!("class has no superinterfaces")
         }
 
-        let fields = create_fields(raw.field_info, &const_pool)?;
-        info!("class has {} fields", fields.entries.len());
+        let fields = RwLock::new(create_fields(raw.field_info, &const_pool)?);
+        debug!("class has {} fields", fields.read().entries.len());
 
-        let methods = create_methods(raw.method_info, &const_pool)?;
-        info!("class has {} methods", methods.entries.len());
+        let methods = RwLock::new(create_methods(raw.method_info, &const_pool)?);
+        debug!("class has {} methods", methods.read().entries.len());
+
+        let constructors = Constructors::from_methods(&methods.read());
+        debug!("class has {} constructors", constructors.entries.len());
 
         let attributes = create_attributes(raw.attribute_info, &const_pool)?;
-        info!("class has {} attributes", attributes.entries.len());
+        debug!("class has {} attributes", attributes.entries.len());
 
-        info!("parsing finished for class {}", this_class.name.as_str);
+        info!("loading finished for class {}", this_class.name.str);
 
         Ok(Self {
             const_pool,
@@ -106,8 +113,17 @@ impl LoadedClassFile {
             interfaces,
             fields,
             methods,
+            constructors,
             attributes,
-            package: None,
+            package: None, //TODO: implement packages
         })
+    }
+
+    pub fn new_instance(self: Arc<Self>, vm: &VM) -> Result<Arc<JVMObject>> {
+        let obj = JVMObject {
+            class: Arc::clone(&self),
+        };
+
+        vm.heap.write().push(obj)
     }
 }
