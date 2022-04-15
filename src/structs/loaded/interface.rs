@@ -1,6 +1,6 @@
-use crate::structs::loaded::constant_pool::ClassData;
-
 use std::sync::Arc;
+
+use crate::structs::loaded::constant_pool::ClassData;
 
 #[derive(Clone)]
 pub struct Interfaces {

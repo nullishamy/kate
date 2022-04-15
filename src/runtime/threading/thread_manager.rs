@@ -1,6 +1,5 @@
 use crate::VMThread;
 
-
 pub struct ThreadManager {}
 
 impl ThreadManager {

@@ -1,8 +1,10 @@
+use std::sync::{Arc, Weak};
+
+use anyhow::{anyhow, Result};
+use tracing::{debug, trace};
+
 use crate::runtime::heap::object::JVMObject;
 use crate::structs::JVMPointer;
-use anyhow::{anyhow, Result};
-use std::sync::{Arc, Weak};
-use tracing::{debug, trace};
 
 pub mod object;
 

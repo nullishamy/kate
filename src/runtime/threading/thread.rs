@@ -1,10 +1,9 @@
-use crate::runtime::stack::{OperandType, Stack};
-use crate::runtime::threading::result::ThreadResult;
-
-use crate::structs::types::{PrimitiveWithValue, Type};
-
 use parking_lot::Mutex;
 use tokio::sync::oneshot;
+
+use crate::runtime::stack::{OperandType, Stack};
+use crate::runtime::threading::result::ThreadResult;
+use crate::structs::types::{PrimitiveWithValue, Type};
 
 pub struct VMThread {
     pub operand_stack: Mutex<Stack<OperandType>>,

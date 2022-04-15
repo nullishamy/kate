@@ -1,5 +1,6 @@
-use anyhow::{anyhow, Result};
 use core::result::Result::{Err, Ok};
+
+use anyhow::{anyhow, Result};
 use enum_as_inner::EnumAsInner;
 
 #[derive(Copy, Clone, Debug)]

@@ -1,36 +1,26 @@
 extern crate core;
 
-use std::borrow::{BorrowMut};
-
-use std::io::Write;
-
+use std::borrow::BorrowMut;
 use std::sync::Arc;
 
-
+use anyhow::{anyhow, Result};
+use clap::Parser;
+use crossterm::event::{Event, EventStream, KeyCode, KeyModifiers};
+use tokio_stream::StreamExt;
+use tracing::{error, Level};
+use tracing_subscriber::fmt;
 
 use crate::classfile::parse::ClassFileParser;
-use crate::interface::cli::{CLICommand, CLI};
+use crate::interface::cli::{Cli, CliCommand};
 use crate::interface::tui::{start_tui, TuiCommand};
 use crate::runtime::classload::loader::ClassLoader;
 use crate::runtime::classload::system::SystemClassLoader;
 use crate::runtime::context::Context;
 use crate::runtime::threading::thread::VMThread;
 use crate::runtime::vm::VM;
-use crate::structs::bitflag::{MethodAccessFlag};
-use crate::structs::descriptor::{DescriptorType};
+use crate::structs::bitflag::MethodAccessFlag;
+use crate::structs::descriptor::DescriptorType;
 use crate::structs::loaded::classfile::LoadedClassFile;
-use anyhow::{anyhow, Result};
-use clap::Parser;
-use crossterm::event::{Event, EventStream, KeyCode, KeyModifiers};
-
-
-
-
-use tokio_stream::StreamExt;
-use tracing::{error, Level};
-use tracing_subscriber::fmt;
-
-
 
 mod classfile;
 mod error;
@@ -41,7 +31,7 @@ mod structs;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let args = CLI::parse();
+    let args = Cli::parse();
     let cmd = args.command;
 
     let format = fmt::format()
@@ -67,7 +57,7 @@ async fn main() -> Result<()> {
     }
 
     match cmd {
-        CLICommand::Run { file } => {
+        CliCommand::Run { file } => {
             let res = start(&file);
 
             if let Err(err) = res {

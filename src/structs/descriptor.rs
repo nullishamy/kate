@@ -2,10 +2,10 @@ use std::iter::Peekable;
 use std::str::Chars;
 
 use anyhow::{anyhow, Result};
-
-use crate::structs::types::PrimitiveType;
 use enum_as_inner::EnumAsInner;
 use tracing::debug;
+
+use crate::structs::types::PrimitiveType;
 
 pub mod notation {
     // i8
@@ -219,29 +219,30 @@ pub enum Descriptor {
     Field(FieldDescriptor),
     Method(MethodDescriptor),
 }
+
 pub fn test_descriptor_parsing() {
     /*
-        oneArrayParam:([Ljava/lang/String;)V
-        twoArrayParams:([Ljava/lang/String;[Ljava/lang/String;)V
-        oneTwoDArrayParam:([[Ljava/lang/String;)V
-        oneThreeDArrayParam:([[[Ljava/lang/String;)V
-        oneRefParam:(Ljava/lang/String;)V
-        twoRefParams:(Ljava/lang/String;Ljava/lang/String;)V
+        one_array_param:([Ljava/lang/String;)V
+        two_array_params:([Ljava/lang/String;[Ljava/lang/String;)V
+        one_two_darray_param:([[Ljava/lang/String;)V
+        one_three_darray_param:([[[Ljava/lang/String;)V
+        one_ref_param:(Ljava/lang/String;)V
+        two_ref_params:(Ljava/lang/String;Ljava/lang/String;)V
     */
 
-    let oneArrayParam = "([Ljava/lang/String;)V";
-    let twoArrayParams = "([Ljava/lang/String;[Ljava/lang/String;)V";
-    let oneTwoDArrayParam = "([[Ljava/lang/String;)V";
-    let oneThreeDArrayParam = "([[[Ljava/lang/String;)V";
-    let oneRefParam = "(Ljava/lang/String;)V";
-    let twoRefParams = "(Ljava/lang/String;Ljava/lang/String;)V";
+    let one_array_param = "([Ljava/lang/String;)V";
+    let two_array_params = "([Ljava/lang/String;[Ljava/lang/String;)V";
+    let one_two_darray_param = "([[Ljava/lang/String;)V";
+    let one_three_darray_param = "([[[Ljava/lang/String;)V";
+    let one_ref_param = "(Ljava/lang/String;)V";
+    let two_ref_params = "(Ljava/lang/String;Ljava/lang/String;)V";
 
     let _all_valid = [
-        MethodDescriptor::parse(oneArrayParam).unwrap(),
-        MethodDescriptor::parse(twoArrayParams).unwrap(),
-        MethodDescriptor::parse(oneTwoDArrayParam).unwrap(),
-        MethodDescriptor::parse(oneThreeDArrayParam).unwrap(),
-        MethodDescriptor::parse(oneRefParam).unwrap(),
-        MethodDescriptor::parse(twoRefParams).unwrap(),
+        MethodDescriptor::parse(one_array_param).unwrap(),
+        MethodDescriptor::parse(two_array_params).unwrap(),
+        MethodDescriptor::parse(one_two_darray_param).unwrap(),
+        MethodDescriptor::parse(one_three_darray_param).unwrap(),
+        MethodDescriptor::parse(one_ref_param).unwrap(),
+        MethodDescriptor::parse(two_ref_params).unwrap(),
     ];
 }

@@ -1,35 +1,29 @@
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use anyhow::{anyhow, Result};
+use tracing::{debug, warn};
+
 use crate::structs::bitflag::{FieldAccessFlags, MethodAccessFlags};
 use crate::structs::descriptor::{FieldDescriptor, MethodDescriptor};
+use crate::structs::loaded::attribute::Attributes;
+use crate::structs::loaded::constant_pool::Data as LoadedPoolData;
+use crate::structs::loaded::constant_pool::PoolEntry as LoadedPoolEntry;
 use crate::structs::loaded::constant_pool::{
     ClassData, ConstantPool, DoubleData, FieldRefData, FloatData, IntegerData,
     InterfaceMethodRefData, LongData, MethodHandleData, MethodHandleReference, MethodRefData,
     MethodTypeData, NameAndTypeData, StringData, Utf8Data,
 };
-use crate::structs::loaded::method::Methods;
-use anyhow::{anyhow, Result};
-use std::collections::HashMap;
-
-use std::sync::Arc;
-use tracing::{debug, warn};
-
-use crate::structs::loaded::method::MethodEntry as LoadedMethodEntry;
-use crate::structs::raw::method::MethodEntry as RawMethodEntry;
-
+use crate::structs::loaded::default_attributes::{AttributeEntry, CodeData};
 use crate::structs::loaded::field::{FieldEntry as LoadedFieldEntry, Fields};
-use crate::structs::raw::field::FieldEntry as RawFieldEntry;
-
-use crate::structs::loaded::attribute::Attributes;
-use crate::structs::raw::attribute::AttributeEntry as RawAttributeEntry;
-
-use crate::structs::loaded::constant_pool::PoolEntry as LoadedPoolEntry;
-use crate::structs::raw::constant_pool::{PoolEntry as RawPoolEntry, Tag};
-
-use crate::structs::loaded::constant_pool::Data as LoadedPoolData;
-use crate::structs::loaded::default_attributes::{
-    AttributeEntry, CodeData,
-};
 use crate::structs::loaded::interface::Interfaces;
+use crate::structs::loaded::method::MethodEntry as LoadedMethodEntry;
+use crate::structs::loaded::method::Methods;
+use crate::structs::raw::attribute::AttributeEntry as RawAttributeEntry;
 use crate::structs::raw::constant_pool::Data as RawPoolData;
+use crate::structs::raw::constant_pool::{PoolEntry as RawPoolEntry, Tag};
+use crate::structs::raw::field::FieldEntry as RawFieldEntry;
+use crate::structs::raw::method::MethodEntry as RawMethodEntry;
 
 struct ConstantPoolBuilder {
     pub entries: HashMap<usize, LoadedPoolEntry>,

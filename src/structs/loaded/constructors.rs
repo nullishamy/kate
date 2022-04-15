@@ -1,7 +1,8 @@
-use crate::structs::descriptor::MethodDescriptor;
-use crate::structs::loaded::method::{MethodEntry, Methods};
 use std::rc::Rc;
 use std::sync::Arc;
+
+use crate::structs::descriptor::MethodDescriptor;
+use crate::structs::loaded::method::{MethodEntry, Methods};
 
 pub struct Constructors {
     pub entries: Vec<Rc<Constructor>>,
@@ -31,6 +32,7 @@ impl Constructors {
         Some(Rc::clone(self.entries.iter().find(predicate)?))
     }
 }
+
 pub struct Constructor {
     pub descriptor: MethodDescriptor,
     pub method: Arc<MethodEntry>,

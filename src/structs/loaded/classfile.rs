@@ -1,10 +1,11 @@
-use crate::runtime::heap::object::JVMObject;
-use crate::structs::bitflag::ClassFileAccessFlags;
-use anyhow::{Result};
-use parking_lot::RwLock;
 use std::sync::Arc;
+
+use anyhow::Result;
+use parking_lot::RwLock;
 use tracing::{debug, info};
 
+use crate::runtime::heap::object::JVMObject;
+use crate::structs::bitflag::ClassFileAccessFlags;
 use crate::structs::loaded::attribute::Attributes;
 use crate::structs::loaded::classfile_helper::{
     create_attributes, create_constant_pool, create_fields, create_interfaces, create_methods,

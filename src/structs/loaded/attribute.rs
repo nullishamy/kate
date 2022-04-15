@@ -1,7 +1,4 @@
-
-use crate::structs::loaded::default_attributes::{AttributeEntry};
-
-
+use crate::structs::loaded::default_attributes::AttributeEntry;
 
 #[derive(Clone)]
 pub struct Attributes {

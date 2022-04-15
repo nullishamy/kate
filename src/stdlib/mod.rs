@@ -1,10 +1,10 @@
-mod visitors;
+use std::collections::HashMap;
+use std::sync::Arc;
 
 use crate::stdlib::visitors::visit_system;
 use crate::LoadedClassFile;
-use std::collections::HashMap;
 
-use std::sync::Arc;
+mod visitors;
 
 type VisitFunc = fn(Arc<LoadedClassFile>);
 

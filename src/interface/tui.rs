@@ -1,17 +1,14 @@
-use anyhow::Result;
+use std::collections::VecDeque;
+use std::io;
+use std::io::{Stdout, Write};
 
+use anyhow::Result;
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-
-use std::collections::VecDeque;
-use std::io::{Stdout, Write};
-
-use std::{io};
 use tokio::sync::mpsc;
-
 use tracing::{info, Level};
 use tracing_subscriber::fmt;
 use tracing_subscriber::fmt::MakeWriter;
