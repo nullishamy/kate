@@ -15,14 +15,15 @@
 - [ ] Heap & GC
 - [ ] Bytecode validation
 - [ ] Error handling
+    - [ ] Channel to send errors on
 - [ ] Graceful shutdown
 - [ ] Improve CLI UX
     - [ ] Opt parsing with clap
 - [ ] Create TUI dashboard
-    - [ ] tracing logs
+    - [x] tracing logs
     - [ ] Heap status and usage
     - [ ] CPU usage
-    - [ ] Interpreter status
+    - [x] Interpreter status
     - [ ] Class loader status
     - [ ] Thread status
 - [ ] Code optimisation
