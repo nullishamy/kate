@@ -5,6 +5,7 @@ use anyhow::{anyhow, Result};
 
 use crate::structs::types::PrimitiveType;
 use enum_as_inner::EnumAsInner;
+use tracing::debug;
 
 pub mod notation {
     // i8
@@ -93,7 +94,6 @@ impl<'a> Parser<'a> {
 
     fn parse_reference_type(&mut self) -> Result<ReferenceType> {
         let mut out = String::new();
-        self.expect_next(notation::CLASS)?;
 
         while self.peek_next()? != notation::END_REFERENCE {
             out.push(self.consume_next()?);
@@ -103,7 +103,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_descriptor_type(&mut self) -> Result<DescriptorType> {
-        let next = self.peek_next()?;
+        let next = self.consume_next()?;
 
         return match next {
             notation::BYTE => Ok(DescriptorType::Primitive(PrimitiveType::Byte)),
@@ -163,7 +163,7 @@ impl<'a> Parser<'a> {
     with a return type of reference type java/lang/Object
 */
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MethodDescriptor {
     pub parameters: Vec<DescriptorType>,
     pub return_type: DescriptorType,
@@ -171,6 +171,8 @@ pub struct MethodDescriptor {
 
 impl MethodDescriptor {
     pub fn parse(descriptor: &str) -> Result<Self> {
+        debug!("parsing method descriptor {}", descriptor);
+
         let mut parser = Parser::new(descriptor);
 
         parser.parse_method_descriptor()
@@ -184,6 +186,7 @@ pub struct FieldDescriptor {
 
 impl FieldDescriptor {
     pub fn parse(descriptor: &str) -> Result<Self> {
+        debug!("parsing field descriptor {}", descriptor);
         let mut parser = Parser::new(descriptor);
 
         let _type = parser.parse_descriptor_type()?;
@@ -192,7 +195,7 @@ impl FieldDescriptor {
     }
 }
 
-#[derive(PartialEq, Clone, EnumAsInner)]
+#[derive(PartialEq, Debug, Clone, EnumAsInner)]
 pub enum DescriptorType {
     Reference(ReferenceType),
     Primitive(PrimitiveType),
@@ -200,13 +203,13 @@ pub enum DescriptorType {
     Void,
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct ArrayType {
     pub _type: Box<DescriptorType>,
     pub dimensions: u16,
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct ReferenceType {
     pub internal_name: String,
 }
