@@ -1,72 +1,122 @@
-use std::borrow::Borrow;
-use std::env;
+extern crate core;
+
+use std::borrow::{Borrow, BorrowMut};
+use std::io::stdout;
+use std::io::Write;
 use std::rc::Rc;
+use std::sync::Arc;
+use std::time::Duration;
+use std::{env, io, thread};
 
 use crate::classfile::parse::ClassFileParser;
 use crate::interface::cli::{CLICommand, CLI};
-use crate::interface::tui::TUI;
-use crate::runtime::classload::loader::{ClassLoader, MutableClassLoader};
+use crate::interface::tui::{start_tui, TuiCommand};
+use crate::runtime::classload::loader::ClassLoader;
 use crate::runtime::classload::system::SystemClassLoader;
 use crate::runtime::context::Context;
 use crate::runtime::threading::thread::VMThread;
 use crate::runtime::vm::VM;
-use crate::structs::bitflag::MethodAccessFlag;
+use crate::structs::bitflag::{FieldAccessFlag, FieldAccessFlags, MethodAccessFlag};
 use crate::structs::descriptor::{DescriptorType, ReferenceType};
 use crate::structs::loaded::classfile::LoadedClassFile;
 use anyhow::{anyhow, Result};
 use clap::Parser;
-use tracing::{error, info, Level};
+use crossterm::event::{read, Event, EventStream, KeyCode, KeyModifiers};
+use crossterm::execute;
+use crossterm::terminal::disable_raw_mode;
+use tokio::task::{spawn_blocking, JoinHandle};
+use tokio::time::interval;
+use tokio_stream::StreamExt;
+use tracing::{error, info, warn, Level};
 use tracing_subscriber::fmt;
+use tui::backend::CrosstermBackend;
+use tui::Terminal;
 
 mod classfile;
 mod error;
 mod interface;
 mod runtime;
+mod stdlib;
 mod structs;
 
-fn main() {
+#[tokio::main]
+async fn main() -> Result<()> {
     let args = CLI::parse();
     let cmd = args.command;
 
     let format = fmt::format()
         .with_ansi(true)
+        .without_time()
         .with_level(true)
         .with_target(false)
-        .with_thread_names(true)
+        .with_thread_names(false)
+        .with_source_location(true)
         .compact();
 
+    let (write, read) = tokio::sync::mpsc::unbounded_channel::<TuiCommand>();
+    //TODO: start runtime with these channels to pass messages to tui
+    //this will no-op if TUI is not enabled as nothing is listening
+
     if args.tui {
-        let tui = TUI::new();
-
-        if let Err(err) = tui {
-            error!("tui returned error `{}`", err)
-        }
-
-        info!("tui selected and loaded");
+        start_tui(write.clone(), read)?;
+    } else {
+        tracing_subscriber::fmt()
+            .with_max_level(Level::TRACE)
+            .event_format(format)
+            .init();
     }
-
-    tracing_subscriber::fmt().event_format(format).init();
 
     match cmd {
         CLICommand::Run { file } => {
             let res = start(&file);
 
             if let Err(err) = res {
-                error!("runtime returned error `{}`", err)
+                error!("runtime returned error `{}`", err);
             }
         }
     }
+
+    if args.tui {
+        let mut events = EventStream::new();
+
+        while let Some(event) = events.next().await {
+            if let Ok(event) = event {
+                match event {
+                    Event::Key(k) => {
+                        if k.modifiers.contains(KeyModifiers::CONTROL)
+                            && k.code == KeyCode::Char('c')
+                        {
+                            write.clone().borrow_mut().send(TuiCommand::Close).unwrap();
+                        }
+                    }
+                    Event::Mouse(_) => {}
+                    Event::Resize(_, _) => {
+                        write
+                            .clone()
+                            .borrow_mut()
+                            .send(TuiCommand::Refresh)
+                            .unwrap();
+                    }
+                }
+            } else {
+                return Err(anyhow!(event.unwrap_err()));
+            }
+        }
+    }
+
+    Ok(())
 }
 
 fn start(class_path: &str) -> Result<()> {
     let mut vm = VM::new();
 
-    let loader = vm.system_classloader();
+    let mut loader = vm.system_classloader.write();
     let main_class = loader.find_class(class_path)?;
-    let (loader, main_class) = loader.define_class(&main_class)?;
+    let main_class = loader.define_class(main_class)?;
 
-    let main_method = main_class.methods.find(|m| {
-        m.name.as_str == "main"
+    let lock = main_class.methods.read();
+    let main_method = lock.find(|m| {
+        m.name.str == "main"
             && m.access_flags.has(MethodAccessFlag::STATIC)
             && m.descriptor.return_type == DescriptorType::Void
             && m.descriptor.parameters.len() == 1
@@ -89,12 +139,14 @@ fn start(class_path: &str) -> Result<()> {
     }
 
     let main_method = main_method.unwrap();
+    drop(loader); // we need to explicitly drop the loader before borrowing 'vm' as mut
+                  // otherwise we would have 'loader' holding imut borrow whilst mut which isnt ok
 
     vm.interpret(
-        main_method,
-        &mut Context {
-            class: Rc::clone(&main_class),
-            thread: VMThread::new(),
+        &main_method,
+        Context {
+            class: Arc::clone(&main_class),
+            thread: VMThread::new("main".to_string()),
         },
     )?;
 
