@@ -9,7 +9,7 @@ use anyhow::{anyhow, Result};
 use bytes::Bytes;
 use std::fs::File;
 use std::io::Read;
-use tracing::info;
+use tracing::{debug, info};
 
 pub struct ClassFileParser {
     pub name: String,
@@ -18,14 +18,14 @@ pub struct ClassFileParser {
 
 impl ClassFileParser {
     pub fn from_path(path: String) -> Result<Self> {
-        info!("opening classfile '{}' for parsing", path);
+        info!("opening classfile '{}' for parsing from path", path);
 
         let buffer = ClassFileParser::bytes(path.to_owned())?;
         Ok(ClassFileParser::from_bytes(path, buffer))
     }
 
     pub fn from_bytes(name: String, bytes: Vec<u8>) -> Self {
-        info!("parsing bytes from class '{}'", name);
+        debug!("creating parser from bytes for class '{}'", name);
 
         Self {
             name,
@@ -34,8 +34,18 @@ impl ClassFileParser {
     }
 
     pub fn bytes(path: String) -> Result<Vec<u8>> {
-        info!("loading bytes from '{}'", path);
+        info!("opening classfile '{}' to read bytes", path);
 
+        let mut path = path;
+
+        if path.starts_with("java/") {
+            debug!("java stdlib detected, altering path");
+
+            path = format!("src/stdlib/{}", path)
+        }
+
+        path += ".class";
+        debug!("loading bytes from '{}'", path);
         let file_handle = File::open(&path);
 
         if let Err(e) = file_handle {
@@ -61,7 +71,11 @@ impl ClassFileParser {
     }
 
     pub fn parse(&mut self) -> Result<RawClassFile> {
+        debug!("parsing bytes for class '{}'", self.name);
+
         let magic = self.bytes.try_get_u32()?;
+
+        debug!("got {magic} as the magic value");
 
         if magic != MAGIC {
             return Err(anyhow!("magic value not present or not matching"));
@@ -69,36 +83,69 @@ impl ClassFileParser {
 
         let minor = self.bytes.try_get_u16()?;
 
+        debug!("got {minor} as the minor version");
+
         if minor > MAX_SUPPORTED_MINOR {
             return Err(anyhow!("minor version not supported"));
         }
 
         let major = self.bytes.try_get_u16()?;
 
+        debug!("got {major} as the major version");
+
         if major > MAX_SUPPORTED_MAJOR {
             return Err(anyhow!("major version not supported"));
         }
 
         let const_pool_count = self.bytes.try_get_u16()?;
+
+        debug!("const pool has {const_pool_count} entries listed");
         let const_pool_info = parse_const_pool(self, const_pool_count)?;
+        debug!(
+            "successfully parsed constant pool, resulting vec has {} items",
+            const_pool_info.len()
+        );
 
         let access_flags = self.bytes.try_get_u16()?;
+        debug!("got access flags {:b}", access_flags);
 
         let this_class = self.bytes.try_get_u16()?;
+        debug!("got this_class index {this_class}");
 
         let super_class = self.bytes.try_get_u16()?;
+        debug!("got super_class index {super_class}");
 
         let interface_count = self.bytes.try_get_u16()?;
+        debug!("class has {interface_count} interfaces");
         let interface_info = parse_interface_info(self, interface_count)?;
+        debug!(
+            "successfully parsed interfaces, resulting vec has {} items",
+            interface_info.len()
+        );
 
         let field_count = self.bytes.try_get_u16()?;
+        debug!("class has {field_count} fields");
         let field_info = parse_field_info(self, field_count)?;
+        debug!(
+            "successfully parsed fields, resulting vec has {} items",
+            field_info.len()
+        );
 
         let method_count = self.bytes.try_get_u16()?;
+        debug!("class has {method_count} methods");
         let method_info = parse_method_info(self, method_count)?;
+        debug!(
+            "successfully parsed methods, resulting vec has {} items",
+            method_info.len()
+        );
 
         let attribute_count = self.bytes.try_get_u16()?;
+        debug!("class has {attribute_count} attributes");
         let attribute_info = parse_attribute_info(self, attribute_count)?;
+        debug!(
+            "successfully parsed attributes, resulting vec has {} items",
+            attribute_info.len()
+        );
 
         if !self.bytes.is_empty() {
             return Err(anyhow!(
