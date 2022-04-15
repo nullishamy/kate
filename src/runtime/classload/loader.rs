@@ -5,11 +5,9 @@ use crate::structs::raw::classfile::RawClassFile;
 use crate::LoadedClassFile;
 use anyhow::{anyhow, Result};
 use std::borrow::BorrowMut;
+use std::cell::RefCell;
 use std::ops::{Deref, DerefMut};
-use std::rc::Rc;
-
-pub type ClassLoaderImpl = Rc<dyn ClassLoader>;
-pub type MutatedLoader<SelfT, T> = (SelfT, T);
+use std::sync::{Arc, RwLock};
 
 pub struct PackageDefinition {
     pub internal_name: String,
@@ -24,43 +22,41 @@ pub struct PackageDefinition {
 
 pub struct ClassDefinition {
     pub internal_name: Option<String>,
-    pub data: Vec<u8>,
+    pub bytes: Vec<u8>,
     pub protection_domain: Option<ProtectionDomain>,
 }
 
-pub trait MutableClassLoader: ClassLoader {
-    fn define_class(
-        &self,
-        data: &ClassDefinition,
-    ) -> Result<MutatedLoader<Rc<Self>, Rc<LoadedClassFile>>>;
-    fn define_package(
-        &self,
-        data: &PackageDefinition,
-    ) -> Result<MutatedLoader<Rc<Self>, Rc<Package>>>;
-}
-
-pub trait ClassLoader {
-    fn parent(&self) -> Option<ClassLoaderImpl>;
+pub trait ClassLoader<T>
+where
+    T: Sized + ClassLoader<T>,
+{
+    fn parent(&self) -> Option<Arc<RwLock<T>>>;
 
     fn find_class(&self, internal_name: &str) -> Result<ClassDefinition>;
-    fn find_loaded_class(&self, internal_name: &str) -> Option<Rc<LoadedClassFile>>;
-    fn get_package(&self, internal_name: &str) -> Result<Rc<Package>>;
-    fn get_packages(&self) -> Result<Vec<Rc<Package>>>;
+    fn find_loaded_class(&self, internal_name: &str) -> Option<Arc<LoadedClassFile>>;
+    fn get_package(&self, internal_name: &str) -> Result<Arc<Package>>;
+    fn get_packages(&self) -> Result<Vec<Arc<Package>>>;
 
-    fn load_class(self: Rc<Self>, internal_name: &str) -> Result<Rc<LoadedClassFile>> {
-        // let found = self.find_loaded_class(internal_name);
-        //
-        // if let Some(found) = found {
-        //     return Ok(found);
-        // }
-        //
-        // let parent = self.parent();
-        //
-        // if let Some(parent) = parent {
-        //     return Rc::clone(parent).load_class(internal_name);
-        // }
-        //
-        // return self.define_class(&self.find_class(internal_name)?);
-        todo!("storing mutable references in a chain is causing issues here")
+    fn define_class(&mut self, data: ClassDefinition) -> Result<Arc<LoadedClassFile>>;
+    fn define_package(&self, data: PackageDefinition) -> Result<Arc<Package>>;
+
+    fn load_class(&mut self, internal_name: &str) -> Result<Arc<LoadedClassFile>> {
+        let found = self.find_loaded_class(internal_name);
+
+        if let Some(found) = found {
+            return Ok(found);
+        }
+
+        let mut root = self.parent();
+
+        while let Some(parent) = root {
+            if let Some(loaded) = parent.read().unwrap().find_loaded_class(internal_name) {
+                return Ok(loaded);
+            }
+
+            root = parent.read().unwrap().parent();
+        }
+
+        self.define_class(self.find_class(internal_name)?)
     }
 }

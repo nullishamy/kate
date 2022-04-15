@@ -1,15 +1,13 @@
-use crate::runtime::classload::loader::{
-    ClassDefinition, ClassLoader, ClassLoaderImpl, MutableClassLoader, MutatedLoader,
-    PackageDefinition,
-};
+use crate::runtime::classload::loader::{ClassDefinition, ClassLoader, PackageDefinition};
+use crate::stdlib::VISITORS;
 use crate::structs::loaded::package::Package;
 use crate::{ClassFileParser, LoadedClassFile};
 use anyhow::{anyhow, Result};
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::sync::{Arc, RwLock};
 
 pub struct SystemClassLoader {
-    classes: HashMap<String, Rc<LoadedClassFile>>,
+    classes: HashMap<String, Arc<LoadedClassFile>>,
 }
 
 impl SystemClassLoader {
@@ -20,12 +18,34 @@ impl SystemClassLoader {
     }
 }
 
-impl MutableClassLoader for SystemClassLoader {
-    fn define_class(
-        &self,
-        data: &ClassDefinition,
-    ) -> Result<MutatedLoader<Rc<Self>, Rc<LoadedClassFile>>> {
-        let name = data.internal_name.to_owned();
+impl ClassLoader<SystemClassLoader> for SystemClassLoader {
+    fn parent(&self) -> Option<Arc<RwLock<SystemClassLoader>>> {
+        None
+    }
+
+    fn find_class(&self, internal_name: &str) -> Result<ClassDefinition> {
+        let bytes = ClassFileParser::bytes(internal_name.to_owned())?;
+        Ok(ClassDefinition {
+            internal_name: Some(internal_name.to_owned()),
+            bytes: bytes,
+            protection_domain: None,
+        })
+    }
+
+    fn find_loaded_class(&self, internal_name: &str) -> Option<Arc<LoadedClassFile>> {
+        self.classes.get(internal_name).map(Arc::clone)
+    }
+
+    fn get_package(&self, internal_name: &str) -> Result<Arc<Package>> {
+        todo!()
+    }
+
+    fn get_packages(&self) -> Result<Vec<Arc<Package>>> {
+        todo!()
+    }
+
+    fn define_class(&mut self, data: ClassDefinition) -> Result<Arc<LoadedClassFile>> {
+        let name = data.internal_name;
 
         if name.is_none() {
             return Err(anyhow!(
@@ -35,57 +55,24 @@ impl MutableClassLoader for SystemClassLoader {
 
         let name = name.unwrap();
 
-        let res = LoadedClassFile::from_raw(
-            ClassFileParser::from_bytes(name.to_string(), data.data.to_owned()).parse()?,
-        )?;
+        let res =
+            LoadedClassFile::from_raw(ClassFileParser::from_bytes(name, data.bytes).parse()?)?;
 
-        let res = Rc::new(res);
-        let mut old_classes = HashMap::with_capacity(self.classes.len());
+        let res = Arc::new(res);
 
-        old_classes.clone_from(&self.classes);
-        old_classes.insert(name.to_owned(), res);
+        self.classes
+            .insert(res.this_class.name.str.clone(), Arc::clone(&res));
 
-        let new_loader = SystemClassLoader {
-            classes: old_classes,
-        };
+        let visitor = VISITORS.get(&res.this_class.name.str);
 
-        let new_loader = &Rc::new(new_loader);
-        let _ref = new_loader.classes.get(&name).unwrap();
+        if let Some(func) = visitor {
+            func(Arc::clone(&res));
+        }
 
-        Ok((Rc::clone(new_loader), Rc::clone(_ref)))
+        Ok(res)
     }
 
-    fn define_package(
-        &self,
-        data: &PackageDefinition,
-    ) -> Result<MutatedLoader<Rc<Self>, Rc<Package>>> {
-        todo!()
-    }
-}
-
-impl ClassLoader for SystemClassLoader {
-    fn parent(&self) -> Option<ClassLoaderImpl> {
-        None
-    }
-
-    fn find_class(&self, internal_name: &str) -> Result<ClassDefinition> {
-        let bytes = ClassFileParser::bytes(internal_name.to_owned())?;
-        Ok(ClassDefinition {
-            internal_name: Some(internal_name.to_owned()),
-            data: bytes,
-            protection_domain: None,
-        })
-    }
-
-    fn find_loaded_class(&self, internal_name: &str) -> Option<Rc<LoadedClassFile>> {
-        self.classes.get(internal_name).map(|c| Rc::clone(c))
-    }
-
-    fn get_package(&self, internal_name: &str) -> Result<Rc<Package>> {
-        todo!()
-    }
-
-    fn get_packages(&self) -> Result<Vec<Rc<Package>>> {
+    fn define_package(&self, data: PackageDefinition) -> Result<Arc<Package>> {
         todo!()
     }
 }
