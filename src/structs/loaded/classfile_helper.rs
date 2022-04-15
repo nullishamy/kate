@@ -9,8 +9,8 @@ use crate::structs::loaded::method::Methods;
 use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 use std::ops::Deref;
-use std::rc::Rc;
-use tracing::warn;
+use std::sync::Arc;
+use tracing::{debug, info, warn};
 
 use crate::structs::loaded::method::MethodEntry as LoadedMethodEntry;
 use crate::structs::raw::method::MethodEntry as RawMethodEntry;
@@ -45,10 +45,10 @@ impl ConstantPoolBuilder {
     //TODO: reduce this duplication
 
     // attempt to resolve a string, will transform where possible
-    fn string(&self, idx: u16) -> Result<Rc<Utf8Data>> {
+    fn string(&self, idx: u16) -> Result<Arc<Utf8Data>> {
         return if let Some(data) = self.entries.get(&(idx as usize)) {
             if let LoadedPoolData::Utf8(data) = &data.data {
-                Ok(Rc::clone(data))
+                Ok(Arc::clone(data))
             } else {
                 Err(anyhow!("pool entry {} was not utf8", idx))
             }
@@ -68,8 +68,8 @@ impl ConstantPoolBuilder {
             let raw = raw.as_ref().unwrap();
 
             return if let RawPoolData::Utf8(data) = &raw.data {
-                Ok(Rc::new(Utf8Data {
-                    as_str: String::from_utf8(data.bytes.clone())?,
+                Ok(Arc::new(Utf8Data {
+                    str: String::from_utf8(data.bytes.clone())?,
                 }))
             } else {
                 Err(anyhow!("pool entry {} was not utf8", idx))
@@ -77,10 +77,10 @@ impl ConstantPoolBuilder {
         };
     }
 
-    fn class(&self, idx: u16) -> Result<Rc<ClassData>> {
+    fn class(&self, idx: u16) -> Result<Arc<ClassData>> {
         return if let Some(data) = self.entries.get(&(idx as usize)) {
             if let LoadedPoolData::Class(data) = &data.data {
-                Ok(Rc::clone(data))
+                Ok(Arc::clone(data))
             } else {
                 Err(anyhow!("raw pool entry {} was not utf8", idx))
             }
@@ -100,7 +100,7 @@ impl ConstantPoolBuilder {
             let raw = raw.as_ref().unwrap();
 
             return if let RawPoolData::Class(data) = &raw.data {
-                Ok(Rc::new(ClassData {
+                Ok(Arc::new(ClassData {
                     name: self.string(data.name_index)?,
                 }))
             } else {
@@ -109,10 +109,10 @@ impl ConstantPoolBuilder {
         };
     }
 
-    fn name_and_type(&self, idx: u16) -> Result<Rc<NameAndTypeData>> {
+    fn name_and_type(&self, idx: u16) -> Result<Arc<NameAndTypeData>> {
         return if let Some(data) = self.entries.get(&(idx as usize)) {
             if let LoadedPoolData::NameAndType(data) = &data.data {
-                Ok(Rc::clone(data))
+                Ok(Arc::clone(data))
             } else {
                 Err(anyhow!("pool entry {} was not utf8", idx))
             }
@@ -132,7 +132,7 @@ impl ConstantPoolBuilder {
             let raw = raw.as_ref().unwrap();
 
             return if let RawPoolData::NameAndType(data) = &raw.data {
-                Ok(Rc::new(NameAndTypeData {
+                Ok(Arc::new(NameAndTypeData {
                     name: self.string(data.name_index)?,
                     descriptor: self.string(data.descriptor_index)?,
                 }))
@@ -162,8 +162,8 @@ impl ConstantPoolBuilder {
         match &entry.data {
             RawPoolData::Utf8(data) => Ok(self.make_entry(
                 entry.tag,
-                LoadedPoolData::Utf8(Rc::new(Utf8Data {
-                    as_str: String::from_utf8(data.bytes.clone())?,
+                LoadedPoolData::Utf8(Arc::new(Utf8Data {
+                    str: String::from_utf8(data.bytes.clone())?,
                 })),
             )),
             RawPoolData::Integer(data) => Ok(self.make_entry(
@@ -190,7 +190,7 @@ impl ConstantPoolBuilder {
             )),
             RawPoolData::Class(data) => Ok(self.make_entry(
                 entry.tag,
-                LoadedPoolData::Class(Rc::new(ClassData {
+                LoadedPoolData::Class(Arc::new(ClassData {
                     name: self.string(data.name_index)?,
                 })),
             )),
@@ -202,7 +202,7 @@ impl ConstantPoolBuilder {
             )),
             RawPoolData::FieldRef(data) => Ok(self.make_entry(
                 entry.tag,
-                LoadedPoolData::FieldRef(Rc::new(FieldRefData {
+                LoadedPoolData::FieldRef(Arc::new(FieldRefData {
                     class: self.class(data.class_index)?,
                     name_and_type: self.name_and_type(data.name_and_type_index)?,
                 })),
@@ -223,7 +223,7 @@ impl ConstantPoolBuilder {
             )),
             RawPoolData::NameAndType(data) => Ok(self.make_entry(
                 entry.tag,
-                LoadedPoolData::NameAndType(Rc::new(NameAndTypeData {
+                LoadedPoolData::NameAndType(Arc::new(NameAndTypeData {
                     name: self.string(data.name_index)?,
                     descriptor: self.string(data.descriptor_index)?,
                 })),
@@ -241,9 +241,7 @@ impl ConstantPoolBuilder {
             RawPoolData::MethodType(data) => Ok(self.make_entry(
                 entry.tag,
                 LoadedPoolData::MethodType(MethodTypeData {
-                    descriptor: MethodDescriptor::parse(
-                        &self.string(data.descriptor_index)?.as_str,
-                    )?,
+                    descriptor: MethodDescriptor::parse(&self.string(data.descriptor_index)?.str)?,
                 }),
             )),
             RawPoolData::Dynamic(_) => todo!(), // cannot implement these 4 as they do not have relevant raw types
@@ -258,14 +256,24 @@ impl ConstantPoolBuilder {
             entries: HashMap::with_capacity(self.entries.len()),
         };
 
-        let mut idx = 0;
+        let mut idx = 1;
         for entry in &self.raw {
             if entry.is_none() {
                 continue;
             }
-            idx += 1;
-            pool.entries
-                .insert(idx, self.load_one(entry.as_ref().unwrap(), self.major)?);
+
+            let loaded = self.load_one(entry.as_ref().unwrap(), self.major)?;
+
+            // special casing for longs and doubles
+            let to_inc = match &loaded.tag {
+                Tag::Long => 2,
+                Tag::Double => 2,
+                _ => 1,
+            };
+
+            pool.entries.insert(idx, loaded);
+
+            idx += to_inc;
         }
         Ok(pool)
     }
@@ -294,21 +302,32 @@ pub fn create_interfaces(raw: Vec<u16>, const_pool: &ConstantPool) -> Result<Int
         let entry = const_pool.class(idx as usize)?;
 
         //TODO: attach a classloader here and load the entries class so that we can validate it is an interface
-        out.entries.push(Rc::clone(&entry))
+        out.entries.push(Arc::clone(&entry))
     }
 
     Ok(out)
 }
 
 pub fn create_fields(raw: Vec<RawFieldEntry>, const_pool: &ConstantPool) -> Result<Fields> {
-    let mut out = Fields { entries: vec![] };
+    let mut out = Fields {
+        entries: vec![],
+        statics: HashMap::new(),
+    };
+
+    debug!("parsing fields");
 
     for entry in raw {
-        let access_flags = FieldAccessFlags::from_bits(entry.access_flags)?;
         let name = const_pool.utf8(entry.name_index as usize)?;
-        let name = Rc::clone(&name);
+        let name = Arc::clone(&name);
+
+        debug!("field has name {}", name.str);
+
+        let access_flags = FieldAccessFlags::from_bits(entry.access_flags)?;
+
+        debug!("field has access flags {:?}", access_flags.flags);
+
         let descriptor =
-            FieldDescriptor::parse(&const_pool.utf8(entry.descriptor_index as usize)?.as_str)?;
+            FieldDescriptor::parse(&const_pool.utf8(entry.descriptor_index as usize)?.str)?;
         let attributes = create_attributes(entry.attribute_info, const_pool)?;
 
         out.entries.push(LoadedFieldEntry {
@@ -324,19 +343,27 @@ pub fn create_fields(raw: Vec<RawFieldEntry>, const_pool: &ConstantPool) -> Resu
 pub fn create_methods(raw: Vec<RawMethodEntry>, const_pool: &ConstantPool) -> Result<Methods> {
     let mut out = Methods { entries: vec![] };
 
+    debug!("parsing methods");
     for entry in raw {
-        let access_flags = MethodAccessFlags::from_bits(entry.access_flags)?;
         let name = const_pool.utf8(entry.name_index as usize)?;
-        let name = Rc::clone(&name);
+        let name = Arc::clone(&name);
+
+        debug!("method has name {}", name.str);
+
+        let access_flags = MethodAccessFlags::from_bits(entry.access_flags)?;
+        debug!("method has access flags {:?}", access_flags.flags);
+
         let descriptor =
-            MethodDescriptor::parse(&const_pool.utf8(entry.descriptor_index as usize)?.as_str)?;
+            MethodDescriptor::parse(&const_pool.utf8(entry.descriptor_index as usize)?.str)?;
+
+        debug!("method has descriptor {:?}", descriptor);
         let attributes = create_attributes(entry.attribute_info, const_pool)?;
-        out.entries.push(LoadedMethodEntry {
+        out.entries.push(Arc::new(LoadedMethodEntry {
             access_flags,
             name,
             descriptor,
             attributes,
-        })
+        }));
     }
     Ok(out)
 }
@@ -349,16 +376,16 @@ pub fn create_attributes(
 
     for entry in raw {
         let name = const_pool.utf8(entry.attribute_name_index as usize)?;
-        let name = Rc::clone(&name);
+        let name = Arc::clone(&name);
 
-        let data = match name.as_str.as_str() {
+        let data = match name.str.as_str() {
             "Code" => AttributeEntry::Code(CodeData::from_bytes(
                 name,
                 entry.attribute_data,
                 const_pool,
             )?),
             _ => {
-                warn!("unrecognised attribute '{}'", name.as_str);
+                warn!("unrecognised attribute '{}'", name.str);
 
                 // ignore attributes we dont recognise
                 continue;

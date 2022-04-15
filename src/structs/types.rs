@@ -1,6 +1,7 @@
 use crate::structs::loaded::constant_pool::ClassData as LoadedClassData;
 use crate::structs::JVMPointer;
 use std::rc::Rc;
+use std::sync::Arc;
 
 pub type Boolean = bool;
 pub type Byte = i8;
@@ -12,7 +13,7 @@ pub type Float = f32;
 pub type Double = f64;
 pub type ReturnAddress = JVMPointer;
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Debug)]
 pub enum PrimitiveWithValue {
     Boolean(Boolean),
     Byte(Byte),
@@ -24,7 +25,7 @@ pub enum PrimitiveWithValue {
     Double(Double),
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum PrimitiveType {
     Boolean,
     Byte,
@@ -37,7 +38,7 @@ pub enum PrimitiveType {
 }
 
 pub struct ClassData {
-    pub class: Rc<LoadedClassData>,
+    pub class: Arc<LoadedClassData>,
     pub ptr: JVMPointer,
 }
 

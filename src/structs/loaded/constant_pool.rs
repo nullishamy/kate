@@ -4,7 +4,8 @@ use crate::structs::descriptor::{Descriptor, MethodDescriptor};
 use crate::structs::raw::constant_pool::Tag;
 use enum_as_inner::EnumAsInner;
 use std::collections::HashMap;
-use std::rc::Rc;
+use std::ops::Deref;
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct ConstantPool {
@@ -22,34 +23,34 @@ impl ConstantPool {
         Ok(res.unwrap())
     }
 
-    pub fn class(&self, idx: usize) -> Result<Rc<ClassData>> {
+    pub fn class(&self, idx: usize) -> Result<Arc<ClassData>> {
         let entry = self.get(idx)?.data.as_class();
 
         if entry.is_none() {
             return Err(anyhow!("constant pool entry {} was not a class", idx));
         }
 
-        Ok(Rc::clone(entry.unwrap()))
+        Ok(Arc::clone(entry.unwrap()))
     }
 
-    pub fn utf8(&self, idx: usize) -> Result<Rc<Utf8Data>> {
+    pub fn utf8(&self, idx: usize) -> Result<Arc<Utf8Data>> {
         let entry = self.get(idx)?.data.as_utf8();
 
         if entry.is_none() {
-            return Err(anyhow!("constant pool entry {} was not a class", idx));
+            return Err(anyhow!("constant pool entry {} was not utf8", idx));
         }
 
-        Ok(Rc::clone(entry.unwrap()))
+        Ok(Arc::clone(entry.unwrap()))
     }
 
-    pub fn field(&self, idx: usize) -> Result<Rc<FieldRefData>> {
+    pub fn field(&self, idx: usize) -> Result<Arc<FieldRefData>> {
         let entry = self.get(idx)?.data.as_field_ref();
 
         if entry.is_none() {
             return Err(anyhow!("constant pool entry {} was not a class", idx));
         }
 
-        Ok(Rc::clone(entry.unwrap()))
+        Ok(Arc::clone(entry.unwrap()))
     }
 
     pub fn has(&self, idx: usize) -> bool {
@@ -59,7 +60,13 @@ impl ConstantPool {
 
 #[derive(Clone)]
 pub struct Utf8Data {
-    pub as_str: String,
+    pub str: String,
+}
+
+impl Into<String> for Utf8Data {
+    fn into(self) -> String {
+        self.str
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -74,50 +81,48 @@ pub struct FloatData {
 
 #[derive(Copy, Clone)]
 pub struct LongData {
-    //TODO: this has to take up 2 entries (?)
     pub low_bytes: u32,
     pub high_bytes: u32,
 }
 
 #[derive(Copy, Clone)]
 pub struct DoubleData {
-    //TODO: this has to take up 2 entries (?)
     pub low_bytes: f32,
     pub high_bytes: f32,
 }
 
 #[derive(Clone)]
 pub struct ClassData {
-    pub name: Rc<Utf8Data>,
+    pub name: Arc<Utf8Data>,
 }
 
 #[derive(Clone)]
 pub struct StringData {
-    pub utf8: Rc<Utf8Data>,
+    pub utf8: Arc<Utf8Data>,
 }
 
 #[derive(Clone)]
 pub struct FieldRefData {
-    pub class: Rc<ClassData>,
-    pub name_and_type: Rc<NameAndTypeData>,
+    pub class: Arc<ClassData>,
+    pub name_and_type: Arc<NameAndTypeData>,
 }
 
 #[derive(Clone)]
 pub struct MethodRefData {
-    pub class: Rc<ClassData>,
-    pub name_and_type: Rc<NameAndTypeData>,
+    pub class: Arc<ClassData>,
+    pub name_and_type: Arc<NameAndTypeData>,
 }
 
 #[derive(Clone)]
 pub struct InterfaceMethodRefData {
-    pub class: Rc<ClassData>,
-    pub name_and_type: Rc<NameAndTypeData>,
+    pub class: Arc<ClassData>,
+    pub name_and_type: Arc<NameAndTypeData>,
 }
 
 #[derive(Clone)]
 pub struct NameAndTypeData {
-    pub name: Rc<Utf8Data>,
-    pub descriptor: Rc<Utf8Data>, // we cannot specify which descriptor this will be trivially, so we must parse and store it later
+    pub name: Arc<Utf8Data>,
+    pub descriptor: Arc<Utf8Data>, // we cannot specify which descriptor this will be trivially, so we must parse and store it later
 }
 
 #[derive(Clone)]
@@ -140,38 +145,38 @@ pub struct MethodTypeData {
 #[derive(Clone)]
 pub struct DynamicData {
     pub bootstrap_method_attr_index: u16, //TODO: resolve this when attribute parsing is implemented
-    pub name_and_type: Rc<NameAndTypeData>,
+    pub name_and_type: Arc<NameAndTypeData>,
 }
 
 #[derive(Clone)]
 pub struct InvokeDynamicData {
     pub bootstrap_method_attr_index: u16, //TODO: resolve this when attribute parsing is implemented
-    pub name_and_type: Rc<NameAndTypeData>,
+    pub name_and_type: Arc<NameAndTypeData>,
 }
 
 #[derive(Clone)]
 pub struct ModuleData {
-    pub name: Rc<Utf8Data>,
+    pub name: Arc<Utf8Data>,
 }
 
 #[derive(Clone)]
 pub struct PackageData {
-    pub name: Rc<Utf8Data>,
+    pub name: Arc<Utf8Data>,
 }
 
 #[derive(Clone, EnumAsInner)]
 pub enum Data {
-    Utf8(Rc<Utf8Data>),
+    Utf8(Arc<Utf8Data>),
     Integer(IntegerData),
     Float(FloatData),
     Long(LongData),
     Double(DoubleData),
-    Class(Rc<ClassData>),
+    Class(Arc<ClassData>),
     String(StringData),
-    FieldRef(Rc<FieldRefData>),
+    FieldRef(Arc<FieldRefData>),
     MethodRef(MethodRefData),
     InterfaceMethodRef(InterfaceMethodRefData),
-    NameAndType(Rc<NameAndTypeData>),
+    NameAndType(Arc<NameAndTypeData>),
     MethodHandle(MethodHandleData),
     MethodType(MethodTypeData),
     Dynamic(DynamicData),
