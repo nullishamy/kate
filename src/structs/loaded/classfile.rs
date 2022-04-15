@@ -21,8 +21,8 @@ use crate::VM;
 
 #[derive(Copy, Clone)]
 pub struct MetaData {
-    minor_version: u16,
-    major_version: u16,
+    pub minor_version: u16,
+    pub major_version: u16,
 }
 
 pub struct LoadedClassFile {

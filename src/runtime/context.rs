@@ -5,5 +5,5 @@ use crate::LoadedClassFile;
 
 pub struct Context {
     pub class: Arc<LoadedClassFile>,
-    pub thread: VMThread,
+    pub thread: Arc<VMThread>,
 }
