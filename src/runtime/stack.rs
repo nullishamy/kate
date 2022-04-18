@@ -1,19 +1,37 @@
-use std::sync::Arc;
+use std::fmt::Debug;
 
-use crate::runtime::heap::object::JVMObject;
-use crate::structs::types::PrimitiveWithValue;
+use crate::structs::types::RefOrPrim;
 
-pub struct Stack<T> {
+#[derive(Debug)]
+pub struct Stack<T>
+where
+    T: Debug,
+{
     items: Vec<T>,
 }
 
-impl<T> Stack<T> {
+impl<T> Stack<T>
+where
+    T: Debug,
+{
     pub fn push(&mut self, value: T) {
         self.items.push(value)
     }
 
     pub fn pop(&mut self) -> Option<T> {
         self.items.pop()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
+    }
+
+    pub fn peek(&self) -> Option<&T> {
+        self.items.last()
+    }
+
+    pub fn discard(&mut self) {
+        self.items.clear()
     }
 
     pub fn new(capacity: usize) -> Self {
@@ -23,7 +41,4 @@ impl<T> Stack<T> {
     }
 }
 
-pub enum OperandType {
-    Primitive(PrimitiveWithValue),
-    Reference(Arc<JVMObject>),
-}
+pub type StackValue = RefOrPrim;
