@@ -214,6 +214,12 @@ impl Instruction {
             0xB2 => Instruction::GETSTATIC,
             0xB6 => Instruction::INVOKEVIRTUAL,
             0x2A => Instruction::ALOAD_0,
+            0x3 => Instruction::ICONST_0,
+            0xB8 => Instruction::INVOKESTATIC,
+            0x1 => Instruction::ACONST_NULL,
+            0xB3 => Instruction::PUTSTATIC,
+            0xB1 => Instruction::RETURN,
+            0x59 => Instruction::DUP,
             _ => return Err(anyhow!("unknown instruction 0x{:X}", byte)),
         })
     }

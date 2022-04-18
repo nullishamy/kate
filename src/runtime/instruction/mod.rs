@@ -1,2 +1,10 @@
+pub mod _return;
+pub mod aconst_null;
+pub mod aload;
+pub mod dup;
 pub mod getstatic;
+pub mod iconst;
+pub mod invokestatic;
 pub mod ldc;
+pub mod new;
+pub mod putstatic;

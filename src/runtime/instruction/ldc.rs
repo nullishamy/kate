@@ -3,10 +3,10 @@ use bytes::Bytes;
 use std::sync::Arc;
 
 use crate::classfile::parse_helper::SafeBuf;
-use crate::runtime::stack::OperandType;
+use crate::runtime::stack::StackValue;
 use crate::structs::loaded::constant_pool::Data;
-use crate::structs::types::{Float, Int, PrimitiveType, PrimitiveWithValue};
-use crate::{ClassLoader, Context, VMThread, VM};
+use crate::structs::types::{Float, Int, PrimitiveType, PrimitiveWithValue, ReferenceType};
+use crate::{ClassLoader, Context, VM};
 
 pub fn ldc(vm: &mut VM, ctx: &mut Context, bytes: &mut Bytes) -> Result<()> {
     let idx = bytes.try_get_u8()?;
@@ -20,10 +20,10 @@ pub fn ldc(vm: &mut VM, ctx: &mut Context, bytes: &mut Bytes) -> Result<()> {
     }
 
     let data = match &entry.data {
-        Data::Integer(data) => OperandType::Primitive(PrimitiveWithValue::Int(data.bytes as Int)),
-        Data::Float(data) => OperandType::Primitive(PrimitiveWithValue::Float(data.bytes as Float)),
-        Data::Long(_data) => OperandType::Primitive(PrimitiveWithValue::Long(todo!("longs"))),
-        Data::Double(_data) => OperandType::Primitive(PrimitiveWithValue::Double(todo!("doubles"))),
+        Data::Integer(data) => StackValue::Primitive(PrimitiveWithValue::Int(data.bytes as Int)),
+        Data::Float(data) => StackValue::Primitive(PrimitiveWithValue::Float(data.bytes as Float)),
+        Data::Long(_data) => StackValue::Primitive(PrimitiveWithValue::Long(todo!("longs"))),
+        Data::Double(_data) => StackValue::Primitive(PrimitiveWithValue::Double(todo!("doubles"))),
         Data::Class(_) => todo!(),
         Data::String(_data) => {
             let mut loader = vm.system_classloader.write();
@@ -64,7 +64,7 @@ pub fn ldc(vm: &mut VM, ctx: &mut Context, bytes: &mut Bytes) -> Result<()> {
                 ));
             }
 
-            OperandType::Reference(instance)
+            StackValue::Reference(ReferenceType::Class(instance))
         }
         Data::MethodHandle(_) => todo!(),
         Data::MethodType(_) => todo!(),
