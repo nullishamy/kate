@@ -179,7 +179,7 @@ impl MethodDescriptor {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct FieldDescriptor {
     _type: DescriptorType,
 }
@@ -214,7 +214,7 @@ pub struct ReferenceType {
     pub internal_name: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Descriptor {
     Field(FieldDescriptor),
     Method(MethodDescriptor),

@@ -4,7 +4,7 @@ use tracing::warn;
 
 macro_rules! impl_flags {
     ( $flag_type:ident, $impl_type:ident ) => {
-        #[derive(Clone)]
+        #[derive(Clone, Debug)]
         pub struct $impl_type {
             pub flags: $flag_type,
         }

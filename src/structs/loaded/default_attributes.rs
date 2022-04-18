@@ -7,7 +7,7 @@ use enum_as_inner::EnumAsInner;
 use crate::classfile::parse_helper::SafeBuf;
 use crate::structs::loaded::constant_pool::{ConstantPool, Utf8Data};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct CodeData {
     pub name: Arc<Utf8Data>,
     pub max_stack: u16,
@@ -17,7 +17,7 @@ pub struct CodeData {
     pub attributes: Vec<CustomData>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ExceptionHandler {
     pub start: u16,
     pub end: u16,
@@ -81,7 +81,7 @@ impl CodeData {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct CustomData {
     pub name: Arc<Utf8Data>,
     pub data: Vec<u8>,
@@ -102,7 +102,7 @@ impl CustomData {
     }
 }
 
-#[derive(Clone, EnumAsInner)]
+#[derive(Clone, Debug, EnumAsInner)]
 pub enum AttributeEntry {
     Code(CodeData),
     Custom(CustomData),

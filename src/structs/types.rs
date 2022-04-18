@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
-use crate::structs::loaded::constant_pool::ClassData as LoadedClassData;
+use crate::runtime::heap::object::JVMObject;
+
 use crate::structs::JVMPointer;
+use enum_as_inner::EnumAsInner;
 
 pub type Boolean = bool;
 pub type Byte = i8;
@@ -13,7 +15,7 @@ pub type Float = f32;
 pub type Double = f64;
 pub type ReturnAddress = JVMPointer;
 
-#[derive(PartialEq, Clone, Debug)]
+#[derive(PartialEq, Clone, Debug, EnumAsInner)]
 pub enum PrimitiveWithValue {
     Boolean(Boolean),
     Byte(Byte),
@@ -37,17 +39,14 @@ pub enum PrimitiveType {
     Double,
 }
 
-pub struct ClassData {
-    pub class: Arc<LoadedClassData>,
-    pub ptr: JVMPointer,
-}
-
+#[derive(Clone, Debug)]
 pub enum ReferenceType {
-    Class(ClassData),
+    Class(Arc<JVMObject>),
     Null,
 }
 
-pub enum Type {
+#[derive(Clone, Debug)]
+pub enum RefOrPrim {
     Reference(ReferenceType),
     Primitive(PrimitiveWithValue),
 }

@@ -1,3 +1,3 @@
-use crate::structs::types::Type;
+use crate::structs::types::RefOrPrim;
 
-pub type ThreadResult = anyhow::Result<Type>;
+pub type ThreadResult = anyhow::Result<RefOrPrim>;

@@ -1,6 +1,6 @@
 use crate::structs::loaded::default_attributes::AttributeEntry;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Attributes {
     pub entries: Vec<AttributeEntry>,
 }
