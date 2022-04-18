@@ -3,8 +3,10 @@ use std::sync::{Arc, Weak};
 use anyhow::{anyhow, Result};
 use tracing::{debug, trace};
 
+use crate::interface::tui::UpdateHeap;
 use crate::runtime::heap::object::JVMObject;
 use crate::structs::JVMPointer;
+use crate::{TUIWriter, TuiCommand};
 
 pub mod object;
 
@@ -12,15 +14,24 @@ const MAX_HEAP: usize = 3096;
 
 pub struct Heap {
     refs: Vec<Weak<JVMObject>>,
+    used: usize,
+    tui: Option<TUIWriter>,
 }
 
 impl Heap {
-    pub fn new() -> Self {
-        Self { refs: vec![] }
+    pub fn new(tui: Option<TUIWriter>) -> Self {
+        Self {
+            // start with a quarter of the max heap, this avoids un-needed allocations
+            // at program start
+            refs: Vec::with_capacity(MAX_HEAP / 4),
+            used: 0,
+            tui,
+        }
     }
 
     pub fn push(&mut self, obj: JVMObject) -> Result<Arc<JVMObject>> {
         trace!("pushing `{}` onto heap", obj.class.this_class.name.str);
+
         if self.refs.len() >= MAX_HEAP - 1 {
             return Err(anyhow!(
                 "out of memory {} objects allocated",
@@ -32,6 +43,15 @@ impl Heap {
 
         let weak = Arc::downgrade(&rc);
         self.refs.push(weak);
+        self.used += 1;
+
+        if let Some(tui) = &self.tui {
+            tui.send(TuiCommand::Heap(UpdateHeap {
+                new_size: self.used(),
+                total: self.total(),
+            }))
+            .unwrap();
+        }
 
         Ok(rc)
     }
@@ -54,9 +74,21 @@ impl Heap {
             counter += 1;
         }
 
+        // even though we still have the allocation, we dont own the value
+        // and it cannot be used, so we consider it unused
+        self.used -= counter;
+
         // TODO: determine when we should de-allocate, this shouldnt be done often as
         // its expensive to then reallocate memory
         // self.refs.shrink_to_fit();
+
+        if let Some(tui) = &self.tui {
+            tui.send(TuiCommand::Heap(UpdateHeap {
+                new_size: self.used(),
+                total: self.total(),
+            }))
+            .unwrap();
+        }
 
         debug!("pruned {counter} elements from heap");
         counter
@@ -76,5 +108,15 @@ impl Heap {
         }
 
         Ok(obj.unwrap())
+    }
+
+    pub fn total(&self) -> usize {
+        // using capacity as this shows the true capacity of the vec
+        // rather than how much we've used
+        self.refs.capacity()
+    }
+
+    pub fn used(&self) -> usize {
+        self.used
     }
 }

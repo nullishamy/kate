@@ -10,7 +10,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use tokio::sync::mpsc;
-use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+use tokio::sync::mpsc::UnboundedSender;
 use tracing::{info, Level};
 use tracing_subscriber::fmt;
 use tracing_subscriber::fmt::MakeWriter;
@@ -18,7 +18,7 @@ use tui::backend::Backend;
 use tui::layout::{Alignment, Direction, Rect};
 use tui::style::{Color, Style};
 use tui::text::{Span, Spans};
-use tui::widgets::{Block, List, ListItem, Paragraph, Tabs};
+use tui::widgets::{Block, LineGauge, List, ListItem, Paragraph, Tabs};
 use tui::{
     backend::CrosstermBackend,
     layout::{Constraint, Layout},
@@ -27,12 +27,26 @@ use tui::{
 };
 
 #[derive(Debug)]
+pub struct UpdateHeap {
+    pub new_size: usize,
+    pub total: usize,
+}
+
+#[derive(Debug)]
+pub struct UpdateCPU {
+    pub new_usage: usize,
+    pub total: usize,
+}
+
+#[derive(Debug)]
 pub enum TuiCommand {
     Log(String),
     Close,
     Refresh,
     VMState(VMState),
     Tab(usize),
+    Heap(UpdateHeap),
+    CPU(UpdateCPU),
 }
 
 #[derive(Clone)]
@@ -76,6 +90,10 @@ struct TUIState {
     log_lines: VecDeque<String>,
     current_tab: usize,
     vm_state: VMState,
+    cpu_used: usize,
+    cpu_total: usize,
+    heap_used: usize,
+    heap_total: usize,
 }
 
 pub fn start_tui(
@@ -113,6 +131,10 @@ pub fn start_tui(
             log_lines: VecDeque::new(),
             current_tab: 0,
             vm_state: VMState::Shutdown,
+            cpu_used: 0,
+            cpu_total: 1,
+            heap_used: 0,
+            heap_total: 1,
         };
 
         fn close(mut term: Terminal<CrosstermBackend<Stdout>>) {
@@ -149,6 +171,14 @@ pub fn start_tui(
                     }
                     TuiCommand::Tab(new_tab) => {
                         state.current_tab = new_tab;
+                    }
+                    TuiCommand::CPU(data) => {
+                        state.cpu_total = data.total;
+                        state.cpu_used = data.new_usage;
+                    }
+                    TuiCommand::Heap(data) => {
+                        state.heap_total = data.total;
+                        state.heap_used = data.new_size;
                     }
                     c => unimplemented!("unimplemented cmd {:?}", c),
                 };
@@ -187,7 +217,8 @@ where
         2 => render_heap(f, state, chunks[1]),
         3 => render_gc(f, state, chunks[1]),
         4 => render_resources(f, state, chunks[1]),
-        _ => unreachable!(),
+        _ => unreachable!(), // there should never be more than 4 tabs
+                             // this would be a programming error
     }
 }
 
@@ -195,12 +226,35 @@ fn render_resources<B>(f: &mut Frame<B>, state: &mut TUIState, area: Rect)
 where
     B: Backend,
 {
+    let chunks = Layout::default()
+        .constraints([
+            Constraint::Length(3),
+            Constraint::Length(3),
+            Constraint::Min(0), // min 0 takes up the rest of the space
+        ])
+        .margin(1)
+        .split(area);
+
     let block = Block::default().borders(Borders::ALL);
-    let para = Paragraph::new("Unimplemented").block(block);
-    f.render_widget(para, area);
+    f.render_widget(block, area);
+
+    let heap_perc = state.heap_used as f64 / state.heap_total as f64;
+    let heap_gauge = LineGauge::default()
+        .block(Block::default().title("Heap").borders(Borders::ALL))
+        .gauge_style(Style::default().fg(Color::Magenta))
+        .ratio(heap_perc);
+
+    let cpu_perc = state.cpu_used as f64 / state.cpu_total as f64;
+    let cpu_gauge = LineGauge::default()
+        .block(Block::default().title("CPU").borders(Borders::ALL))
+        .gauge_style(Style::default().fg(Color::Magenta))
+        .ratio(cpu_perc);
+
+    f.render_widget(heap_gauge, chunks[0]);
+    f.render_widget(cpu_gauge, chunks[1]);
 }
 
-fn render_gc<B>(f: &mut Frame<B>, state: &mut TUIState, area: Rect)
+fn render_gc<B>(f: &mut Frame<B>, _state: &mut TUIState, area: Rect)
 where
     B: Backend,
 {
@@ -209,7 +263,7 @@ where
     f.render_widget(para, area);
 }
 
-fn render_heap<B>(f: &mut Frame<B>, state: &mut TUIState, area: Rect)
+fn render_heap<B>(f: &mut Frame<B>, _state: &mut TUIState, area: Rect)
 where
     B: Backend,
 {
@@ -218,7 +272,7 @@ where
     f.render_widget(para, area);
 }
 
-fn render_classes<B>(f: &mut Frame<B>, state: &mut TUIState, area: Rect)
+fn render_classes<B>(f: &mut Frame<B>, _state: &mut TUIState, area: Rect)
 where
     B: Backend,
 {
