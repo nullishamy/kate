@@ -1,11 +1,11 @@
-use std::rc::Rc;
 use std::sync::Arc;
 
 use crate::structs::descriptor::MethodDescriptor;
 use crate::structs::loaded::method::{MethodEntry, Methods};
 
+#[derive(Debug)]
 pub struct Constructors {
-    pub entries: Vec<Rc<Constructor>>,
+    pub entries: Vec<Arc<Constructor>>,
 }
 
 impl Constructors {
@@ -19,20 +19,21 @@ impl Constructors {
                 descriptor: x.descriptor.clone(),
                 method: Arc::clone(x),
             })
-            .map(Rc::new)
+            .map(Arc::new)
             .collect();
 
         Self { entries }
     }
 
-    pub fn find<F>(&self, predicate: F) -> Option<Rc<Constructor>>
+    pub fn find<F>(&self, predicate: F) -> Option<Arc<Constructor>>
     where
-        F: Fn(&&Rc<Constructor>) -> bool,
+        F: Fn(&&Arc<Constructor>) -> bool,
     {
-        Some(Rc::clone(self.entries.iter().find(predicate)?))
+        Some(Arc::clone(self.entries.iter().find(predicate)?))
     }
 }
 
+#[derive(Debug)]
 pub struct Constructor {
     pub descriptor: MethodDescriptor,
     pub method: Arc<MethodEntry>,

@@ -5,7 +5,7 @@ use crate::structs::descriptor::MethodDescriptor;
 use crate::structs::loaded::attribute::Attributes;
 use crate::structs::loaded::constant_pool::Utf8Data;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MethodEntry {
     pub access_flags: MethodAccessFlags,
     pub name: Arc<Utf8Data>,
@@ -13,7 +13,7 @@ pub struct MethodEntry {
     pub attributes: Attributes,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Methods {
     pub entries: Vec<Arc<MethodEntry>>,
 }

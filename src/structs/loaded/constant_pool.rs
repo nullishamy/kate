@@ -7,7 +7,7 @@ use enum_as_inner::EnumAsInner;
 use crate::structs::descriptor::MethodDescriptor;
 use crate::structs::raw::constant_pool::Tag;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ConstantPool {
     pub entries: HashMap<usize, PoolEntry>,
 }
@@ -58,7 +58,7 @@ impl ConstantPool {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Utf8Data {
     pub str: String,
 }
@@ -69,104 +69,104 @@ impl From<String> for Utf8Data {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct IntegerData {
     pub bytes: u32,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct FloatData {
     pub bytes: f32,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct LongData {
     pub low_bytes: u32,
     pub high_bytes: u32,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct DoubleData {
     pub low_bytes: f32,
     pub high_bytes: f32,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ClassData {
     pub name: Arc<Utf8Data>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct StringData {
     pub utf8: Arc<Utf8Data>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct FieldRefData {
     pub class: Arc<ClassData>,
     pub name_and_type: Arc<NameAndTypeData>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MethodRefData {
     pub class: Arc<ClassData>,
     pub name_and_type: Arc<NameAndTypeData>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct InterfaceMethodRefData {
     pub class: Arc<ClassData>,
     pub name_and_type: Arc<NameAndTypeData>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct NameAndTypeData {
     pub name: Arc<Utf8Data>,
     pub descriptor: Arc<Utf8Data>, // we cannot specify which descriptor this will be trivially, so we must parse and store it later
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum MethodHandleReference {
     Field(FieldRefData),
     Method(MethodRefData),
     InterfaceMethod(InterfaceMethodRefData),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MethodHandleData {
     pub reference: MethodHandleReference,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MethodTypeData {
     pub descriptor: MethodDescriptor,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct DynamicData {
     pub bootstrap_method_attr_index: u16,
     //TODO: resolve this when attribute parsing is implemented
     pub name_and_type: Arc<NameAndTypeData>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct InvokeDynamicData {
     pub bootstrap_method_attr_index: u16,
     //TODO: resolve this when attribute parsing is implemented
     pub name_and_type: Arc<NameAndTypeData>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ModuleData {
     pub name: Arc<Utf8Data>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PackageData {
     pub name: Arc<Utf8Data>,
 }
 
-#[derive(Clone, EnumAsInner)]
+#[derive(Clone, EnumAsInner, Debug)]
 pub enum Data {
     Utf8(Arc<Utf8Data>),
     Integer(IntegerData),
@@ -187,7 +187,7 @@ pub enum Data {
     Package(PackageData),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct PoolEntry {
     pub tag: Tag,
     pub data: Data,
