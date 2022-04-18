@@ -1,5 +1,5 @@
 use parking_lot::lock_api::RwLock;
-use std::ops::Deref;
+
 use std::sync::Arc;
 
 use crate::runtime::heap::object::JVMObject;
@@ -11,6 +11,7 @@ use crate::structs::loaded::constructors::Constructors;
 use crate::structs::loaded::field::Fields;
 use crate::structs::loaded::interface::Interfaces;
 use crate::structs::loaded::method::Methods;
+use crate::structs::types::{RefOrPrim, ReferenceType};
 use crate::LoadedClassFile;
 
 pub fn visit_system(class: Arc<LoadedClassFile>) {
@@ -38,15 +39,15 @@ pub fn visit_system(class: Arc<LoadedClassFile>) {
         constructors: Constructors { entries: vec![] },
         attributes: Attributes { entries: vec![] },
         package: None,
+        has_clinit_called: Default::default(),
     };
 
     let sysout = JVMObject {
         class: Arc::new(sysout),
     };
 
-    class
-        .fields
-        .write()
-        .statics
-        .insert("out".to_string(), Arc::new(sysout));
+    class.fields.write().statics.insert(
+        "out".to_string(),
+        RefOrPrim::Reference(ReferenceType::Class(Arc::new(sysout))),
+    );
 }

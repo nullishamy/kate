@@ -1,8 +1,6 @@
 extern crate core;
 
-use std::borrow::BorrowMut;
 use std::sync::Arc;
-use std::time::Duration;
 
 use anyhow::{anyhow, Result};
 use clap::Parser;
@@ -55,7 +53,7 @@ async fn main() -> Result<()> {
         tui = Some(start_tui(write.clone(), read)?);
     } else {
         tracing_subscriber::fmt()
-            .with_max_level(Level::TRACE)
+            .with_max_level(Level::DEBUG)
             .event_format(format)
             .init();
     }
@@ -112,7 +110,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-fn start(vm: &mut VM, main_class_path: &String) -> Result<()> {
+fn start(vm: &mut VM, main_class_path: &str) -> Result<()> {
     let mut loader = vm.system_classloader.write();
     let main_class = loader.find_class(main_class_path)?;
     let main_class = loader.define_class(main_class)?;
