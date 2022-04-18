@@ -1,3 +1,5 @@
+use std::borrow::Borrow;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -17,14 +19,15 @@ use crate::structs::loaded::interface::Interfaces;
 use crate::structs::loaded::method::Methods;
 use crate::structs::loaded::package::Package;
 use crate::structs::raw::classfile::RawClassFile;
-use crate::VM;
+use crate::{Context, VM};
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct MetaData {
     pub minor_version: u16,
     pub major_version: u16,
 }
 
+#[derive(Debug)]
 pub struct LoadedClassFile {
     pub const_pool: ConstantPool,
     pub meta: MetaData,
@@ -39,6 +42,8 @@ pub struct LoadedClassFile {
     pub constructors: Constructors,
     pub attributes: Attributes,
     pub package: Option<Package>,
+
+    pub has_clinit_called: AtomicBool,
 }
 
 impl LoadedClassFile {
@@ -117,6 +122,7 @@ impl LoadedClassFile {
             constructors,
             attributes,
             package: None, //TODO: implement packages
+            has_clinit_called: AtomicBool::new(false),
         })
     }
 
@@ -126,5 +132,21 @@ impl LoadedClassFile {
         };
 
         vm.heap.write().push(obj)
+    }
+
+    pub fn run_clinit(self: &Arc<Self>, vm: &mut VM, ctx: Context) -> Result<()> {
+        if self.has_clinit_called.load(Ordering::Acquire) {
+            return Ok(());
+        }
+
+        let clinit = self.methods.read().find(|m| m.name.str == "<clinit>");
+
+        if clinit.is_none() {
+            return Ok(());
+        }
+
+        self.has_clinit_called.store(true, Ordering::Release);
+
+        vm.interpret(clinit.unwrap().borrow(), ctx)
     }
 }
