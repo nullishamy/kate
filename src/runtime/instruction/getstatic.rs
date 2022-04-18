@@ -1,10 +1,8 @@
-use std::sync::Arc;
-
 use anyhow::{anyhow, Result};
 use bytes::Bytes;
 
 use crate::classfile::parse_helper::SafeBuf;
-use crate::runtime::stack::OperandType;
+
 use crate::{ClassLoader, Context, VM};
 
 pub fn get_static(vm: &mut VM, ctx: &mut Context, bytes: &mut Bytes) -> Result<()> {
@@ -30,6 +28,6 @@ pub fn get_static(vm: &mut VM, ctx: &mut Context, bytes: &mut Bytes) -> Result<(
 
     let mut stack = ctx.thread.operand_stack.lock();
 
-    stack.push(OperandType::Reference(Arc::clone(field_obj)));
+    stack.push(field_obj.clone());
     Ok(())
 }
