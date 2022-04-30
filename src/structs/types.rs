@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 use crate::runtime::heap::object::JVMObject;
 
+use crate::structs::descriptor::DescriptorReferenceType;
 use crate::structs::JVMPointer;
+use crate::DescriptorType;
 use enum_as_inner::EnumAsInner;
 
 pub type Boolean = bool;
@@ -39,14 +41,44 @@ pub enum PrimitiveType {
     Double,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, EnumAsInner)]
 pub enum ReferenceType {
     Class(Arc<JVMObject>),
     Null,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, EnumAsInner)]
 pub enum RefOrPrim {
     Reference(ReferenceType),
     Primitive(PrimitiveWithValue),
 }
+
+impl RefOrPrim {
+    pub fn get_type(&self) -> Option<DescriptorType> {
+        match self {
+            RefOrPrim::Reference(d) => match d {
+                ReferenceType::Class(d) => {
+                    Some(DescriptorType::Reference(DescriptorReferenceType {
+                        internal_name: d.class.this_class.name.str.clone(),
+                    }))
+                }
+                ReferenceType::Null => None,
+            },
+            RefOrPrim::Primitive(p) => Some(DescriptorType::Primitive(match p {
+                PrimitiveWithValue::Boolean(_) => PrimitiveType::Boolean,
+                PrimitiveWithValue::Byte(_) => PrimitiveType::Byte,
+                PrimitiveWithValue::Short(_) => PrimitiveType::Short,
+                PrimitiveWithValue::Int(_) => PrimitiveType::Int,
+                PrimitiveWithValue::Long(_) => PrimitiveType::Long,
+                PrimitiveWithValue::Char(_) => PrimitiveType::Char,
+                PrimitiveWithValue::Float(_) => PrimitiveType::Float,
+                PrimitiveWithValue::Double(_) => PrimitiveType::Double,
+            })),
+        }
+    }
+}
+
+/*
+ReferenceType::Class(c) => DescriptorType::Reference(DescriptorReferenceType { internal_name: "".to_string() }).
+                ReferenceType::Null => None
+ */

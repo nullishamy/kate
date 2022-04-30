@@ -49,16 +49,18 @@ pub mod notation {
 
 struct Parser<'a> {
     chars: Peekable<Chars<'a>>,
+    raw: String,
 }
 
 impl<'a> Parser<'a> {
     fn new(src: &'a str) -> Self {
         Self {
             chars: src.chars().peekable(),
+            raw: src.to_string(),
         }
     }
 
-    fn parse_method_descriptor(&mut self) -> Result<MethodDescriptor> {
+    fn parse_method_descriptor(mut self) -> Result<MethodDescriptor> {
         self.expect_next('(')?;
 
         let mut parameters: Vec<DescriptorType> = Vec::new();
@@ -74,10 +76,11 @@ impl<'a> Parser<'a> {
         Ok(MethodDescriptor {
             parameters,
             return_type,
+            raw: self.raw,
         })
     }
 
-    fn parse_array_type(&mut self) -> Result<ArrayType> {
+    fn parse_array_type(&mut self) -> Result<DescriptorArrayType> {
         let mut count = 0;
         while self.peek_next()? == notation::ARRAY {
             count += 1;
@@ -86,20 +89,20 @@ impl<'a> Parser<'a> {
 
         let _type = self.parse_descriptor_type()?;
 
-        Ok(ArrayType {
+        Ok(DescriptorArrayType {
             _type: Box::new(_type),
             dimensions: count,
         })
     }
 
-    fn parse_reference_type(&mut self) -> Result<ReferenceType> {
+    fn parse_reference_type(&mut self) -> Result<DescriptorReferenceType> {
         let mut out = String::new();
 
         while self.peek_next()? != notation::END_REFERENCE {
             out.push(self.consume_next()?);
         }
         self.consume_next()?; // consume the end reference
-        Ok(ReferenceType { internal_name: out })
+        Ok(DescriptorReferenceType { internal_name: out })
     }
 
     fn parse_descriptor_type(&mut self) -> Result<DescriptorType> {
@@ -167,13 +170,15 @@ impl<'a> Parser<'a> {
 pub struct MethodDescriptor {
     pub parameters: Vec<DescriptorType>,
     pub return_type: DescriptorType,
+
+    raw: String,
 }
 
 impl MethodDescriptor {
     pub fn parse(descriptor: &str) -> Result<Self> {
         debug!("parsing method descriptor {}", descriptor);
 
-        let mut parser = Parser::new(descriptor);
+        let parser = Parser::new(descriptor);
 
         parser.parse_method_descriptor()
     }
@@ -182,6 +187,7 @@ impl MethodDescriptor {
 #[derive(Clone, Debug)]
 pub struct FieldDescriptor {
     _type: DescriptorType,
+    raw: String,
 }
 
 impl FieldDescriptor {
@@ -191,26 +197,29 @@ impl FieldDescriptor {
 
         let _type = parser.parse_descriptor_type()?;
 
-        Ok(Self { _type })
+        Ok(Self {
+            _type,
+            raw: parser.raw,
+        })
     }
 }
 
 #[derive(PartialEq, Debug, Clone, EnumAsInner)]
 pub enum DescriptorType {
-    Reference(ReferenceType),
+    Reference(DescriptorReferenceType),
     Primitive(PrimitiveType),
-    Array(ArrayType),
+    Array(DescriptorArrayType),
     Void,
 }
 
 #[derive(PartialEq, Debug, Clone)]
-pub struct ArrayType {
+pub struct DescriptorArrayType {
     pub _type: Box<DescriptorType>,
     pub dimensions: u16,
 }
 
 #[derive(PartialEq, Debug, Clone)]
-pub struct ReferenceType {
+pub struct DescriptorReferenceType {
     pub internal_name: String,
 }
 
@@ -218,6 +227,12 @@ pub struct ReferenceType {
 pub enum Descriptor {
     Field(FieldDescriptor),
     Method(MethodDescriptor),
+}
+
+impl ToString for MethodDescriptor {
+    fn to_string(&self) -> String {
+        self.raw.clone()
+    }
 }
 
 pub fn test_descriptor_parsing() {
