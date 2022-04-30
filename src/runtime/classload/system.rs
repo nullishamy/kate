@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 use anyhow::{anyhow, Result};
+use tracing::debug;
 
 use crate::runtime::classload::loader::{ClassDefinition, ClassLoader, PackageDefinition};
 use crate::stdlib::VISITORS;
@@ -68,6 +69,7 @@ impl ClassLoader<SystemClassLoader> for SystemClassLoader {
         let visitor = VISITORS.get(&res.this_class.name.str);
 
         if let Some(func) = visitor {
+            debug!("calling visitor for classfile");
             func(Arc::clone(&res));
         }
 
