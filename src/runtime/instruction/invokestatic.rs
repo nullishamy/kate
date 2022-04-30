@@ -3,11 +3,17 @@ use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
 use bytes::Bytes;
+use tracing::debug;
 
 use crate::classfile::parse_helper::SafeBuf;
-use crate::{ClassLoader, Context, VM};
+use crate::runtime::instruction::util::create_args;
+use crate::runtime::threading::thread::StackFrame;
+use crate::{CallSite, ClassLoader, VM};
 
-pub fn invoke_static(vm: &mut VM, ctx: &mut Context, bytes: &mut Bytes) -> Result<()> {
+pub fn invoke_static(vm: &VM, ctx: &mut CallSite, bytes: &mut Bytes) -> Result<()> {
+    let mut lock = ctx.thread.call_stack.lock();
+    let sf = lock.peek_mut().expect("call stack was empty?");
+
     let idx = bytes.try_get_u16()?;
 
     let entry = ctx.class.const_pool.get(idx as usize)?;
@@ -39,14 +45,6 @@ pub fn invoke_static(vm: &mut VM, ctx: &mut Context, bytes: &mut Bytes) -> Resul
         .borrow_mut()
         .load_class(&cls.name.str)?;
 
-    cls.run_clinit(
-        vm,
-        Context {
-            class: Arc::clone(&cls),
-            thread: Arc::clone(&ctx.thread),
-        },
-    )?;
-
     let method = cls.methods.read().find(|m| m.name.str == nt.name.str);
 
     if method.is_none() {
@@ -55,12 +53,32 @@ pub fn invoke_static(vm: &mut VM, ctx: &mut Context, bytes: &mut Bytes) -> Resul
 
     let method = method.unwrap();
 
+    debug!(
+        "INVOKESTATIC: {} {} {}",
+        idx, cls.this_class.name.str, method.name.str
+    );
+
+    let args = create_args(&method.descriptor, &mut sf.operand_stack)?;
+
+    if cls.requires_clinit() {
+        drop(lock);
+        cls.run_clinit(
+            vm,
+            CallSite::new(
+                Arc::clone(&cls),
+                Arc::clone(&ctx.thread),
+                Arc::clone(&ctx.method),
+                None,
+            ),
+        )?;
+    } else {
+        drop(lock)
+    }
+
     // interpret on the same thread, using a different class
     vm.interpret(
-        method.borrow(),
-        Context {
-            class: Arc::clone(&cls),
-            thread: Arc::clone(&ctx.thread),
-        },
+        CallSite::new(Arc::clone(&cls), Arc::clone(&ctx.thread), method, None),
+        args,
+        false,
     )
 }

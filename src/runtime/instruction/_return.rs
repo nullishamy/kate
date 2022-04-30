@@ -1,11 +1,15 @@
-use crate::{Context, VM};
+use crate::runtime::threading::thread::StackFrame;
+use crate::{CallSite, VM};
 use anyhow::Result;
 use bytes::Bytes;
-use std::borrow::BorrowMut;
 use tracing::debug;
 
-pub fn _return(_vm: &mut VM, ctx: &mut Context, _bytes: &mut Bytes) -> Result<()> {
+pub fn _return(vm: &VM, ctx: &mut CallSite, _bytes: &mut Bytes) -> Result<()> {
     debug!("returning & discarding the op stack");
-    ctx.thread.operand_stack.lock().borrow_mut().discard();
+    let mut lock = ctx.thread.call_stack.lock();
+    let mut sf = lock.pop().expect("call stack was empty?");
+    sf.operand_stack.discard();
+    *ctx.pc.write() = 0;
+    debug!("dropped a stackframe from the callstack");
     Ok(())
 }

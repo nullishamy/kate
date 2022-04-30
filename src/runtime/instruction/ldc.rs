@@ -4,12 +4,17 @@ use std::sync::Arc;
 
 use crate::classfile::parse_helper::SafeBuf;
 use crate::runtime::stack::StackValue;
+use crate::runtime::threading::thread::StackFrame;
 use crate::structs::loaded::constant_pool::Data;
 use crate::structs::types::{Float, Int, PrimitiveType, PrimitiveWithValue, ReferenceType};
-use crate::{ClassLoader, Context, VM};
+use crate::{CallSite, ClassLoader, VM};
 
-pub fn ldc(vm: &mut VM, ctx: &mut Context, bytes: &mut Bytes) -> Result<()> {
+pub fn ldc(vm: &VM, ctx: &mut CallSite, bytes: &mut Bytes) -> Result<()> {
+    let mut lock = ctx.thread.call_stack.lock();
+    let sf = lock.peek_mut().expect("call stack was empty?");
+
     let idx = bytes.try_get_u8()?;
+
     let entry = ctx.class.const_pool.get(idx as usize)?;
 
     if !entry.tag.loadable() {
@@ -51,13 +56,7 @@ pub fn ldc(vm: &mut VM, ctx: &mut Context, bytes: &mut Bytes) -> Result<()> {
             });
 
             if let Some(c) = cons {
-                vm.interpret(
-                    &*c.method,
-                    Context {
-                        class: Arc::clone(&ctx.class),
-                        thread: Arc::clone(&ctx.thread),
-                    },
-                )?;
+                return Err(anyhow!("unimplemented"));
             } else {
                 return Err(anyhow!(
                     "char[] constructor for String could not be located "
@@ -72,7 +71,7 @@ pub fn ldc(vm: &mut VM, ctx: &mut Context, bytes: &mut Bytes) -> Result<()> {
         _ => unreachable!(), // if we cant load it, we should never reach here
     };
 
-    let mut stack = ctx.thread.operand_stack.lock();
+    let stack = &mut sf.operand_stack;
 
     stack.push(data);
     Ok(())

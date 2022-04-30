@@ -1,19 +1,24 @@
 use crate::classfile::parse_helper::SafeBuf;
 
-use crate::{ClassLoader, Context, VM};
+use crate::runtime::threading::thread::StackFrame;
+use crate::{CallSite, ClassLoader, VM};
 use anyhow::{anyhow, Result};
 use bytes::Bytes;
 use std::borrow::BorrowMut;
 use std::sync::Arc;
 
-pub fn put_static(vm: &mut VM, ctx: &mut Context, bytes: &mut Bytes) -> Result<()> {
-    let value = ctx.thread.operand_stack.lock().pop();
+pub fn put_static(vm: &VM, ctx: &mut CallSite, bytes: &mut Bytes) -> Result<()> {
+    let mut lock = ctx.thread.call_stack.lock();
+    let sf = lock.peek_mut().expect("call stack was empty?");
+
+    let value = sf.operand_stack.pop();
 
     if value.is_none() {
         return Err(anyhow!("operand stack was empty"));
     }
 
     let idx = bytes.try_get_u16()?;
+
     let entry = ctx.class.const_pool.get(idx.into())?;
     let data = &entry.data.as_field_ref();
 
@@ -32,10 +37,12 @@ pub fn put_static(vm: &mut VM, ctx: &mut Context, bytes: &mut Bytes) -> Result<(
 
     cls.run_clinit(
         vm,
-        Context {
-            class: Arc::clone(&cls),
-            thread: Arc::clone(&ctx.thread),
-        },
+        CallSite::new(
+            Arc::clone(&cls),
+            Arc::clone(&ctx.thread),
+            Arc::clone(&ctx.method),
+            None,
+        ),
     )?;
 
     cls.fields

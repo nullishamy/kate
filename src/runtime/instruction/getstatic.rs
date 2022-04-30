@@ -3,9 +3,13 @@ use bytes::Bytes;
 
 use crate::classfile::parse_helper::SafeBuf;
 
-use crate::{ClassLoader, Context, VM};
+use crate::runtime::threading::thread::StackFrame;
+use crate::{CallSite, ClassLoader, VM};
 
-pub fn get_static(vm: &mut VM, ctx: &mut Context, bytes: &mut Bytes) -> Result<()> {
+pub fn get_static(vm: &VM, ctx: &mut CallSite, bytes: &mut Bytes) -> Result<()> {
+    let mut lock = ctx.thread.call_stack.lock();
+    let sf = lock.peek_mut().expect("call stack was empty?");
+
     let idx = bytes.try_get_u16()?;
 
     let field_ref = ctx.class.const_pool.field(idx as usize)?;
@@ -26,8 +30,11 @@ pub fn get_static(vm: &mut VM, ctx: &mut Context, bytes: &mut Bytes) -> Result<(
 
     let field_obj = field_data.unwrap();
 
-    let mut stack = ctx.thread.operand_stack.lock();
+    let stack = &mut sf.operand_stack;
 
+    // field_obj is trivially cloneable and is essentially
+    // an owned reference to a java value or reference
+    // it will always refer to the same object or value
     stack.push(field_obj.clone());
     Ok(())
 }
