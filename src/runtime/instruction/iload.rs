@@ -3,9 +3,10 @@ use tracing::debug;
 
 use crate::runtime::stack::StackValue;
 use crate::runtime::threading::thread::StackFrame;
+use crate::structs::types::PrimitiveWithValue;
 use crate::{CallSite, VM};
 
-pub fn aload(vm: &VM, ctx: &mut CallSite, idx: u16) -> Result<()> {
+pub fn iload(vm: &VM, ctx: &mut CallSite, idx: u16) -> Result<()> {
     let mut lock = ctx.thread.call_stack.lock();
     let sf = lock.peek_mut().expect("call stack was empty?");
 
@@ -15,13 +16,20 @@ pub fn aload(vm: &VM, ctx: &mut CallSite, idx: u16) -> Result<()> {
     let local = sf.locals.get(idx as usize);
 
     if let Some(local) = local {
-        if let StackValue::Reference(_ref) = local {
-            ops.push(StackValue::Reference(_ref.clone()));
-            debug!("pushed local to the op stack");
-            Ok(())
+        if let StackValue::Primitive(_ref) = local {
+            if let PrimitiveWithValue::Int(i) = _ref {
+                ops.push(StackValue::Primitive(PrimitiveWithValue::Int(*i)));
+                debug!("pushed int {:?} to the op stack", _ref);
+                Ok(())
+            } else {
+                Err(anyhow!(
+                    "local @ idx {} was not an int, invalid bytecode",
+                    idx
+                ))
+            }
         } else {
             Err(anyhow!(
-                "local @ idx {} was not a reference, invalid bytecode",
+                "local @ idx {} was not a primitive, invalid bytecode",
                 idx
             ))
         }

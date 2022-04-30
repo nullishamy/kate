@@ -1,14 +1,18 @@
 use crate::runtime::stack::StackValue;
 
 use crate::classfile::parse_helper::SafeBuf;
+use crate::runtime::threading::thread::StackFrame;
 use crate::structs::types::ReferenceType;
-use crate::{ClassLoader, Context, VM};
+use crate::{CallSite, ClassLoader, VM};
 use anyhow::{anyhow, Result};
 use bytes::Bytes;
 use std::borrow::BorrowMut;
 use std::sync::Arc;
 
-pub fn new(vm: &mut VM, ctx: &mut Context, bytes: &mut Bytes) -> Result<()> {
+pub fn new(vm: &VM, ctx: &mut CallSite, bytes: &mut Bytes) -> Result<()> {
+    let mut lock = ctx.thread.call_stack.lock();
+    let sf = lock.peek_mut().expect("call stack was empty?");
+
     let idx = bytes.try_get_u16()?;
 
     let entry = ctx.class.const_pool.get(idx.into())?;
@@ -29,17 +33,17 @@ pub fn new(vm: &mut VM, ctx: &mut Context, bytes: &mut Bytes) -> Result<()> {
 
     cls.run_clinit(
         vm,
-        Context {
-            class: Arc::clone(&cls),
-            thread: Arc::clone(&ctx.thread),
-        },
+        CallSite::new(
+            Arc::clone(&cls),
+            Arc::clone(&ctx.thread),
+            Arc::clone(&ctx.method),
+            None,
+        ),
     )?;
 
     let obj = cls.new_instance(vm)?;
 
-    ctx.thread
-        .operand_stack
-        .lock()
+    sf.operand_stack
         .push(StackValue::Reference(ReferenceType::Class(obj)));
     Ok(())
 }
