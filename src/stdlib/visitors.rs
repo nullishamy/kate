@@ -14,7 +14,7 @@ use crate::structs::loaded::default_attributes::{AttributeEntry, CodeData};
 use crate::structs::loaded::field::Fields;
 use crate::structs::loaded::interface::Interfaces;
 use crate::structs::loaded::method::{MethodEntry, Methods};
-use crate::structs::types::{PrimitiveWithValue, RefOrPrim, ReferenceType};
+use crate::structs::types::{RefOrPrim, ReferenceType};
 use crate::{LoadedClassFile, MethodAccessFlag};
 
 pub fn visit_system(class: Arc<LoadedClassFile>) {
@@ -60,8 +60,8 @@ pub fn visit_system(class: Arc<LoadedClassFile>) {
         .entries
         .iter()
         .enumerate()
-        .filter(|(i, p)| p.name.str == "getSecurityManager")
-        .map(|(i, p)| i)
+        .filter(|(_i, p)| p.name.str == "getSecurityManager")
+        .map(|(i, _p)| i)
         .collect::<Vec<usize>>()
         .first()
         .unwrap();
@@ -103,8 +103,8 @@ pub fn visit_shutdown(class: Arc<LoadedClassFile>) {
         .entries
         .iter()
         .enumerate()
-        .filter(|(i, p)| p.name.str == "<clinit>")
-        .map(|(i, p)| i)
+        .filter(|(_i, p)| p.name.str == "<clinit>")
+        .map(|(i, _p)| i)
         .collect::<Vec<usize>>()
         .first()
         .unwrap();
@@ -142,8 +142,8 @@ pub fn visit_shutdown(class: Arc<LoadedClassFile>) {
         .entries
         .iter()
         .enumerate()
-        .filter(|(i, p)| p.name.str == "exit")
-        .map(|(i, p)| i)
+        .filter(|(_i, p)| p.name.str == "exit")
+        .map(|(i, _p)| i)
         .collect::<Vec<usize>>()
         .first()
         .unwrap();

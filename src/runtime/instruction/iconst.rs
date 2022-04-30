@@ -1,7 +1,7 @@
 use anyhow::Result;
 
 use crate::runtime::stack::StackValue;
-use crate::runtime::threading::thread::StackFrame;
+
 use crate::structs::types::PrimitiveWithValue;
 use crate::{CallSite, VM};
 

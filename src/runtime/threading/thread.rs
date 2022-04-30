@@ -1,17 +1,17 @@
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use anyhow::anyhow;
 
-use parking_lot::{Mutex, RwLock};
+
+
+use parking_lot::{Mutex};
 use tokio::sync::oneshot;
 use tokio::task::spawn_blocking;
 
-use crate::{Args, CallSite, ClassLoader, LoadedClassFile, VM};
+use crate::{Args, CallSite, ClassLoader, VM};
 use crate::runtime::heap::object::JVMObject;
 use crate::runtime::stack::{Stack, StackValue};
 use crate::runtime::threading::result::ThreadResult;
 use crate::structs::loaded::method::MethodEntry;
-use crate::structs::types::{PrimitiveWithValue, RefOrPrim};
+
 
 #[derive(Debug)]
 pub struct VMThread {
