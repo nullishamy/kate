@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use crate::structs::types::RefOrPrim;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Stack<T>
 where
     T: Debug,
@@ -12,7 +12,7 @@ where
 
 impl<T> Stack<T>
 where
-    T: Debug,
+    T: Debug + Clone,
 {
     pub fn push(&mut self, value: T) {
         self.items.push(value)
@@ -30,14 +30,36 @@ where
         self.items.last()
     }
 
+    pub fn peek_mut(&mut self) -> Option<&mut T> {
+        self.items.last_mut()
+    }
+
     pub fn discard(&mut self) {
         self.items.clear()
     }
 
-    pub fn new(capacity: usize) -> Self {
-        Self {
-            items: Vec::with_capacity(capacity),
-        }
+    pub fn len(&self) -> usize {
+        self.items.len()
+    }
+
+    pub fn clone(&self) -> Stack<T> {
+        let items = self.items.clone();
+
+        Self { items }
+    }
+
+    pub fn flip(&mut self) -> &Stack<T> {
+        self.items.reverse();
+
+        self
+    }
+
+    pub fn raw(self) -> Vec<T> {
+        self.items
+    }
+
+    pub fn new() -> Self {
+        Self { items: Vec::new() }
     }
 }
 
