@@ -4,8 +4,9 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use parking_lot::RwLock;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
+use crate::runtime::bytecode::args::Args;
 use crate::runtime::heap::object::JVMObject;
 use crate::structs::bitflag::ClassFileAccessFlags;
 use crate::structs::loaded::attribute::Attributes;
@@ -19,7 +20,7 @@ use crate::structs::loaded::interface::Interfaces;
 use crate::structs::loaded::method::Methods;
 use crate::structs::loaded::package::Package;
 use crate::structs::raw::classfile::RawClassFile;
-use crate::{Context, VM};
+use crate::{CallSite, VM};
 
 #[derive(Copy, Clone, Debug)]
 pub struct MetaData {
@@ -134,19 +135,34 @@ impl LoadedClassFile {
         vm.heap.write().push(obj)
     }
 
-    pub fn run_clinit(self: &Arc<Self>, vm: &mut VM, ctx: Context) -> Result<()> {
-        if self.has_clinit_called.load(Ordering::Acquire) {
+    pub fn requires_clinit(&self) -> bool {
+        !self.has_clinit_called.load(Ordering::Acquire)
+    }
+
+    pub fn run_clinit(self: &Arc<Self>, vm: &VM, ctx: CallSite) -> Result<()> {
+        if !self.requires_clinit() {
+            debug!("clinit already called for {}", self.this_class.name.str);
             return Ok(());
         }
 
         let clinit = self.methods.read().find(|m| m.name.str == "<clinit>");
 
         if clinit.is_none() {
+            warn!("clinit not found for {}", self.this_class.name.str);
             return Ok(());
         }
 
+        debug!("storing clinit state {}", self.this_class.name.str);
         self.has_clinit_called.store(true, Ordering::Release);
 
-        vm.interpret(clinit.unwrap().borrow(), ctx)
+        debug!("calling clinit for {}", self.this_class.name.str);
+        let res = vm.interpret(
+            CallSite::new(Arc::clone(self), ctx.thread, clinit.unwrap(), None),
+            Args { entries: vec![] }, // empty args for clinit. it cannot take args, it is a class initialiser
+            false,
+        );
+
+        debug!("clinit finished for {}", ctx.class.this_class.name.str);
+        res
     }
 }
