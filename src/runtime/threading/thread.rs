@@ -1,14 +1,17 @@
-use parking_lot::{Mutex, RwLock};
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use tokio::sync::oneshot;
+use std::sync::atomic::{AtomicBool, Ordering};
+use anyhow::anyhow;
 
+use parking_lot::{Mutex, RwLock};
+use tokio::sync::oneshot;
+use tokio::task::spawn_blocking;
+
+use crate::{Args, CallSite, ClassLoader, LoadedClassFile, VM};
 use crate::runtime::heap::object::JVMObject;
 use crate::runtime::stack::{Stack, StackValue};
 use crate::runtime::threading::result::ThreadResult;
 use crate::structs::loaded::method::MethodEntry;
 use crate::structs::types::{PrimitiveWithValue, RefOrPrim};
-use crate::{Args, CallSite, ClassLoader, LoadedClassFile, VM};
 
 #[derive(Debug)]
 pub struct VMThread {
@@ -28,19 +31,29 @@ impl VMThread {
     }
 
     // consume self, we can only run once
-    pub fn run(self: Arc<Self>, vm: &VM, args: Args) -> oneshot::Receiver<ThreadResult> {
+    // this accepts a 'static VM so that we can be sure the ref
+    // will live long enough and still exist when the closure is invoked
+    // if i understand this correctly. idk it makes rustc happy lol.
+    pub fn run(self: Arc<Self>, vm: &'static VM, args: Args) -> oneshot::Receiver<ThreadResult> {
         let (send, recv) = oneshot::channel::<ThreadResult>();
 
         let mut loader = vm.system_classloader.write();
         let thread_class = loader.load_class("java/lang/Thread").unwrap();
 
-        let this = JVMObject {
+        let this = Arc::new(JVMObject {
             class: Arc::clone(&thread_class),
-        };
+        });
+        
+        let callsite = CallSite::new(thread_class, Arc::clone(&self), Arc::clone(&self.method), Some(this));
 
-        //TODO: implement thread running
-        let callsite = CallSite::new(thread_class, self, self.method, this);
-        tokio::spawn(async move { send.send() });
+        //TODO: change this to async once we implement async interpretation
+        spawn_blocking(|| {
+            // any blocking operations will get transformed into async ones here, hopefully
+            // in order for this to work, the entire interpreter needs to be async
+            // which is a long way off. for now, this will just be blocking
+            let res = vm.interpret(callsite, args,false );
+            send.send(res)
+        });
 
         recv
     }
