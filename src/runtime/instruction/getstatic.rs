@@ -3,7 +3,7 @@ use bytes::Bytes;
 
 use crate::classfile::parse_helper::SafeBuf;
 
-use crate::runtime::threading::thread::StackFrame;
+
 use crate::{CallSite, ClassLoader, VM};
 
 pub fn get_static(vm: &VM, ctx: &mut CallSite, bytes: &mut Bytes) -> Result<()> {

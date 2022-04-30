@@ -2,8 +2,8 @@ use anyhow::{anyhow, Result};
 use bytes::Bytes;
 use parking_lot::RwLock;
 use std::process::exit;
-use std::sync::Arc;
-use tracing::{debug, error, warn};
+
+use tracing::{debug, error};
 
 use crate::classfile::parse_helper::SafeBuf;
 use crate::runtime::bytecode::instruction_set::Instruction;
@@ -31,9 +31,9 @@ use crate::runtime::threading::thread_manager::ThreadManager;
 use crate::runtime::bytecode::args::Args;
 use crate::runtime::instruction::bipush::bipush;
 use crate::runtime::native::method_controller::NativeMethodController;
-use crate::runtime::stack::StackValue;
+
 use crate::structs::types::{RefOrPrim, ReferenceType};
-use crate::{MethodAccessFlag, SystemClassLoader, TUIWriter, TuiCommand, VMConfig, VMThread};
+use crate::{MethodAccessFlag, SystemClassLoader, TUIWriter, TuiCommand, VMConfig};
 
 // this struct is entirely interior mutable so that we can pass it around freely
 pub struct VM {

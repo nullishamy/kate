@@ -2,11 +2,11 @@ use anyhow::{anyhow, Result};
 use tracing::debug;
 
 use crate::runtime::stack::StackValue;
-use crate::runtime::threading::thread::StackFrame;
+
 use crate::structs::types::PrimitiveWithValue;
 use crate::{CallSite, VM};
 
-pub fn iload(vm: &VM, ctx: &mut CallSite, idx: u16) -> Result<()> {
+pub fn iload(_vm: &VM, ctx: &mut CallSite, idx: u16) -> Result<()> {
     let mut lock = ctx.thread.call_stack.lock();
     let sf = lock.peek_mut().expect("call stack was empty?");
 

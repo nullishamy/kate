@@ -1,10 +1,10 @@
 use anyhow::{anyhow, Result};
 use bytes::Bytes;
-use std::sync::Arc;
+
 
 use crate::classfile::parse_helper::SafeBuf;
 use crate::runtime::stack::StackValue;
-use crate::runtime::threading::thread::StackFrame;
+
 use crate::structs::loaded::constant_pool::Data;
 use crate::structs::types::{Float, Int, PrimitiveType, PrimitiveWithValue, ReferenceType};
 use crate::{CallSite, ClassLoader, VM};
@@ -55,7 +55,7 @@ pub fn ldc(vm: &VM, ctx: &mut CallSite, bytes: &mut Bytes) -> Result<()> {
                     .is_some()
             });
 
-            if let Some(c) = cons {
+            if let Some(_c) = cons {
                 return Err(anyhow!("unimplemented"));
             } else {
                 return Err(anyhow!(

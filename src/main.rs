@@ -149,17 +149,17 @@ fn start(vm: &VM, main_class_path: &str) -> Result<()> {
 
     vm.native.write().entries.insert(
         "java/lang/System.registerNatives:()V".to_string(),
-        |vm, args, ctx| Ok(()),
+        |_vm, _args, _ctx| Ok(()),
     );
 
     vm.native.write().entries.insert(
         "java/lang/Object.registerNatives:()V".to_string(),
-        |vm, args, ctx| Ok(()),
+        |_vm, _args, _ctx| Ok(()),
     );
 
     vm.native.write().entries.insert(
         "java/lang/Shutdown.exit:(I)V".to_string(),
-        |vm, args, ctx| {
+        |_vm, args, _ctx| {
             let code = args.entries.pop().unwrap();
             let code = code.as_primitive().unwrap().as_int().unwrap();
             exit(*code);

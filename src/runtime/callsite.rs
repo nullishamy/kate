@@ -1,10 +1,10 @@
-use parking_lot::{Mutex, RwLock};
-use std::borrow::{Borrow, BorrowMut};
+use parking_lot::{RwLock};
+
 use std::sync::Arc;
 
 use crate::runtime::heap::object::JVMObject;
-use crate::runtime::stack::Stack;
-use crate::runtime::threading::thread::{StackFrame, VMThread};
+
+use crate::runtime::threading::thread::{VMThread};
 use crate::structs::loaded::method::MethodEntry;
 use crate::LoadedClassFile;
 

@@ -1,5 +1,5 @@
 use crate::VMThread;
-use parking_lot::RwLock;
+
 use std::collections::HashMap;
 use std::sync::Arc;
 use crate::structs::loaded::method::MethodEntry;

@@ -1,4 +1,4 @@
-use std::borrow::{Borrow, BorrowMut};
+use std::borrow::{BorrowMut};
 use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
@@ -7,7 +7,7 @@ use tracing::debug;
 
 use crate::classfile::parse_helper::SafeBuf;
 use crate::runtime::instruction::util::create_args;
-use crate::runtime::threading::thread::StackFrame;
+
 use crate::{CallSite, ClassLoader, VM};
 
 pub fn invoke_static(vm: &VM, ctx: &mut CallSite, bytes: &mut Bytes) -> Result<()> {
