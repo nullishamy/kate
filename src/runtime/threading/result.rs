@@ -1,3 +1,2 @@
-use crate::structs::types::RefOrPrim;
-
-pub type ThreadResult = anyhow::Result<RefOrPrim>;
+// threads always return void
+pub type ThreadResult = anyhow::Result<()>;
