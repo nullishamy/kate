@@ -1,5 +1,6 @@
 extern crate core;
 
+use std::process::exit;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
@@ -12,10 +13,11 @@ use tracing_subscriber::fmt;
 use crate::classfile::parse::ClassFileParser;
 use crate::interface::cli::{Cli, CliCommand};
 use crate::interface::tui::{start_tui, TUIWriter, TuiCommand};
+use crate::runtime::bytecode::args::Args;
+use crate::runtime::callsite::CallSite;
 use crate::runtime::classload::loader::ClassLoader;
 use crate::runtime::classload::system::SystemClassLoader;
 use crate::runtime::config::VMConfig;
-use crate::runtime::context::Context;
 use crate::runtime::threading::thread::VMThread;
 use crate::runtime::vm::{VMState, VM};
 use crate::structs::bitflag::MethodAccessFlag;
@@ -34,15 +36,6 @@ async fn main() -> Result<()> {
     let args = Cli::parse();
     let cmd = args.command;
 
-    let format = fmt::format()
-        .with_ansi(true)
-        .without_time()
-        .with_level(true)
-        .with_target(false)
-        .with_thread_names(false)
-        .with_source_location(true)
-        .compact();
-
     let (write, read) = tokio::sync::mpsc::unbounded_channel::<TuiCommand>();
     //TODO: start runtime with these channels to pass messages to tui
     //this will no-op if TUI is not enabled as nothing is listening
@@ -52,17 +45,26 @@ async fn main() -> Result<()> {
     if args.tui {
         tui = Some(start_tui(write.clone(), read)?);
     } else {
+        let format = fmt::format()
+            .with_ansi(true)
+            .without_time()
+            .with_level(true)
+            .with_target(false)
+            .with_thread_names(false)
+            .with_source_location(true)
+            .compact();
+
         tracing_subscriber::fmt()
             .with_max_level(Level::DEBUG)
             .event_format(format)
             .init();
     }
 
-    let mut vm = VM::new(VMConfig { tui });
+    let vm = VM::new(VMConfig { tui });
 
     match cmd {
         CliCommand::Run { file } => {
-            let res = start(&mut vm, &file);
+            let res = start(&vm, &file);
 
             if let Err(err) = res {
                 vm.state(VMState::Shutdown);
@@ -110,12 +112,14 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-fn start(vm: &mut VM, main_class_path: &str) -> Result<()> {
+fn start(vm: &VM, main_class_path: &str) -> Result<()> {
     let mut loader = vm.system_classloader.write();
+
     let main_class = loader.find_class(main_class_path)?;
     let main_class = loader.define_class(main_class)?;
 
     let lock = main_class.methods.read();
+
     let main_method = lock.find(|m| {
         m.name.str == "main"
             && m.access_flags.has(MethodAccessFlag::STATIC)
@@ -162,7 +166,7 @@ fn start(vm: &mut VM, main_class_path: &str) -> Result<()> {
         },
     );
 
-    let main_thread = vm.threads.write().new_thread("main".to_string());
+    let main_thread = vm.threads.write().new_thread("main".to_string(), Arc::clone(&main_method));
 
     vm.interpret(
         CallSite::new(Arc::clone(&main_class), main_thread, main_method, None),
