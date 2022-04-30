@@ -143,13 +143,30 @@ fn start(vm: &mut VM, main_class_path: &str) -> Result<()> {
     drop(loader); // we need to explicitly drop the loader before borrowing 'vm' as mut
                   // otherwise we would have 'loader' holding imut borrow whilst mut which isnt ok
 
-    vm.interpret(
-        &main_method,
-        Context {
-            class: Arc::clone(&main_class),
-            thread: Arc::new(VMThread::new("main".to_string())),
-        },
-    )?;
+    vm.native.write().entries.insert(
+        "java/lang/System.registerNatives:()V".to_string(),
+        |vm, args, ctx| Ok(()),
+    );
 
-    Ok(())
+    vm.native.write().entries.insert(
+        "java/lang/Object.registerNatives:()V".to_string(),
+        |vm, args, ctx| Ok(()),
+    );
+
+    vm.native.write().entries.insert(
+        "java/lang/Shutdown.exit:(I)V".to_string(),
+        |vm, args, ctx| {
+            let code = args.entries.pop().unwrap();
+            let code = code.as_primitive().unwrap().as_int().unwrap();
+            exit(*code);
+        },
+    );
+
+    let main_thread = vm.threads.write().new_thread("main".to_string());
+
+    vm.interpret(
+        CallSite::new(Arc::clone(&main_class), main_thread, main_method, None),
+        Args { entries: vec![] }, // TODO: replace this with a string[] of cli args
+        false,
+    )
 }
