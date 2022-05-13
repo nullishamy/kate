@@ -3,7 +3,7 @@ use parking_lot::lock_api::RwLock;
 use std::sync::Arc;
 use tracing::debug;
 
-use crate::runtime::heap::object::JVMObject;
+use crate::runtime::heap::object::JvmObject;
 use crate::structs::bitflag::{ClassFileAccessFlags, MethodAccessFlags};
 use crate::structs::descriptor::MethodDescriptor;
 use crate::structs::loaded::attribute::Attributes;
@@ -45,7 +45,7 @@ pub fn visit_system(class: Arc<LoadedClassFile>) {
         has_clinit_called: Default::default(),
     };
 
-    let sysout = JVMObject {
+    let sysout = JvmObject {
         class: Arc::new(sysout),
     };
 
@@ -76,7 +76,7 @@ pub fn visit_system(class: Arc<LoadedClassFile>) {
         name: Arc::new(Utf8Data {
             str: "getSecurityManager".to_string(),
         }),
-        descriptor: MethodDescriptor::parse(&"()Ljava/lang/SecurityManager;".to_string()).unwrap(),
+        descriptor: MethodDescriptor::parse("()Ljava/lang/SecurityManager;").unwrap(),
         attributes: Attributes {
             entries: vec![AttributeEntry::Code(CodeData {
                 name: Arc::new(Utf8Data {
@@ -119,7 +119,7 @@ pub fn visit_shutdown(class: Arc<LoadedClassFile>) {
         name: Arc::new(Utf8Data {
             str: "<clinit>".to_string(),
         }),
-        descriptor: MethodDescriptor::parse(&"()V".to_string()).unwrap(),
+        descriptor: MethodDescriptor::parse("()V").unwrap(),
         attributes: Attributes {
             entries: vec![AttributeEntry::Code(CodeData {
                 name: Arc::new(Utf8Data {

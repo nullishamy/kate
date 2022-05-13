@@ -1,10 +1,9 @@
-
-use crate::{CallSite, VM};
+use crate::{CallSite, Vm};
 use anyhow::Result;
 use bytes::Bytes;
 use tracing::debug;
 
-pub fn _return(_vm: &VM, ctx: &mut CallSite, _bytes: &mut Bytes) -> Result<()> {
+pub fn _return(_vm: &Vm, ctx: &mut CallSite, _bytes: &mut Bytes) -> Result<()> {
     debug!("returning & discarding the op stack");
     let mut lock = ctx.thread.call_stack.lock();
     let mut sf = lock.pop().expect("call stack was empty?");

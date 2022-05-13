@@ -1,4 +1,3 @@
-
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
@@ -7,7 +6,7 @@ use parking_lot::RwLock;
 use tracing::{debug, info, warn};
 
 use crate::runtime::bytecode::args::Args;
-use crate::runtime::heap::object::JVMObject;
+use crate::runtime::heap::object::JvmObject;
 use crate::structs::bitflag::ClassFileAccessFlags;
 use crate::structs::loaded::attribute::Attributes;
 use crate::structs::loaded::classfile_helper::{
@@ -20,7 +19,7 @@ use crate::structs::loaded::interface::Interfaces;
 use crate::structs::loaded::method::Methods;
 use crate::structs::loaded::package::Package;
 use crate::structs::raw::classfile::RawClassFile;
-use crate::{CallSite, VM};
+use crate::{CallSite, Vm};
 
 #[derive(Copy, Clone, Debug)]
 pub struct MetaData {
@@ -127,8 +126,8 @@ impl LoadedClassFile {
         })
     }
 
-    pub fn new_instance(self: Arc<Self>, vm: &VM) -> Result<Arc<JVMObject>> {
-        let obj = JVMObject {
+    pub fn new_instance(self: Arc<Self>, vm: &Vm) -> Result<Arc<JvmObject>> {
+        let obj = JvmObject {
             class: Arc::clone(&self),
         };
 
@@ -139,7 +138,7 @@ impl LoadedClassFile {
         !self.has_clinit_called.load(Ordering::Acquire)
     }
 
-    pub fn run_clinit(self: &Arc<Self>, vm: &VM, ctx: CallSite) -> Result<()> {
+    pub fn run_clinit(self: &Arc<Self>, vm: &Vm, ctx: CallSite) -> Result<()> {
         if !self.requires_clinit() {
             debug!("clinit already called for {}", self.this_class.name.str);
             return Ok(());

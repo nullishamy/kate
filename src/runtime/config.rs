@@ -1,5 +1,5 @@
-use crate::TUIWriter;
+use crate::TuiWriter;
 
-pub struct VMConfig {
-    pub tui: Option<TUIWriter>,
+pub struct VmConfig {
+    pub tui: Option<TuiWriter>,
 }

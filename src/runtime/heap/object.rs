@@ -3,6 +3,6 @@ use std::sync::Arc;
 use crate::LoadedClassFile;
 
 #[derive(Clone, Debug)]
-pub struct JVMObject {
+pub struct JvmObject {
     pub class: Arc<LoadedClassFile>,
 }

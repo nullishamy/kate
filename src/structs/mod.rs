@@ -4,4 +4,4 @@ pub mod loaded;
 pub mod raw;
 pub mod types;
 
-pub type JVMPointer = isize;
+pub type JvmPointer = isize;

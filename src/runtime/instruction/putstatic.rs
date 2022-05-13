@@ -1,13 +1,12 @@
 use crate::classfile::parse_helper::SafeBuf;
 
-
-use crate::{CallSite, ClassLoader, VM};
+use crate::{CallSite, ClassLoader, Vm};
 use anyhow::{anyhow, Result};
 use bytes::Bytes;
 use std::borrow::BorrowMut;
 use std::sync::Arc;
 
-pub fn put_static(vm: &VM, ctx: &mut CallSite, bytes: &mut Bytes) -> Result<()> {
+pub fn put_static(vm: &Vm, ctx: &mut CallSite, bytes: &mut Bytes) -> Result<()> {
     let mut lock = ctx.thread.call_stack.lock();
     let sf = lock.peek_mut().expect("call stack was empty?");
 

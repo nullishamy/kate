@@ -1,17 +1,13 @@
-
-
 use crate::classfile::parse_helper::SafeBuf;
 use crate::runtime::bytecode::args::Args;
 
-
-use crate::{CallSite, VM};
+use crate::{CallSite, Vm};
 use anyhow::{anyhow, Result};
 use bytes::Bytes;
 
-
 use tracing::debug;
 
-pub fn ifnull(vm: &VM, ctx: &mut CallSite, args: &mut Args, bytes: &mut Bytes) -> Result<()> {
+pub fn ifnull(vm: &Vm, ctx: &mut CallSite, args: &mut Args, bytes: &mut Bytes) -> Result<()> {
     let mut lock = ctx.thread.call_stack.lock();
     let sf = lock.peek_mut().expect("call stack was empty?");
 

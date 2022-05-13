@@ -4,22 +4,22 @@ use anyhow::{anyhow, Result};
 use tracing::{debug, trace};
 
 use crate::interface::tui::UpdateHeap;
-use crate::runtime::heap::object::JVMObject;
-use crate::structs::JVMPointer;
-use crate::{TUIWriter, TuiCommand};
+use crate::runtime::heap::object::JvmObject;
+use crate::structs::JvmPointer;
+use crate::{TuiCommand, TuiWriter};
 
 pub mod object;
 
 const MAX_HEAP: usize = 3096;
 
 pub struct Heap {
-    refs: Vec<Weak<JVMObject>>,
+    refs: Vec<Weak<JvmObject>>,
     used: usize,
-    tui: Option<TUIWriter>,
+    tui: Option<TuiWriter>,
 }
 
 impl Heap {
-    pub fn new(tui: Option<TUIWriter>) -> Self {
+    pub fn new(tui: Option<TuiWriter>) -> Self {
         Self {
             // start with a quarter of the max heap, this avoids un-needed allocations
             // at program start
@@ -29,7 +29,7 @@ impl Heap {
         }
     }
 
-    pub fn push(&mut self, obj: JVMObject) -> Result<Arc<JVMObject>> {
+    pub fn push(&mut self, obj: JvmObject) -> Result<Arc<JvmObject>> {
         trace!("pushing `{}` onto heap", obj.class.this_class.name.str);
 
         if self.refs.len() >= MAX_HEAP - 1 {
@@ -94,7 +94,7 @@ impl Heap {
         counter
     }
 
-    pub fn get(&self, ptr: &JVMPointer) -> Result<Arc<JVMObject>> {
+    pub fn get(&self, ptr: &JvmPointer) -> Result<Arc<JvmObject>> {
         let obj = self.refs.get(*ptr as usize);
 
         if obj.is_none() {

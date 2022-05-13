@@ -3,9 +3,9 @@ use tracing::debug;
 
 use crate::runtime::stack::StackValue;
 
-use crate::{CallSite, VM};
+use crate::{CallSite, Vm};
 
-pub fn aload(_vm: &VM, ctx: &mut CallSite, idx: u16) -> Result<()> {
+pub fn aload(_vm: &Vm, ctx: &mut CallSite, idx: u16) -> Result<()> {
     let mut lock = ctx.thread.call_stack.lock();
     let sf = lock.peek_mut().expect("call stack was empty?");
 

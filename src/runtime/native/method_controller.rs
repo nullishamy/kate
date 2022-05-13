@@ -1,7 +1,7 @@
-use crate::{Args, CallSite, VM};
+use crate::{Args, CallSite, Vm};
 use std::collections::HashMap;
 
-pub type NativeMethod = fn(&VM, &mut Args, &mut CallSite) -> anyhow::Result<()>;
+pub type NativeMethod = fn(&Vm, &mut Args, &mut CallSite) -> anyhow::Result<()>;
 
 pub struct NativeMethodController {
     pub entries: HashMap<String, NativeMethod>,

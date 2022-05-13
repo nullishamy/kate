@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 extern crate core;
 
 use std::process::exit;
@@ -12,14 +14,14 @@ use tracing_subscriber::fmt;
 
 use crate::classfile::parse::ClassFileParser;
 use crate::interface::cli::{Cli, CliCommand};
-use crate::interface::tui::{start_tui, TUIWriter, TuiCommand};
+use crate::interface::tui::{start_tui, TuiCommand, TuiWriter};
 use crate::runtime::bytecode::args::Args;
 use crate::runtime::callsite::CallSite;
 use crate::runtime::classload::loader::ClassLoader;
 use crate::runtime::classload::system::SystemClassLoader;
-use crate::runtime::config::VMConfig;
-use crate::runtime::threading::thread::VMThread;
-use crate::runtime::vm::{VMState, VM};
+use crate::runtime::config::VmConfig;
+use crate::runtime::threading::thread::VmThread;
+use crate::runtime::vm::{Vm, VmState};
 use crate::structs::bitflag::MethodAccessFlag;
 use crate::structs::descriptor::DescriptorType;
 use crate::structs::loaded::classfile::LoadedClassFile;
@@ -40,7 +42,7 @@ async fn main() -> Result<()> {
     //TODO: start runtime with these channels to pass messages to tui
     //this will no-op if TUI is not enabled as nothing is listening
 
-    let mut tui: Option<TUIWriter> = None;
+    let mut tui: Option<TuiWriter> = None;
 
     if args.tui {
         tui = Some(start_tui(write.clone(), read)?);
@@ -60,14 +62,14 @@ async fn main() -> Result<()> {
             .init();
     }
 
-    let vm = VM::new(VMConfig { tui });
+    let vm = Vm::new(VmConfig { tui });
 
     match cmd {
         CliCommand::Run { file } => {
             let res = start(&vm, &file);
 
             if let Err(err) = res {
-                vm.state(VMState::Shutdown);
+                vm.state(VmState::Shutdown);
                 error!("runtime returned error `{}`", err);
             }
         }
@@ -112,7 +114,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-fn start(vm: &VM, main_class_path: &str) -> Result<()> {
+fn start(vm: &Vm, main_class_path: &str) -> Result<()> {
     let mut loader = vm.system_classloader.write();
 
     let main_class = loader.find_class(main_class_path)?;
@@ -166,7 +168,10 @@ fn start(vm: &VM, main_class_path: &str) -> Result<()> {
         },
     );
 
-    let main_thread = vm.threads.write().new_thread("main".to_string(), Arc::clone(&main_method));
+    let main_thread = vm
+        .threads
+        .write()
+        .new_thread("main".to_string(), Arc::clone(&main_method));
 
     vm.interpret(
         CallSite::new(Arc::clone(&main_class), main_thread, main_method, None),
