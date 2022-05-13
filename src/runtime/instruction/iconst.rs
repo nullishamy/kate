@@ -3,9 +3,9 @@ use anyhow::Result;
 use crate::runtime::stack::StackValue;
 
 use crate::structs::types::PrimitiveWithValue;
-use crate::{CallSite, VM};
+use crate::{CallSite, Vm};
 
-pub fn iconst(_vm: &VM, ctx: &mut CallSite, value: i32) -> Result<()> {
+pub fn iconst(_vm: &Vm, ctx: &mut CallSite, value: i32) -> Result<()> {
     let mut lock = ctx.thread.call_stack.lock();
     let sf = lock.peek_mut().expect("call stack was empty?");
 

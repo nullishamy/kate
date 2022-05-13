@@ -1,15 +1,12 @@
-
-
-
 use crate::structs::types::{RefOrPrim, ReferenceType};
-use crate::{CallSite, VM};
+use crate::{CallSite, Vm};
 use anyhow::{anyhow, Result};
 use bytes::Bytes;
 
 use std::sync::Arc;
 use tracing::{debug, warn};
 
-pub fn areturn(_vm: &VM, ctx: &mut CallSite, _bytes: &mut Bytes) -> Result<()> {
+pub fn areturn(_vm: &Vm, ctx: &mut CallSite, _bytes: &mut Bytes) -> Result<()> {
     let mut lock = ctx.thread.call_stack.lock();
     let mut sf = lock.pop().expect("call stack was empty?");
 

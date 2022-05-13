@@ -33,42 +33,42 @@ use crate::runtime::instruction::bipush::bipush;
 use crate::runtime::native::method_controller::NativeMethodController;
 
 use crate::structs::types::{RefOrPrim, ReferenceType};
-use crate::{MethodAccessFlag, SystemClassLoader, TUIWriter, TuiCommand, VMConfig};
+use crate::{MethodAccessFlag, SystemClassLoader, TuiCommand, TuiWriter, VmConfig};
 
 // this struct is entirely interior mutable so that we can pass it around freely
-pub struct VM {
+pub struct Vm {
     pub system_classloader: RwLock<SystemClassLoader>,
     pub threads: RwLock<ThreadManager>,
     pub heap: RwLock<Heap>,
-    pub tui: Option<TUIWriter>,
+    pub tui: Option<TuiWriter>,
     pub native: RwLock<NativeMethodController>,
 
-    state: RwLock<VMState>,
+    state: RwLock<VmState>,
 }
 
-impl VM {
-    pub fn new(config: VMConfig) -> Self {
+impl Vm {
+    pub fn new(config: VmConfig) -> Self {
         let s = Self {
             system_classloader: RwLock::new(SystemClassLoader::new()),
             threads: RwLock::new(ThreadManager::new()),
             heap: RwLock::new(Heap::new(config.tui.as_ref().cloned())),
             tui: config.tui,
-            state: RwLock::new(VMState::Shutdown),
+            state: RwLock::new(VmState::Shutdown),
             native: RwLock::new(NativeMethodController::new()),
         };
 
-        s.state(VMState::Shutdown); // make sure we render this state, this should never fail
-        s.state(VMState::Booting);
+        s.state(VmState::Shutdown); // make sure we render this state, this should never fail
+        s.state(VmState::Booting);
 
         s
     }
 
-    pub fn state(&self, new_state: VMState) {
+    pub fn state(&self, new_state: VmState) {
         *self.state.write() = new_state.clone();
         if let Some(t) = &self.tui {
             // sending stuff to TUI should never fail
             // if it does, the TUI task has panicked and we should too
-            t.send(TuiCommand::VMState(new_state)).unwrap();
+            t.send(TuiCommand::VmState(new_state)).unwrap();
         }
     }
 
@@ -142,7 +142,7 @@ impl VM {
 
         drop(call_stack);
 
-        self.state(VMState::Online);
+        self.state(VmState::Online);
 
         let instructions = method.attributes.get("Code");
 
@@ -238,7 +238,7 @@ impl VM {
 }
 
 #[derive(Debug, Clone)]
-pub enum VMState {
+pub enum VmState {
     Shutdown,
     Booting,
     Online,

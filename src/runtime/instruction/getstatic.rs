@@ -3,10 +3,9 @@ use bytes::Bytes;
 
 use crate::classfile::parse_helper::SafeBuf;
 
+use crate::{CallSite, ClassLoader, Vm};
 
-use crate::{CallSite, ClassLoader, VM};
-
-pub fn get_static(vm: &VM, ctx: &mut CallSite, bytes: &mut Bytes) -> Result<()> {
+pub fn get_static(vm: &Vm, ctx: &mut CallSite, bytes: &mut Bytes) -> Result<()> {
     let mut lock = ctx.thread.call_stack.lock();
     let sf = lock.peek_mut().expect("call stack was empty?");
 

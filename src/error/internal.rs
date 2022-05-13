@@ -29,16 +29,16 @@ impl InternalData {
     }
 
     pub fn message(&self) -> String {
-        (&self.message)
+        self.message
             .as_ref()
-            .unwrap_or(&"unknown".to_string())
+            .map_or("unknown", |m| m.as_str())
             .to_owned()
     }
 
     pub fn file(&self) -> String {
-        (&self.source_file)
+        self.source_file
             .as_ref()
-            .unwrap_or(&"unknown".to_string())
+            .map_or("unknown", |m| m.as_str())
             .to_owned()
     }
 }

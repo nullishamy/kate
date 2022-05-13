@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 use std::io;
 use std::io::{Stdout, Write};
 
-use crate::runtime::vm::VMState;
+use crate::runtime::vm::VmState;
 use anyhow::Result;
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
@@ -33,7 +33,7 @@ pub struct UpdateHeap {
 }
 
 #[derive(Debug)]
-pub struct UpdateCPU {
+pub struct UpdateCpu {
     pub new_usage: usize,
     pub total: usize,
 }
@@ -43,10 +43,10 @@ pub enum TuiCommand {
     Log(String),
     Close,
     Refresh,
-    VMState(VMState),
+    VmState(VmState),
     Tab(usize),
     Heap(UpdateHeap),
-    CPU(UpdateCPU),
+    Cpu(UpdateCpu),
 }
 
 #[derive(Clone)]
@@ -55,11 +55,11 @@ struct LogWriter {
 }
 
 #[derive(Clone)]
-pub struct TUIWriter {
+pub struct TuiWriter {
     write: UnboundedSender<TuiCommand>,
 }
 
-impl TUIWriter {
+impl TuiWriter {
     pub fn send(&self, cmd: TuiCommand) -> Result<()> {
         Ok(self.write.send(cmd)?)
     }
@@ -86,10 +86,10 @@ impl MakeWriter<'_> for LogWriter {
     }
 }
 
-struct TUIState {
+struct TuiState {
     log_lines: VecDeque<String>,
     current_tab: usize,
-    vm_state: VMState,
+    vm_state: VmState,
     cpu_used: usize,
     cpu_total: usize,
     heap_used: usize,
@@ -99,7 +99,7 @@ struct TUIState {
 pub fn start_tui(
     write: mpsc::UnboundedSender<TuiCommand>,
     read: mpsc::UnboundedReceiver<TuiCommand>,
-) -> Result<TUIWriter> {
+) -> Result<TuiWriter> {
     let format = fmt::format()
         .with_ansi(false)
         .without_time()
@@ -127,10 +127,10 @@ pub fn start_tui(
 
         let mut cmds = read;
 
-        let mut state = TUIState {
+        let mut state = TuiState {
             log_lines: VecDeque::new(),
             current_tab: 0,
-            vm_state: VMState::Shutdown,
+            vm_state: VmState::Shutdown,
             cpu_used: 0,
             cpu_total: 1,
             heap_used: 0,
@@ -166,13 +166,13 @@ pub fn start_tui(
                     TuiCommand::Refresh => {
                         //no-op, this just causes a re-render
                     }
-                    TuiCommand::VMState(new_status) => {
+                    TuiCommand::VmState(new_status) => {
                         state.vm_state = new_status;
                     }
                     TuiCommand::Tab(new_tab) => {
                         state.current_tab = new_tab;
                     }
-                    TuiCommand::CPU(data) => {
+                    TuiCommand::Cpu(data) => {
                         state.cpu_total = data.total;
                         state.cpu_used = data.new_usage;
                     }
@@ -190,10 +190,10 @@ pub fn start_tui(
         }
     });
 
-    Ok(TUIWriter { write })
+    Ok(TuiWriter { write })
 }
 
-fn do_render<B>(f: &mut Frame<B>, state: &mut TUIState)
+fn do_render<B>(f: &mut Frame<B>, state: &mut TuiState)
 where
     B: Backend,
 {
@@ -222,7 +222,7 @@ where
     }
 }
 
-fn render_resources<B>(f: &mut Frame<B>, state: &mut TUIState, area: Rect)
+fn render_resources<B>(f: &mut Frame<B>, state: &mut TuiState, area: Rect)
 where
     B: Backend,
 {
@@ -254,7 +254,7 @@ where
     f.render_widget(cpu_gauge, chunks[1]);
 }
 
-fn render_gc<B>(f: &mut Frame<B>, _state: &mut TUIState, area: Rect)
+fn render_gc<B>(f: &mut Frame<B>, _state: &mut TuiState, area: Rect)
 where
     B: Backend,
 {
@@ -263,7 +263,7 @@ where
     f.render_widget(para, area);
 }
 
-fn render_heap<B>(f: &mut Frame<B>, _state: &mut TUIState, area: Rect)
+fn render_heap<B>(f: &mut Frame<B>, _state: &mut TuiState, area: Rect)
 where
     B: Backend,
 {
@@ -272,7 +272,7 @@ where
     f.render_widget(para, area);
 }
 
-fn render_classes<B>(f: &mut Frame<B>, _state: &mut TUIState, area: Rect)
+fn render_classes<B>(f: &mut Frame<B>, _state: &mut TuiState, area: Rect)
 where
     B: Backend,
 {
@@ -281,7 +281,7 @@ where
     f.render_widget(para, area);
 }
 
-fn render_status<B>(f: &mut Frame<B>, state: &mut TUIState, area: Rect)
+fn render_status<B>(f: &mut Frame<B>, state: &mut TuiState, area: Rect)
 where
     B: Backend,
 {
@@ -293,12 +293,12 @@ where
     let online = Style::default().fg(Color::Green);
 
     let style = match state.vm_state {
-        VMState::Shutdown => shutdown,
-        VMState::Booting => booting,
-        VMState::Online => online,
-        VMState::Paused => paused,
-        VMState::ShuttingDown => booting,
-        VMState::GC => gc,
+        VmState::Shutdown => shutdown,
+        VmState::Booting => booting,
+        VmState::Online => online,
+        VmState::Paused => paused,
+        VmState::ShuttingDown => booting,
+        VmState::GC => gc,
     };
     let status = Paragraph::new(format!("{:?}", state.vm_state))
         .block(block)
@@ -308,7 +308,7 @@ where
     f.render_widget(status, area);
 }
 
-fn render_tabs<B>(f: &mut Frame<B>, state: &mut TUIState, area: Rect)
+fn render_tabs<B>(f: &mut Frame<B>, state: &mut TuiState, area: Rect)
 where
     B: Backend,
 {
@@ -325,7 +325,7 @@ where
     f.render_widget(tabs, area);
 }
 
-fn render_log<B>(f: &mut Frame<B>, state: &mut TUIState, area: Rect)
+fn render_log<B>(f: &mut Frame<B>, state: &mut TuiState, area: Rect)
 where
     B: Backend,
 {

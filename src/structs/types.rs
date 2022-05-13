@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
-use crate::runtime::heap::object::JVMObject;
+use crate::runtime::heap::object::JvmObject;
 
 use crate::structs::descriptor::DescriptorReferenceType;
-use crate::structs::JVMPointer;
+use crate::structs::JvmPointer;
 use crate::DescriptorType;
 use enum_as_inner::EnumAsInner;
 
@@ -15,7 +15,7 @@ pub type Long = i64;
 pub type Char = char;
 pub type Float = f32;
 pub type Double = f64;
-pub type ReturnAddress = JVMPointer;
+pub type ReturnAddress = JvmPointer;
 
 #[derive(PartialEq, Clone, Debug, EnumAsInner)]
 pub enum PrimitiveWithValue {
@@ -43,7 +43,7 @@ pub enum PrimitiveType {
 
 #[derive(Clone, Debug, EnumAsInner)]
 pub enum ReferenceType {
-    Class(Arc<JVMObject>),
+    Class(Arc<JvmObject>),
     Null,
 }
 
