@@ -26,13 +26,18 @@ jobs:
             - name: Build
               run: cargo build --release --bins
 
-            - name: Rename executable
-              run: mv target/release/jvm target/release/jvm-amd64-${{ matrix.os }}
+            - name: Rename executable (linux)
+              run: mv target/release/jvm target/release/jvm-linux-amd64
+              if: matrix.os == 'ubuntu-latest'
+
+            - name: Rename executable (mac)
+              run: mv target/release/jvm target/release/jvm-darwin-amd64
+              if: matrix.os == 'macos-latest'
 
             - name: Create release
               uses: softprops/action-gh-release@v1
               with:
-                  files: target/release/jvm-amd64-${{ matrix.os }}
+                  files: target/release/jvm???* # glob hackery
                   draft: true
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
