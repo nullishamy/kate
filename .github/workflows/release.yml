@@ -26,6 +26,9 @@ jobs:
             - name: Build
               run: cargo build --release --bins
 
+            - name: Rename executable
+              run: mv target/release/jvm target/release/jvm-amd64-${{ matrix.os }}
+
             - name: Create release
               uses: softprops/action-gh-release@v1
               with:
