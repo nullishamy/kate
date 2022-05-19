@@ -32,7 +32,7 @@ jobs:
             - name: Create release
               uses: softprops/action-gh-release@v1
               with:
-                  files: target/release/jvm
+                  files: target/release/jvm-amd64-${{ matrix.os }}
                   draft: true
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
