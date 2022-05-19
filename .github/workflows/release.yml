@@ -1,0 +1,38 @@
+name: Release
+on:
+    push:
+        tags:
+            - "v*"
+
+jobs:
+    release-unix:
+        runs-on: ${{ matrix.os }}
+
+        strategy:
+            matrix:
+                os: [ubuntu-latest, macos-latest]
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v2
+
+            - name: Install latest stable rust toolchain
+              uses: actions-rs/toolchain@v1
+              with:
+                  toolchain: stable
+                  default: true
+                  override: true
+
+            - name: Build
+              run: cargo build --release --bins
+
+            - name: Create release
+              uses: softprops/actions-gh-release@v1
+              if: startsWith(github.ref, 'refs/tags/')
+              with:
+                  files: |
+                      target/release/jvm
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    # TODO: add windows release
