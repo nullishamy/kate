@@ -27,11 +27,10 @@ jobs:
               run: cargo build --release --bins
 
             - name: Create release
-              uses: softprops/actions-gh-release@v0.1.14
-              if: startsWith(github.ref, 'refs/tags/')
+              uses: softprops/action-gh-release@v1
               with:
-                  files: |
-                      target/release/jvm
+                  files: target/release/jvm
+                  draft: true
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
