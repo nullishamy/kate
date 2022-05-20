@@ -5,12 +5,12 @@ on:
             - "v*"
 
 jobs:
-    release-unix:
+    release-amd64:
         runs-on: ${{ matrix.os }}
 
         strategy:
             matrix:
-                os: [ubuntu-latest, macos-latest]
+                os: [ubuntu-latest, macos-latest, windows-latest]
 
         steps:
             - name: Checkout
@@ -33,6 +33,10 @@ jobs:
             - name: Rename executable (mac)
               run: mv target/release/jvm target/release/jvm-darwin-amd64
               if: matrix.os == 'macos-latest'
+
+            - name: Rename executable (windows)
+              run: Rename-Item .\target\release\jvm.exe .\target\release\jvm-win32-amd64.exe
+              if: matrix.os == 'windows-latest'
 
             - name: Create release
               uses: softprops/action-gh-release@v1
