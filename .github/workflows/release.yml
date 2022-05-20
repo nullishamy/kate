@@ -35,7 +35,7 @@ jobs:
               if: matrix.os == 'macos-latest'
 
             - name: Rename executable (windows)
-              run: Rename-Item .\target\release\jvm.exe .\target\release\jvm-win32-amd64.exe
+              run: Rename-Item .\target\release\jvm.exe jvm-win32-amd64.exe
               if: matrix.os == 'windows-latest'
 
             - name: Create release
