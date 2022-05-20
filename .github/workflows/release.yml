@@ -65,12 +65,12 @@ jobs:
               run: cargo build --release --bins --target aarch64-apple-darwin
 
             - name: Rename executable
-              run: mv target/release/aarch64-apple-darwin/jvm target/release/aarch64-apple-darwin/jvm-darwin-aarch64
+              run: mv target/aarch64-apple-darwin/release/jvm target/aarch64-apple-darwin/release/jvm-darwin-aarch64
 
             - name: Create release
               uses: softprops/action-gh-release@v1
               with:
-                  files: target/release/aarch64-apple-darwin/jvm*64?(.exe)
+                  files: target/aarch64-apple-darwin/release/jvm*64?(.exe)
                   draft: true
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
