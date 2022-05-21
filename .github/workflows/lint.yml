@@ -1,0 +1,26 @@
+on:
+    pull_request:
+        types: [opened, ready_for_review, edited, synchronize]
+
+jobs:
+    clippy:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v2
+
+            - name: Install latest stable rust toolchain
+              uses: actions-rs/toolchain@v1
+              with:
+                  toolchain: stable
+                  default: true
+                  override: true
+
+            - name: Check formatting
+              run: cargo fmt -- --check
+
+            - name: Lint with clippy
+              uses: actions-rs/clippy-check@v1
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
+                  args: --all-features -- --deny warnings
