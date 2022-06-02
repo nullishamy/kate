@@ -7,3 +7,4 @@ of JVM internals.
 ## External resources
 
 -  [ASM Tools](https://wiki.openjdk.java.net/display/CodeTools/asmtools)
+-  [jasm](https://github.com/roscopeco/jasm)
