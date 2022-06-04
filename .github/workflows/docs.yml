@@ -20,11 +20,17 @@ jobs:
                   default: true
                   override: true
 
+            - name: Delete existing docs directory
+              run: rm -rf ./docs/
+
             - name: Generate docs
               run: cargo doc --release --no-deps
 
-            - name: Move generated docs to docs folder
-              run: mv ./target/doc ./docs
+            - name: Create index.html for github pages
+              run: echo "<meta http-equiv=\"refresh\" content=\"0; url=jvm\">" > target/doc/index.html
+
+            - name: Copy generated docs to docs folder
+              run: cp -r ./target/doc ./docs
 
             - name: Commit updated documentation
               uses: stefanzweifel/git-auto-commit-action@v4
