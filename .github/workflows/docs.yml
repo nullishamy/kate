@@ -1,7 +1,7 @@
 on:
     push:
-        branches:
-            - main # only for testing, run on v* tag push later
+        tags:
+            - "v*"
 
 jobs:
     docgen:
