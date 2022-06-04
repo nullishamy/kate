@@ -1,0 +1,38 @@
+on:
+    push:
+        branches:
+            - main # only for testing, run on v* tag push later
+
+jobs:
+    docgen:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout docs branch
+              uses: actions/checkout@v3
+              with:
+                  ref: docs
+
+            - name: Install latest stable rust toolchain
+              uses: actions-rs/toolchain@v1
+              with:
+                  toolchain: stable
+                  default: true
+                  override: true
+
+            - name: Generate docs
+              run: cargo doc --release --no-deps
+
+            - name: Move generated docs to docs folder
+              run: mv ./target/doc ./docs
+
+            - name: Commit updated documentation
+              run: |
+                  git add ./docs/
+                  git commit -m "docs: generate documentation"
+
+            - name: Push
+              uses: ad-m/github-push-action@master
+              with:
+                  github_token: ${{ secrets.GITHUB_TOKEN }}
+                  branch: docs
