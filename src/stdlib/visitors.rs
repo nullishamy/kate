@@ -54,10 +54,10 @@ pub fn visit_system(class: Arc<LoadedClassFile>) {
         RefOrPrim::Reference(ReferenceType::Class(Arc::new(sysout))),
     );
 
-    let m = *class
-        .methods
-        .read()
-        .entries
+    let mut lock = class.methods.write();
+    let entries = &mut lock.entries;
+
+    let m = entries
         .iter()
         .enumerate()
         .filter(|(_i, p)| p.name.str == "getSecurityManager")
@@ -66,9 +66,9 @@ pub fn visit_system(class: Arc<LoadedClassFile>) {
         .first()
         .unwrap();
 
-    class.methods.write().entries.remove(m);
+    entries.remove(m);
 
-    class.methods.write().entries.push(Arc::new(MethodEntry {
+    entries.push(Arc::new(MethodEntry {
         access_flags: MethodAccessFlags::from_bits(
             (MethodAccessFlag::PUBLIC | MethodAccessFlag::STATIC).bits(),
         )
@@ -97,10 +97,10 @@ pub fn visit_system(class: Arc<LoadedClassFile>) {
 }
 
 pub fn visit_shutdown(class: Arc<LoadedClassFile>) {
-    let m = *class
-        .methods
-        .read()
-        .entries
+    let mut lock = class.methods.write();
+    let entries = &mut lock.entries;
+
+    let m = entries
         .iter()
         .enumerate()
         .filter(|(_i, p)| p.name.str == "<clinit>")
@@ -109,9 +109,9 @@ pub fn visit_shutdown(class: Arc<LoadedClassFile>) {
         .first()
         .unwrap();
 
-    class.methods.write().entries.remove(m);
+    entries.remove(m);
 
-    class.methods.write().entries.push(Arc::new(MethodEntry {
+    entries.push(Arc::new(MethodEntry {
         access_flags: MethodAccessFlags::from_bits(
             (MethodAccessFlag::PUBLIC | MethodAccessFlag::STATIC).bits(),
         )
@@ -136,10 +136,7 @@ pub fn visit_shutdown(class: Arc<LoadedClassFile>) {
         },
     }));
 
-    let m = *class
-        .methods
-        .read()
-        .entries
+    let m = entries
         .iter()
         .enumerate()
         .filter(|(_i, p)| p.name.str == "exit")
@@ -148,9 +145,9 @@ pub fn visit_shutdown(class: Arc<LoadedClassFile>) {
         .first()
         .unwrap();
 
-    class.methods.write().entries.remove(m);
+    entries.remove(m);
 
-    class.methods.write().entries.push(Arc::new(MethodEntry {
+    entries.push(Arc::new(MethodEntry {
         access_flags: MethodAccessFlags::from_bits(
             (MethodAccessFlag::PUBLIC | MethodAccessFlag::STATIC | MethodAccessFlag::NATIVE).bits(),
         )

@@ -57,8 +57,8 @@ pub fn invoke_static(vm: &Vm, ctx: &mut CallSite, bytes: &mut Bytes) -> Result<(
 
     let args = create_args(&method.descriptor, &mut sf.operand_stack)?;
 
+    drop(lock);
     if cls.requires_clinit() {
-        drop(lock);
         cls.run_clinit(
             vm,
             CallSite::new(
@@ -68,8 +68,6 @@ pub fn invoke_static(vm: &Vm, ctx: &mut CallSite, bytes: &mut Bytes) -> Result<(
                 None,
             ),
         )?;
-    } else {
-        drop(lock)
     }
 
     // interpret on the same thread, using a different class

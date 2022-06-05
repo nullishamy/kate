@@ -57,8 +57,8 @@ pub fn invoke_virtual(vm: &Vm, ctx: &mut CallSite, bytes: &mut Bytes) -> Result<
     // if we didnt do this, we could deadlock
     // we use this if/else to definitely drop before we interpret anything
 
+    drop(lock);
     if cls.requires_clinit() {
-        drop(lock);
         cls.run_clinit(
             vm,
             CallSite::new(
@@ -68,8 +68,6 @@ pub fn invoke_virtual(vm: &Vm, ctx: &mut CallSite, bytes: &mut Bytes) -> Result<
                 Some(Arc::clone(&obj_ref)),
             ),
         )?;
-    } else {
-        drop(lock);
     }
 
     vm.interpret(
