@@ -12,7 +12,7 @@ where
 
 impl<T> Stack<T>
 where
-    T: Debug + Clone,
+    T: Debug,
 {
     pub fn push(&mut self, value: T) {
         self.items.push(value);
@@ -42,16 +42,8 @@ where
         self.items.len()
     }
 
-    pub fn clone(&self) -> Stack<T> {
-        let items = self.items.clone();
-
-        Self { items }
-    }
-
-    pub fn flip(&mut self) -> &Stack<T> {
+    pub fn flip(&mut self) {
         self.items.reverse();
-
-        self
     }
 
     pub fn raw(self) -> Vec<T> {
