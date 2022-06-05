@@ -81,7 +81,7 @@ impl LoadedClassFile {
 
             debug!("class has a superclass, {}", entry.name.str);
         } else {
-            debug!("class has no superclass")
+            debug!("class has no superclass");
         }
 
         let interfaces = create_interfaces(raw.interface_info, &const_pool)?;
@@ -90,10 +90,10 @@ impl LoadedClassFile {
             debug!("class as {} superinterfaces", interfaces.entries.len());
 
             for interface in &interfaces.entries {
-                debug!("\t{}", interface.name.str)
+                debug!("\t{}", interface.name.str);
             }
         } else {
-            debug!("class has no superinterfaces")
+            debug!("class has no superinterfaces");
         }
 
         let fields = RwLock::new(create_fields(raw.field_info, &const_pool)?);

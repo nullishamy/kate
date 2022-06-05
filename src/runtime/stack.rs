@@ -15,7 +15,7 @@ where
     T: Debug + Clone,
 {
     pub fn push(&mut self, value: T) {
-        self.items.push(value)
+        self.items.push(value);
     }
 
     pub fn pop(&mut self) -> Option<T> {
@@ -35,7 +35,7 @@ where
     }
 
     pub fn discard(&mut self) {
-        self.items.clear()
+        self.items.clear();
     }
 
     pub fn len(&self) -> usize {

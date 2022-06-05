@@ -162,5 +162,5 @@ pub fn visit_shutdown(class: Arc<LoadedClassFile>) {
         attributes: Attributes { entries: vec![] },
     }));
 
-    debug!("finished writing to java/lang/Shutdown")
+    debug!("finished writing to java/lang/Shutdown");
 }

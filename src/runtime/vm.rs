@@ -129,7 +129,7 @@ impl Vm {
             if let Some(this_ref) = this_ref {
                 // push thisref as the first local if it exists. it might not (statics)
                 f.locals
-                    .push(RefOrPrim::Reference(ReferenceType::Class(this_ref)))
+                    .push(RefOrPrim::Reference(ReferenceType::Class(this_ref)));
             }
 
             while let Some(arg) = args.entries.pop() {

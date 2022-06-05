@@ -35,7 +35,7 @@ pub fn create_args(
             args.push(
                 ops.pop()
                     .expect("somehow we could not pop the value? we just peeked it though..."),
-            )
+            );
         }
 
         let from_t = from_t.unwrap();
@@ -45,7 +45,7 @@ pub fn create_args(
             args.push(
                 ops.pop()
                     .expect("somehow we could not pop the value? we just peeked it though..."),
-            )
+            );
         } else {
             // invalid type
             return Err(anyhow!(

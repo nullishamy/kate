@@ -274,7 +274,7 @@ pub fn create_interfaces(raw: Vec<u16>, const_pool: &ConstantPool) -> Result<Int
         let entry = const_pool.class(idx as usize)?;
 
         //TODO: attach a classloader here and load the entries class so that we can validate it is an interface
-        out.entries.push(Arc::clone(&entry))
+        out.entries.push(Arc::clone(&entry));
     }
 
     Ok(out)
@@ -307,7 +307,7 @@ pub fn create_fields(raw: Vec<RawFieldEntry>, const_pool: &ConstantPool) -> Resu
             name,
             descriptor,
             attributes,
-        })
+        });
     }
     Ok(out)
 }
@@ -364,7 +364,7 @@ pub fn create_attributes(
             }
         };
 
-        out.entries.push(data)
+        out.entries.push(data);
     }
     Ok(out)
 }

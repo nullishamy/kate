@@ -240,7 +240,7 @@ pub fn parse_method_info(parser: &mut ClassFileParser, length: u16) -> Result<Ve
             descriptor_index,
             attributes_count,
             attribute_info,
-        })
+        });
     }
 
     Ok(out)

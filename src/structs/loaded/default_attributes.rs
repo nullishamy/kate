@@ -52,7 +52,7 @@ impl CodeData {
                 end: bytes.try_get_u16()?,
                 handler: bytes.try_get_u16()?,
                 catch_type: bytes.try_get_u16()?,
-            })
+            });
         }
 
         let attribute_count = bytes.try_get_u16()?;

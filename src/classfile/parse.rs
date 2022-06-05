@@ -43,7 +43,7 @@ impl ClassFileParser {
         if path.starts_with("java/") {
             debug!("java stdlib detected, altering path");
 
-            path = format!("src/stdlib/{}", path)
+            path = format!("src/stdlib/{}", path);
         }
 
         path += ".class";
