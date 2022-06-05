@@ -25,7 +25,7 @@ jobs:
               run: cargo doc --release --no-deps
 
             - name: Create index.html for github pages
-              run: echo "<meta http-equiv=\"refresh\" content=\"0; url=Kate\">" > target/doc/index.html
+              run: echo "<meta http-equiv=\"refresh\" content=\"0; url=kate\">" > target/doc/index.html
 
             - name: Copy generated docs to docs folder
               run: cp -r ./target/doc ./docs
