@@ -18,4 +18,4 @@ We accept the following non standard commit types:
 - docs: for documentation changes
 - chore: for trivial changes that arent a feature
 - style: similar to chore, but for style only changes
-- miscL for miscellaneous changes that dont fall under the above
+- misc: for miscellaneous changes that dont fall under the above
