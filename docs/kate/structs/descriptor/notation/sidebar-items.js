@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["ARRAY",""],["BOOLEAN",""],["BYTE",""],["CHAR",""],["CLASS",""],["DOUBLE",""],["END_REFERENCE",""],["FLOAT",""],["INT",""],["LONG",""],["SHORT",""],["VOID",""]]});

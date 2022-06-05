@@ -1,3 +1,4 @@
+name: Generate Documentation
 on:
     push:
         tags:

@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Descriptor",""],["DescriptorType",""]],"fn":[["test_descriptor_parsing",""]],"mod":[["notation",""]],"struct":[["DescriptorArrayType",""],["DescriptorReferenceType",""],["FieldDescriptor",""],["MethodDescriptor",""],["Parser",""]]});

@@ -1,0 +1,3 @@
+(function() {var implementors = {};
+implementors["kate"] = [{"text":"impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.61.0/core/convert/trait.From.html\" title=\"trait core::convert::From\">From</a>&lt;<a class=\"struct\" href=\"https://doc.rust-lang.org/1.61.0/alloc/string/struct.String.html\" title=\"struct alloc::string::String\">String</a>&gt; for <a class=\"struct\" href=\"kate/structs/loaded/constant_pool/struct.Utf8Data.html\" title=\"struct kate::structs::loaded::constant_pool::Utf8Data\">Utf8Data</a>","synthetic":false,"types":["kate::structs::loaded::constant_pool::Utf8Data"]}];
+if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
