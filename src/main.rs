@@ -81,32 +81,33 @@ async fn main() -> Result<()> {
         let mut events = EventStream::new();
 
         while let Some(event) = events.next().await {
-            if let Ok(event) = event {
-                match event {
-                    Event::Key(k) => {
-                        // if we hit ctrl+c, send the quit signal
-                        if k.modifiers.contains(KeyModifiers::CONTROL)
-                            && k.code == KeyCode::Char('c')
-                        {
-                            tui.send(TuiCommand::Close)?;
-                        }
+            match event {
+                Ok(event) => {
+                    match event {
+                        Event::Key(k) => {
+                            // if we hit ctrl+c, send the quit signal
+                            if k.modifiers.contains(KeyModifiers::CONTROL)
+                                && k.code == KeyCode::Char('c')
+                            {
+                                tui.send(TuiCommand::Close)?;
+                            }
 
-                        match &k.code {
-                            KeyCode::Char('L') | KeyCode::Char('l') => tui.send(TuiCommand::Tab(0)),
-                            KeyCode::Char('C') | KeyCode::Char('c') => tui.send(TuiCommand::Tab(1)),
-                            KeyCode::Char('H') | KeyCode::Char('h') => tui.send(TuiCommand::Tab(2)),
-                            KeyCode::Char('G') | KeyCode::Char('g') => tui.send(TuiCommand::Tab(3)),
-                            KeyCode::Char('R') | KeyCode::Char('r') => tui.send(TuiCommand::Tab(4)),
-                            _ => Ok(()),
-                        }?;
-                    }
-                    Event::Mouse(_) => {}
-                    Event::Resize(_, _) => {
-                        tui.send(TuiCommand::Refresh)?;
+                            match &k.code {
+                                KeyCode::Char('L' | 'l') => tui.send(TuiCommand::Tab(0)),
+                                KeyCode::Char('C' | 'c') => tui.send(TuiCommand::Tab(1)),
+                                KeyCode::Char('H' | 'h') => tui.send(TuiCommand::Tab(2)),
+                                KeyCode::Char('G' | 'g') => tui.send(TuiCommand::Tab(3)),
+                                KeyCode::Char('R' | 'r') => tui.send(TuiCommand::Tab(4)),
+                                _ => Ok(()),
+                            }?;
+                        }
+                        Event::Mouse(_) => {}
+                        Event::Resize(_, _) => {
+                            tui.send(TuiCommand::Refresh)?;
+                        }
                     }
                 }
-            } else {
-                return Err(anyhow!(event.unwrap_err()));
+                Err(why) => return Err(anyhow!(why)),
             }
         }
     }
@@ -120,9 +121,11 @@ fn start(vm: &Vm, main_class_path: &str) -> Result<()> {
     let main_class = loader.find_class(main_class_path)?;
     let main_class = loader.define_class(main_class)?;
 
-    let lock = main_class.methods.read();
+    drop(loader);
 
-    let main_method = lock.find(|m| {
+    let methods_lock = main_class.methods.read();
+
+    let main_method = methods_lock.find(|m| {
         m.name.str == "main"
             && m.access_flags.has(MethodAccessFlag::STATIC)
             && m.descriptor.return_type == DescriptorType::Void
@@ -141,25 +144,24 @@ fn start(vm: &Vm, main_class_path: &str) -> Result<()> {
                 .is_some()
     });
 
-    if main_method.is_none() {
-        return Err(anyhow!("main method not found"));
-    }
+    drop(methods_lock);
 
-    let main_method = main_method.unwrap();
-    drop(loader); // we need to explicitly drop the loader before borrowing 'vm' as mut
-                  // otherwise we would have 'loader' holding imut borrow whilst mut which isnt ok
+    let main_method = main_method.ok_or_else(|| anyhow!("main method not found"))?;
 
-    vm.native.write().entries.insert(
+    let mut native_lock = vm.native.write();
+    let entries = &mut native_lock.entries;
+
+    entries.insert(
         "java/lang/System.registerNatives:()V".to_string(),
         |_vm, _args, _ctx| Ok(()),
     );
 
-    vm.native.write().entries.insert(
+    entries.insert(
         "java/lang/Object.registerNatives:()V".to_string(),
         |_vm, _args, _ctx| Ok(()),
     );
 
-    vm.native.write().entries.insert(
+    entries.insert(
         "java/lang/Shutdown.exit:(I)V".to_string(),
         |_vm, args, _ctx| {
             let code = args.entries.pop().unwrap();
@@ -167,6 +169,8 @@ fn start(vm: &Vm, main_class_path: &str) -> Result<()> {
             exit(*code);
         },
     );
+
+    drop(native_lock);
 
     let main_thread = vm
         .threads
