@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["TuiCommand",""]],"fn":[["do_render",""],["render_classes",""],["render_gc",""],["render_heap",""],["render_log",""],["render_resources",""],["render_status",""],["render_tabs",""],["start_tui",""]],"struct":[["LogWriter",""],["TuiState",""],["TuiWriter",""],["UpdateCpu",""],["UpdateHeap",""]]});

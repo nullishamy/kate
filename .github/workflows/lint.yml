@@ -1,6 +1,7 @@
+name: Clippy linter
 on:
     pull_request:
-        types: [opened, ready_for_review, edited, synchronize]
+        types: [opened, ready_for_review, synchronize]
 
 jobs:
     clippy:

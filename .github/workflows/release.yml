@@ -27,21 +27,21 @@ jobs:
               run: cargo build --release --bins
 
             - name: Rename executable (linux)
-              run: mv target/release/jvm target/release/jvm-linux-amd64
+              run: mv target/release/kate target/release/kate-linux-amd64
               if: matrix.os == 'ubuntu-latest'
 
             - name: Rename executable (mac)
-              run: mv target/release/jvm target/release/jvm-darwin-amd64
+              run: mv target/release/kate target/release/kate-darwin-amd64
               if: matrix.os == 'macos-latest'
 
             - name: Rename executable (windows)
-              run: Rename-Item .\target\release\jvm.exe jvm-win32-amd64.exe
+              run: Rename-Item .\target\release\kate.exe kate-win32-amd64.exe
               if: matrix.os == 'windows-latest'
 
             - name: Create release
               uses: softprops/action-gh-release@v1
               with:
-                  files: target/release/jvm*64?(.exe)
+                  files: target/release/kate*64?(.exe)
                   draft: true
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -65,12 +65,12 @@ jobs:
               run: cargo build --release --bins --target aarch64-apple-darwin
 
             - name: Rename executable
-              run: mv target/aarch64-apple-darwin/release/jvm target/aarch64-apple-darwin/release/jvm-darwin-aarch64
+              run: mv target/aarch64-apple-darwin/release/kate target/aarch64-apple-darwin/release/kate-darwin-aarch64
 
             - name: Create release
               uses: softprops/action-gh-release@v1
               with:
-                  files: target/aarch64-apple-darwin/release/jvm*64?(.exe)
+                  files: target/aarch64-apple-darwin/release/kate*64?(.exe)
                   draft: true
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
