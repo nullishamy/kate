@@ -1,0 +1,1 @@
+initSidebarItems({"constant":[["MAGIC",""],["MAX_SUPPORTED_MAJOR",""],["MAX_SUPPORTED_MINOR",""]],"struct":[["RawClassFile",""]]});
