@@ -42,7 +42,7 @@ impl ConstantPoolBuilder {
 
     // attempt to resolve a string, will transform where possible
     fn string(&self, idx: u16) -> Result<Arc<Utf8Data>> {
-        return if let Some(data) = self.entries.get(&(idx as usize)) {
+        if let Some(data) = self.entries.get(&(idx as usize)) {
             if let LoadedPoolData::Utf8(data) = &data.data {
                 Ok(Arc::clone(data))
             } else {
@@ -50,31 +50,23 @@ impl ConstantPoolBuilder {
             }
         } else {
             let raw = self.raw.get(idx as usize);
+            let raw = raw.ok_or_else(|| anyhow!("pool entry {} did not exist", idx))?;
+            let raw = raw
+                .as_ref()
+                .ok_or_else(|| anyhow!("pool entry {} did not exist", idx))?;
 
-            if raw.is_none() {
-                return Err(anyhow!("pool entry {} did not exist", idx));
-            }
-
-            let raw = raw.unwrap();
-
-            if raw.is_none() {
-                return Err(anyhow!("pool entry {} did not exist", idx));
-            }
-
-            let raw = raw.as_ref().unwrap();
-
-            return if let RawPoolData::Utf8(data) = &raw.data {
+            if let RawPoolData::Utf8(data) = &raw.data {
                 Ok(Arc::new(Utf8Data {
                     str: String::from_utf8(data.bytes.clone())?,
                 }))
             } else {
                 Err(anyhow!("pool entry {} was not utf8", idx))
-            };
-        };
+            }
+        }
     }
 
     fn class(&self, idx: u16) -> Result<Arc<ClassData>> {
-        return if let Some(data) = self.entries.get(&(idx as usize)) {
+        if let Some(data) = self.entries.get(&(idx as usize)) {
             if let LoadedPoolData::Class(data) = &data.data {
                 Ok(Arc::clone(data))
             } else {
@@ -82,31 +74,23 @@ impl ConstantPoolBuilder {
             }
         } else {
             let raw = self.raw.get(idx as usize);
+            let raw = raw.ok_or_else(|| anyhow!("pool entry {} did not exist", idx))?;
+            let raw = raw
+                .as_ref()
+                .ok_or_else(|| anyhow!("pool entry {} did not exist", idx))?;
 
-            if raw.is_none() {
-                return Err(anyhow!("pool entry {} did not exist", idx));
-            }
-
-            let raw = raw.unwrap();
-
-            if raw.is_none() {
-                return Err(anyhow!("pool entry {} did not exist", idx));
-            }
-
-            let raw = raw.as_ref().unwrap();
-
-            return if let RawPoolData::Class(data) = &raw.data {
+            if let RawPoolData::Class(data) = &raw.data {
                 Ok(Arc::new(ClassData {
                     name: self.string(data.name_index)?,
                 }))
             } else {
                 Err(anyhow!("raw pool entry {} was not class", idx))
-            };
-        };
+            }
+        }
     }
 
     fn name_and_type(&self, idx: u16) -> Result<Arc<NameAndTypeData>> {
-        return if let Some(data) = self.entries.get(&(idx as usize)) {
+        if let Some(data) = self.entries.get(&(idx as usize)) {
             if let LoadedPoolData::NameAndType(data) = &data.data {
                 Ok(Arc::clone(data))
             } else {
@@ -114,28 +98,20 @@ impl ConstantPoolBuilder {
             }
         } else {
             let raw = self.raw.get(idx as usize);
+            let raw = raw.ok_or_else(|| anyhow!("pool entry {} did not exist", idx))?;
+            let raw = raw
+                .as_ref()
+                .ok_or_else(|| anyhow!("pool entry {} did not exist", idx))?;
 
-            if raw.is_none() {
-                return Err(anyhow!("pool entry {} did not exist", idx));
-            }
-
-            let raw = raw.unwrap();
-
-            if raw.is_none() {
-                return Err(anyhow!("pool entry {} did not exist", idx));
-            }
-
-            let raw = raw.as_ref().unwrap();
-
-            return if let RawPoolData::NameAndType(data) = &raw.data {
+            if let RawPoolData::NameAndType(data) = &raw.data {
                 Ok(Arc::new(NameAndTypeData {
                     name: self.string(data.name_index)?,
                     descriptor: self.string(data.descriptor_index)?,
                 }))
             } else {
                 Err(anyhow!("raw pool entry {} was not nameandtype", idx))
-            };
-        };
+            }
+        }
     }
 
     fn method_handle_reference(

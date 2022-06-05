@@ -15,42 +15,29 @@ pub struct ConstantPool {
 impl ConstantPool {
     pub fn get(&self, idx: usize) -> Result<&PoolEntry> {
         let res = self.entries.get(&idx);
-
-        if res.is_none() {
-            return Err(anyhow!("pool entry {} does not exist", idx));
-        }
-
-        Ok(res.unwrap())
+        res.ok_or_else(|| anyhow!("pool entry {} does not exist", idx))
     }
 
     pub fn class(&self, idx: usize) -> Result<Arc<ClassData>> {
         let entry = self.get(idx)?.data.as_class();
+        let entry = entry.ok_or_else(|| anyhow!("constant pool entry {} was not a class", idx))?;
 
-        if entry.is_none() {
-            return Err(anyhow!("constant pool entry {} was not a class", idx));
-        }
-
-        Ok(Arc::clone(entry.unwrap()))
+        Ok(Arc::clone(entry))
     }
 
     pub fn utf8(&self, idx: usize) -> Result<Arc<Utf8Data>> {
         let entry = self.get(idx)?.data.as_utf8();
+        let entry = entry.ok_or_else(|| anyhow!("constant pool entry {} was not utf8", idx))?;
 
-        if entry.is_none() {
-            return Err(anyhow!("constant pool entry {} was not utf8", idx));
-        }
-
-        Ok(Arc::clone(entry.unwrap()))
+        Ok(Arc::clone(entry))
     }
 
     pub fn field(&self, idx: usize) -> Result<Arc<FieldRefData>> {
         let entry = self.get(idx)?.data.as_field_ref();
+        let entry = entry
+            .ok_or_else(|| anyhow!("constant pool entry {} was not a field reference", idx))?;
 
-        if entry.is_none() {
-            return Err(anyhow!("constant pool entry {} was not a class", idx));
-        }
-
-        Ok(Arc::clone(entry.unwrap()))
+        Ok(Arc::clone(entry))
     }
 
     pub fn has(&self, idx: usize) -> bool {

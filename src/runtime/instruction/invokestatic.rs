@@ -47,11 +47,8 @@ pub fn invoke_static(vm: &Vm, ctx: &mut CallSite, bytes: &mut Bytes) -> Result<(
 
     let method = cls.methods.read().find(|m| m.name.str == nt.name.str);
 
-    if method.is_none() {
-        return Err(anyhow!("could not resolve static method '{}'", nt.name.str));
-    }
-
-    let method = method.unwrap();
+    let method =
+        method.ok_or_else(|| anyhow!("could not resolve static method '{}'", nt.name.str))?;
 
     debug!(
         "INVOKESTATIC: {} {} {}",

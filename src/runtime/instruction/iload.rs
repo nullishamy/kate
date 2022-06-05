@@ -15,27 +15,23 @@ pub fn iload(_vm: &Vm, ctx: &mut CallSite, idx: u16) -> Result<()> {
     let ops = &mut sf.operand_stack;
     let local = sf.locals.get(idx as usize);
 
-    if let Some(local) = local {
-        if let StackValue::Primitive(_ref) = local {
-            if let PrimitiveWithValue::Int(i) = _ref {
-                ops.push(StackValue::Primitive(PrimitiveWithValue::Int(*i)));
-                debug!("pushed int {:?} to the op stack", _ref);
-                Ok(())
-            } else {
-                Err(anyhow!(
-                    "local @ idx {} was not an int, invalid bytecode",
-                    idx
-                ))
-            }
+    let local =
+        local.ok_or_else(|| anyhow!("local @ idx {} did not exist, invalid bytecode", idx))?;
+
+    if let StackValue::Primitive(_ref) = local {
+        if let PrimitiveWithValue::Int(i) = _ref {
+            ops.push(StackValue::Primitive(PrimitiveWithValue::Int(*i)));
+            debug!("pushed int {:?} to the op stack", _ref);
+            Ok(())
         } else {
             Err(anyhow!(
-                "local @ idx {} was not a primitive, invalid bytecode",
+                "local @ idx {} was not an int, invalid bytecode",
                 idx
             ))
         }
     } else {
         Err(anyhow!(
-            "local @ idx {} did not exist, invalid bytecode",
+            "local @ idx {} was not a primitive, invalid bytecode",
             idx
         ))
     }

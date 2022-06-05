@@ -11,22 +11,16 @@ pub fn put_static(vm: &Vm, ctx: &mut CallSite, bytes: &mut Bytes) -> Result<()> 
     let sf = lock.peek_mut().expect("call stack was empty?");
 
     let value = sf.operand_stack.pop();
-
-    if value.is_none() {
-        return Err(anyhow!("operand stack was empty"));
-    }
+    let value = value.ok_or_else(|| anyhow!("operand stack was empty"))?;
 
     let idx = bytes.try_get_u16()?;
 
     let entry = ctx.class.const_pool.get(idx.into())?;
     let data = &entry.data.as_field_ref();
+    let data = data.ok_or_else(|| anyhow!("entry was not a field, got {:?} instead", entry))?;
 
-    if data.is_none() {
-        return Err(anyhow!("entry was not a field, got {:?} instead", entry));
-    }
-
-    let nt = Arc::clone(&data.unwrap().name_and_type);
-    let cls = Arc::clone(&data.unwrap().class);
+    let nt = Arc::clone(&data.name_and_type);
+    let cls = Arc::clone(&data.class);
 
     let cls = vm
         .system_classloader
@@ -47,7 +41,7 @@ pub fn put_static(vm: &Vm, ctx: &mut CallSite, bytes: &mut Bytes) -> Result<()> 
     cls.fields
         .write()
         .statics
-        .insert(nt.name.str.clone(), value.unwrap());
+        .insert(nt.name.str.clone(), value);
 
     Ok(())
 }

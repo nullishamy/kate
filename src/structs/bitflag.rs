@@ -11,16 +11,13 @@ macro_rules! impl_flags {
 
         impl $impl_type {
             pub fn from_bits(raw: u16) -> Result<Self> {
-                let mut flags = <$flag_type>::from_bits(raw);
-
-                if flags.is_none() {
+                let flags = <$flag_type>::from_bits(raw);
+                let flags = flags.unwrap_or_else(|| {
                     warn!("unrecognised bits {:b} for {}", raw, stringify!($flag_type));
-                    flags = Some(<$flag_type>::from_bits_truncate(raw));
-                }
+                    <$flag_type>::from_bits_truncate(raw)
+                });
 
-                Ok(Self {
-                    flags: flags.unwrap(),
-                })
+                Ok(Self { flags })
             }
 
             pub fn has(&self, other: $flag_type) -> bool {

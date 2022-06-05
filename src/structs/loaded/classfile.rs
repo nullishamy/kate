@@ -146,17 +146,19 @@ impl LoadedClassFile {
 
         let clinit = self.methods.read().find(|m| m.name.str == "<clinit>");
 
-        if clinit.is_none() {
+        let clinit = if let Some(clinit) = clinit {
+            clinit
+        } else {
             warn!("clinit not found for {}", self.this_class.name.str);
             return Ok(());
-        }
+        };
 
         debug!("storing clinit state {}", self.this_class.name.str);
         self.has_clinit_called.store(true, Ordering::Release);
 
         debug!("calling clinit for {}", self.this_class.name.str);
         let res = vm.interpret(
-            CallSite::new(Arc::clone(self), ctx.thread, clinit.unwrap(), None),
+            CallSite::new(Arc::clone(self), ctx.thread, clinit, None),
             Args { entries: vec![] }, // empty args for clinit. it cannot take args, it is a class initialiser
             false,
         );

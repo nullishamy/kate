@@ -17,11 +17,7 @@ pub fn invoke_special(vm: &Vm, ctx: &mut CallSite, bytes: &mut Bytes) -> Result<
     let entry = ctx.class.const_pool.get(idx.into())?;
     let data = entry.data.as_method_ref();
 
-    if data.is_none() {
-        return Err(anyhow!("expected method ref, got {:?}", entry));
-    }
-
-    let method = data.unwrap();
+    let method = data.ok_or_else(|| anyhow!("expected method ref, got {:?}", entry))?;
 
     let nt = Arc::clone(&method.name_and_type);
     let cls = Arc::clone(&method.class);
@@ -29,15 +25,13 @@ pub fn invoke_special(vm: &Vm, ctx: &mut CallSite, bytes: &mut Bytes) -> Result<
 
     let method = cls.methods.read().find(|f| f.name.str == nt.name.str);
 
-    if method.is_none() {
-        return Err(anyhow!(
+    let method = method.ok_or_else(|| {
+        anyhow!(
             "could not find method {} for class {}",
             nt.name.str,
             cls.this_class.name.str
-        ));
-    }
-
-    let method = method.unwrap();
+        )
+    })?;
 
     debug!(
         "INVOKESPECIAL: {} {} {}",
@@ -50,25 +44,15 @@ pub fn invoke_special(vm: &Vm, ctx: &mut CallSite, bytes: &mut Bytes) -> Result<
     // it should be the only value left after args have been popped off
     let obj_ref = sf.operand_stack.pop();
 
-    if obj_ref.is_none() {
-        return Err(anyhow!("operand stack was empty"));
-    }
-
-    let obj_ref = obj_ref.unwrap();
+    let obj_ref = obj_ref.ok_or_else(|| anyhow!("operand stack was empty"))?;
     let obj_ref = obj_ref.as_reference();
 
-    if obj_ref.is_none() {
-        return Err(anyhow!("obj ref was a primitive, expected reference"));
-    }
+    let obj_ref = obj_ref.ok_or_else(|| anyhow!("obj ref was a primitive, expected reference"))?;
+    let obj_ref = obj_ref
+        .as_class()
+        .ok_or_else(|| anyhow!("obj ref was a null, expected class"))?;
 
-    let obj_ref = obj_ref.unwrap();
-    let obj_ref = obj_ref.as_class();
-
-    if obj_ref.is_none() {
-        return Err(anyhow!("obj ref was a null, expected class"));
-    }
-
-    let obj_ref = Arc::clone(obj_ref.unwrap());
+    let obj_ref = Arc::clone(obj_ref);
 
     // drop the lock before re-interpreting in case 'method' invokes invokespecial again
     // if we didnt do this, we could deadlock

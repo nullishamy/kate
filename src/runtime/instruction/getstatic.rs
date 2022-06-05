@@ -18,16 +18,9 @@ pub fn get_static(vm: &Vm, ctx: &mut CallSite, bytes: &mut Bytes) -> Result<()> 
     let class = loader.load_class(class_name)?;
 
     let lock = class.fields.read();
-    let field_data = lock.statics.get(&field_ref.name_and_type.name.str);
-
-    if field_data.is_none() {
-        return Err(anyhow!(
-            "unknown static field {}",
-            field_ref.name_and_type.name.str
-        ));
-    }
-
-    let field_obj = field_data.unwrap();
+    let field_obj = lock.statics.get(&field_ref.name_and_type.name.str);
+    let field_obj = field_obj
+        .ok_or_else(|| anyhow!("unknown static field {}", field_ref.name_and_type.name.str))?;
 
     let stack = &mut sf.operand_stack;
 

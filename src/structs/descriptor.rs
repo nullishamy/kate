@@ -127,23 +127,14 @@ impl<'a> Parser<'a> {
     }
 
     fn consume_next(&mut self) -> Result<char> {
-        let next = self.chars.next();
-
-        if next.is_none() {
-            return Err(anyhow!("out of chars"));
-        }
-
-        Ok(next.unwrap())
+        self.chars.next().ok_or_else(|| anyhow!("out of chars"))
     }
 
     fn peek_next(&mut self) -> Result<char> {
-        let next = self.chars.peek();
-
-        if next.is_none() {
-            return Err(anyhow!("out of chars"));
-        }
-
-        Ok(*next.unwrap())
+        self.chars
+            .peek()
+            .copied()
+            .ok_or_else(|| anyhow!("out of chars"))
     }
 
     fn expect_next(&mut self, expect: char) -> Result<()> {

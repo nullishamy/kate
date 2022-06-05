@@ -49,14 +49,9 @@ impl ClassLoader<SystemClassLoader> for SystemClassLoader {
 
     fn define_class(&mut self, data: ClassDefinition) -> Result<Arc<LoadedClassFile>> {
         let name = data.internal_name;
-
-        if name.is_none() {
-            return Err(anyhow!(
-                "name was not present, and anonymous classes are not supported yet"
-            ));
-        }
-
-        let name = name.unwrap();
+        let name = name.ok_or_else(|| {
+            anyhow!("name was not present, and anonymous classes are not supported yet")
+        })?;
 
         let res =
             LoadedClassFile::from_raw(ClassFileParser::from_bytes(name, data.bytes).parse()?)?;

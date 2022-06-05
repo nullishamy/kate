@@ -27,6 +27,7 @@ pub fn create_args(
         let from_t = from.get_type();
         let from_t = from_t.as_ref();
 
+        // FIXME: logic error - if from_t is None, the type wasn't a reference type, but a primitive
         if from_t.is_none() {
             // null case
             // pop because its quicker & more accurate.

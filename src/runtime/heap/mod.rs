@@ -96,18 +96,10 @@ impl Heap {
 
     pub fn get(&self, ptr: &JvmPointer) -> Result<Arc<JvmObject>> {
         let obj = self.refs.get(*ptr as usize);
-
-        if obj.is_none() {
-            return Err(anyhow!("could not locate object for ptr {}", ptr));
-        }
-
-        let obj = obj.unwrap().upgrade();
-
-        if obj.is_none() {
-            return Err(anyhow!("could not upgrade object for ptr {}", ptr));
-        }
-
-        Ok(obj.unwrap())
+        let obj = obj
+            .ok_or_else(|| anyhow!("could not locate object for ptr {}", ptr))?
+            .upgrade();
+        obj.ok_or_else(|| anyhow!("could not upgrade object for ptr {}", ptr))
     }
 
     pub fn total(&self) -> usize {
