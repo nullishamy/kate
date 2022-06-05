@@ -60,10 +60,8 @@ pub fn visit_system(class: Arc<LoadedClassFile>) {
     let m = entries
         .iter()
         .enumerate()
-        .filter(|(_i, p)| p.name.str == "getSecurityManager")
+        .find(|(_i, p)| p.name.str == "getSecurityManager")
         .map(|(i, _p)| i)
-        .collect::<Vec<usize>>()
-        .first()
         .unwrap();
 
     entries.remove(m);
@@ -103,10 +101,8 @@ pub fn visit_shutdown(class: Arc<LoadedClassFile>) {
     let m = entries
         .iter()
         .enumerate()
-        .filter(|(_i, p)| p.name.str == "<clinit>")
+        .find(|(_i, p)| p.name.str == "<clinit>")
         .map(|(i, _p)| i)
-        .collect::<Vec<usize>>()
-        .first()
         .unwrap();
 
     entries.remove(m);
@@ -139,10 +135,8 @@ pub fn visit_shutdown(class: Arc<LoadedClassFile>) {
     let m = entries
         .iter()
         .enumerate()
-        .filter(|(_i, p)| p.name.str == "exit")
+        .find(|(_i, p)| p.name.str == "exit")
         .map(|(i, _p)| i)
-        .collect::<Vec<usize>>()
-        .first()
         .unwrap();
 
     entries.remove(m);

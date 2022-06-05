@@ -60,22 +60,19 @@ impl Heap {
         let mut counter = 0;
 
         // Iterate through the indices of weak references without any corresponding strong references
-        let dead_refs: Vec<usize> = self
-            .refs
-            .iter()
-            .enumerate()
-            .filter(|(_i, e)| e.strong_count() == 0)
-            .map(|(i, _)| i)
-            .rev()
-            .collect();
-
-        for dead in dead_refs {
-            self.refs.swap_remove(dead);
-            counter += 1;
-        }
+        self.refs.retain(|e| {
+            if e.strong_count() == 0 {
+                counter += 1;
+                false
+            } else {
+                true
+            }
+        });
 
         // even though we still have the allocation, we dont own the value
         // and it cannot be used, so we consider it unused
+        // TODO: Can we just set this to size after pruning?
+        // Or if not, maybe consider comparing size before and after, seems less error-prone.
         self.used -= counter;
 
         // TODO: determine when we should de-allocate, this shouldnt be done often as
