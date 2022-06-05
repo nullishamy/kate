@@ -10,8 +10,6 @@ jobs:
         steps:
             - name: Checkout docs branch
               uses: actions/checkout@v3
-              with:
-                  ref: docs
 
             - name: Install latest stable rust toolchain
               uses: actions-rs/toolchain@v1
