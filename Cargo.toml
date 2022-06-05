@@ -1,6 +1,11 @@
 [package]
-name = "jvm"
+name = "kate"
+license-file = "LICENSE"
+documentation = "https://amy.is-a.dev/kate"
+repository = "https://github.com/nullishamy/kate/"
 version = "0.1.0"
+readme = "README.md"
+description = "A WIP JVM written in rust."
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
