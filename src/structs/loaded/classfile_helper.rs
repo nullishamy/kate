@@ -238,8 +238,7 @@ impl ConstantPoolBuilder {
 
             // special casing for longs and doubles
             let to_inc = match &loaded.tag {
-                Tag::Long => 2,
-                Tag::Double => 2,
+                Tag::Long | Tag::Double => 2,
                 _ => 1,
             };
 
@@ -350,18 +349,17 @@ pub fn create_attributes(
         let name = const_pool.utf8(entry.attribute_name_index as usize)?;
         let name = Arc::clone(&name);
 
-        let data = match name.str.as_str() {
-            "Code" => AttributeEntry::Code(CodeData::from_bytes(
+        let data = if &name.str == "Code" {
+            AttributeEntry::Code(CodeData::from_bytes(
                 name,
                 entry.attribute_data,
                 const_pool,
-            )?),
-            _ => {
-                warn!("unrecognised attribute '{}'", name.str);
+            )?)
+        } else {
+            warn!("unrecognised attribute '{}'", name.str);
 
-                // ignore attributes we dont recognise
-                continue;
-            }
+            // ignore attributes we dont recognise
+            continue;
         };
 
         out.entries.push(data);

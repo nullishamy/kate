@@ -247,9 +247,9 @@ pub fn parse_method_info(parser: &mut ClassFileParser, length: u16) -> Result<Ve
 }
 
 /**
-This macro builds a set of try_get_{number_type} functions for safe reading of
+This macro builds a set of `try_get_{number_type}` functions for safe reading of
 bytes from a Bytes object. They return Result<T> instead of panicking
- **/
+ */
 macro_rules! impl_safebuf {
     ( $($type:ty),* ) => {
         pub trait SafeBuf: bytes::Buf {
