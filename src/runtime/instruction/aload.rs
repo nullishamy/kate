@@ -15,8 +15,8 @@ pub fn aload(_vm: &Vm, ctx: &mut CallSite, idx: u16) -> Result<()> {
     let local = sf.locals.get(idx as usize);
 
     if let Some(local) = local {
-        if let StackValue::Reference(_ref) = local {
-            ops.push(StackValue::Reference(_ref.clone()));
+        if let StackValue::Reference(ref_) = local {
+            ops.push(StackValue::Reference(ref_.clone()));
             debug!("pushed local to the op stack");
             Ok(())
         } else {

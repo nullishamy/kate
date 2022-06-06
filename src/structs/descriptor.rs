@@ -87,10 +87,10 @@ impl<'a> Parser<'a> {
             self.consume_next()?;
         }
 
-        let _type = self.parse_descriptor_type()?;
+        let type_ = self.parse_descriptor_type()?;
 
         Ok(DescriptorArrayType {
-            _type: Box::new(_type),
+            type_: Box::new(type_),
             dimensions: count,
         })
     }
@@ -186,10 +186,10 @@ impl FieldDescriptor {
         debug!("parsing field descriptor {}", descriptor);
         let mut parser = Parser::new(descriptor);
 
-        let _type = parser.parse_descriptor_type()?;
+        let type_ = parser.parse_descriptor_type()?;
 
         Ok(Self {
-            _type,
+            _type: type_,
             raw: parser.raw,
         })
     }
@@ -205,7 +205,7 @@ pub enum DescriptorType {
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct DescriptorArrayType {
-    pub _type: Box<DescriptorType>,
+    pub type_: Box<DescriptorType>,
     pub dimensions: u16,
 }
 

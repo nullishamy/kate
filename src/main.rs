@@ -136,7 +136,7 @@ fn start(vm: &Vm, main_class_path: &str) -> Result<()> {
                 .unwrap()
                 .as_array()
                 .filter(|p| {
-                    p._type
+                    p.type_
                         .as_reference()
                         .filter(|a| a.internal_name == "java/lang/String")
                         .is_some()
