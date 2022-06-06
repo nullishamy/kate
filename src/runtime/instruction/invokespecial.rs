@@ -56,7 +56,6 @@ pub fn invoke_special(vm: &Vm, ctx: &mut CallSite, bytes: &mut Bytes) -> Result<
 
     // drop the lock before re-interpreting in case 'method' invokes invokespecial again
     // if we didnt do this, we could deadlock
-    // we use this if/else to definitely drop before we interpret anything
     drop(lock);
     if cls.requires_clinit() {
         cls.run_clinit(

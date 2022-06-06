@@ -13,7 +13,6 @@ pub fn areturn(_vm: &Vm, ctx: &mut CallSite, _bytes: &mut Bytes) -> Result<()> {
     let ref_value = sf.operand_stack.pop();
     let ref_value = ref_value.ok_or_else(|| anyhow!("operand stack was empty"))?;
 
-    // TODO: I don't quite understand this, "operand stack was empty" is an error, and operand stack not empty is a warn?
     if !sf.operand_stack.is_empty() {
         warn!("attempted to areturn with values on the operand stack");
         sf.operand_stack.discard();

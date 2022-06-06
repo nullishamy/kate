@@ -349,17 +349,20 @@ pub fn create_attributes(
         let name = const_pool.utf8(entry.attribute_name_index as usize)?;
         let name = Arc::clone(&name);
 
-        let data = if &name.str == "Code" {
-            AttributeEntry::Code(CodeData::from_bytes(
+
+        let data = match name.str.as_str() {
+            "Code" => AttributeEntry::Code(CodeData::from_bytes(
                 name,
                 entry.attribute_data,
                 const_pool,
-            )?)
-        } else {
-            warn!("unrecognised attribute '{}'", name.str);
+            )?),
+            _ => {
+                // TODO: Implement standard attributes.
+                warn!("unrecognised attribute '{}'", name.str);
 
-            // ignore attributes we dont recognise
-            continue;
+                // ignore attributes we dont recognise
+                continue;
+            }
         };
 
         out.entries.push(data);
