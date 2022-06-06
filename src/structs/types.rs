@@ -1,3 +1,6 @@
+//! provides various types for use in the JVM.
+//! mainly wraps primitives to make a more usable API out of them.
+
 use std::sync::Arc;
 
 use crate::runtime::heap::object::JvmObject;
@@ -7,16 +10,34 @@ use crate::structs::JvmPointer;
 use crate::DescriptorType;
 use enum_as_inner::EnumAsInner;
 
+/// The bool JVM type
 pub type Boolean = bool;
+
+/// The byte JVM type
 pub type Byte = i8;
+
+/// The short JVM type
 pub type Short = i16;
+
+/// The int JVM type
 pub type Int = i32;
+
+/// The long JVM type
 pub type Long = i64;
+
+/// The char JVM type
 pub type Char = char;
+
+/// The float JVM type
 pub type Float = f32;
+
+/// The double JVM type
 pub type Double = f64;
+
+/// The return address JVM type
 pub type ReturnAddress = JvmPointer;
 
+/// refers to a primitive with a value attached to it
 #[derive(PartialEq, Clone, Debug, EnumAsInner)]
 pub enum PrimitiveWithValue {
     Boolean(Boolean),
@@ -29,6 +50,7 @@ pub enum PrimitiveWithValue {
     Double(Double),
 }
 
+/// refers to just a primitive type, with no value
 #[derive(Clone, PartialEq, Debug)]
 pub enum PrimitiveType {
     Boolean,
@@ -47,6 +69,8 @@ pub enum ReferenceType {
     Null,
 }
 
+/// refers to a reference type, or a primitive type.
+/// used for fields and method parameters
 #[derive(Clone, Debug, EnumAsInner)]
 pub enum RefOrPrim {
     Reference(ReferenceType),
@@ -54,6 +78,8 @@ pub enum RefOrPrim {
 }
 
 impl RefOrPrim {
+    /// get the underlying descriptor type of a RefOrPrim
+    /// this returns None if there is no type associated with this value (`null`)
     pub fn get_type(&self) -> Option<DescriptorType> {
         match self {
             RefOrPrim::Reference(d) => match d {
@@ -77,8 +103,3 @@ impl RefOrPrim {
         }
     }
 }
-
-/*
-ReferenceType::Class(c) => DescriptorType::Reference(DescriptorReferenceType { internal_name: "".to_string() }).
-                ReferenceType::Null => None
- */

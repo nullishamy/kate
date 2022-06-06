@@ -1,3 +1,9 @@
+//! descriptors are used to describe the types of fields and methods
+//! when used in methods, they describe the parameters and return type of a method.
+//! when used in fields, they describe the type of the field.
+//!
+//! the `notation` module details the different type notation used by the JVM
+
 use std::iter::Peekable;
 use std::str::Chars;
 
@@ -7,43 +13,46 @@ use tracing::debug;
 
 use crate::structs::types::PrimitiveType;
 
+/// this describes the meaning of each of the type notations found in a descriptor
+/// in a comment above each, the corresponding programmatic type is provided.
 pub mod notation {
-    // i8
+    /// i8
     pub const BYTE: char = 'B';
 
-    // UTF-16 Char
+    /// UTF-16 Char
     pub const CHAR: char = 'C';
 
-    // f64
+    /// f64
     pub const DOUBLE: char = 'D';
 
-    // f32
+    /// f32
     pub const FLOAT: char = 'F';
 
-    // u32
+    /// u32
     pub const INT: char = 'I';
 
-    // u64
+    /// u64
     pub const LONG: char = 'J';
 
-    // Class type, described by an 'internal class name'
-    // preceding the token
+    /// Class type, described by an 'internal class name'
+    /// preceding the token
     pub const CLASS: char = 'L';
 
-    // i16
+    /// i16
     pub const SHORT: char = 'S';
 
-    // bool
+    /// bool
     pub const BOOLEAN: char = 'Z';
 
-    // void
+    /// void
     pub const VOID: char = 'V';
 
-    // Array type, who's reference type is
-    // described by an 'internal class name'
-    // preceding the token. Ends with a ';'
+    /// array type, who's reference type is
+    /// described by an 'internal class name'
+    /// preceding the token. Ends with a ';'
     pub const ARRAY: char = '[';
 
+    /// ending token of a reference type
     pub const END_REFERENCE: char = ';';
 }
 
@@ -166,6 +175,26 @@ impl<'a> Parser<'a> {
     with a return type of reference type java/lang/Object
 */
 
+/// a descriptor for a method.
+///
+/// # examples
+/// ```
+/// // 1 parameter, a reference type of java/lang/String with a return type of void
+/// let str = "(Ljava/lang/String;)V"
+///
+/// let descriptor: Result<MethodDescriptor> = MethodDescriptor::parse(str);
+///
+/// assert(descriptor.is_ok());
+/// ```
+///
+/// ```
+/// // Invalid
+/// let str = "(Ljava/lang/String;INVALID)V"
+///
+/// let descriptor: Result<MethodDescriptor> = MethodDescriptor::parse(str);
+///
+/// assert(descriptor.is_err());
+/// ```
 #[derive(Clone, Debug)]
 pub struct MethodDescriptor {
     pub parameters: Vec<DescriptorType>,
