@@ -349,7 +349,6 @@ pub fn create_attributes(
         let name = const_pool.utf8(entry.attribute_name_index as usize)?;
         let name = Arc::clone(&name);
 
-
         let data = match name.str.as_str() {
             "Code" => AttributeEntry::Code(CodeData::from_bytes(
                 name,
