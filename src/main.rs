@@ -39,8 +39,8 @@ async fn main() -> Result<()> {
     let cmd = args.command;
 
     let (write, read) = tokio::sync::mpsc::unbounded_channel::<TuiCommand>();
-    //TODO: start runtime with these channels to pass messages to tui
-    //this will no-op if TUI is not enabled as nothing is listening
+    // TODO: start runtime with these channels to pass messages to tui
+    // this will no-op if TUI is not enabled as nothing is listening
 
     let mut tui: Option<TuiWriter> = None;
 

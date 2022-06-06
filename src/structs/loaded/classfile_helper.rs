@@ -38,7 +38,7 @@ impl ConstantPoolBuilder {
         LoadedPoolEntry { tag, data }
     }
 
-    //TODO: reduce this duplication
+    // TODO: reduce this duplication
 
     // attempt to resolve a string, will transform where possible
     fn string(&self, idx: u16) -> Result<Arc<Utf8Data>> {
@@ -272,7 +272,7 @@ pub fn create_interfaces(raw: Vec<u16>, const_pool: &ConstantPool) -> Result<Int
     for idx in raw {
         let entry = const_pool.class(idx as usize)?;
 
-        //TODO: attach a classloader here and load the entries class so that we can validate it is an interface
+        // TODO: attach a classloader here and load the entries class so that we can validate it is an interface
         out.entries.push(Arc::clone(&entry));
     }
 

@@ -97,7 +97,7 @@ impl Vm {
             );
         }
 
-        //TODO: stackframe support for native functions
+        // TODO: stackframe support for native functions
         if method.access_flags.has(MethodAccessFlag::NATIVE) {
             // f/q/c/n.methodName:(descriptor)
             let name = format!(

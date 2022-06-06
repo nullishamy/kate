@@ -132,14 +132,14 @@ pub struct MethodTypeData {
 #[derive(Clone, Debug)]
 pub struct DynamicData {
     pub bootstrap_method_attr_index: u16,
-    //TODO: resolve this when attribute parsing is implemented
+    // TODO: resolve this when attribute parsing is implemented
     pub name_and_type: Arc<NameAndTypeData>,
 }
 
 #[derive(Clone, Debug)]
 pub struct InvokeDynamicData {
     pub bootstrap_method_attr_index: u16,
-    //TODO: resolve this when attribute parsing is implemented
+    // TODO: resolve this when attribute parsing is implemented
     pub name_and_type: Arc<NameAndTypeData>,
 }
 

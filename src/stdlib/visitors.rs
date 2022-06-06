@@ -83,7 +83,7 @@ pub fn visit_system(class: Arc<LoadedClassFile>) {
                 max_stack: 0,
                 max_locals: 0,
                 // return null, this will bypass the checks
-                //FIXME hack
+                // FIXME hack
                 code: vec![1, 176],
                 exception_handlers: vec![],
                 attributes: vec![],
@@ -124,7 +124,7 @@ pub fn visit_shutdown(class: Arc<LoadedClassFile>) {
                 max_stack: 0,
                 max_locals: 0,
                 // return null, this will bypass the checks
-                //FIXME hack
+                // FIXME hack
                 code: vec![177],
                 exception_handlers: vec![],
                 attributes: vec![],

@@ -69,7 +69,7 @@ pub fn invoke_special(vm: &Vm, ctx: &mut CallSite, bytes: &mut Bytes) -> Result<
         )?;
     }
 
-    //TODO: respect polymorphic calls
+    // TODO: respect polymorphic calls
     // replace '&cls' with obj_ref's class once we figure out polymorphism
     vm.interpret(
         CallSite::new(

@@ -148,14 +148,12 @@ impl<'a> Parser<'a> {
     }
 }
 
-/*
-    Examples:
-    (Ljava/lang/String;)V - 1 parameter, a reference type of java/lang/String
-    with a return type of void
-
-    (IDLjava/lang/Thread;)Ljava/lang/Object; - 3 parameters, int, double and reference type java/lang/Thread
-    with a return type of reference type java/lang/Object
-*/
+// Examples:
+// (Ljava/lang/String;)V - 1 parameter, a reference type of java/lang/String
+// with a return type of void
+//
+// (IDLjava/lang/Thread;)Ljava/lang/Object; - 3 parameters, int, double and reference type java/lang/Thread
+// with a return type of reference type java/lang/Object
 
 #[derive(Clone, Debug)]
 pub struct MethodDescriptor {
@@ -227,14 +225,12 @@ impl ToString for MethodDescriptor {
 }
 
 pub fn test_descriptor_parsing() {
-    /*
-        one_array_param:([Ljava/lang/String;)V
-        two_array_params:([Ljava/lang/String;[Ljava/lang/String;)V
-        one_two_darray_param:([[Ljava/lang/String;)V
-        one_three_darray_param:([[[Ljava/lang/String;)V
-        one_ref_param:(Ljava/lang/String;)V
-        two_ref_params:(Ljava/lang/String;Ljava/lang/String;)V
-    */
+    // one_array_param:([Ljava/lang/String;)V
+    // two_array_params:([Ljava/lang/String;[Ljava/lang/String;)V
+    // one_two_darray_param:([[Ljava/lang/String;)V
+    // one_three_darray_param:([[[Ljava/lang/String;)V
+    // one_ref_param:(Ljava/lang/String;)V
+    // two_ref_params:(Ljava/lang/String;Ljava/lang/String;)V
 
     let one_array_param = "([Ljava/lang/String;)V";
     let two_array_params = "([Ljava/lang/String;[Ljava/lang/String;)V";

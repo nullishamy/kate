@@ -82,14 +82,14 @@ pub struct FloatData {
 
 #[derive(Copy, Clone, Debug)]
 pub struct LongData {
-    //TODO: this has to take up 2 entries (?)
+    // TODO: this has to take up 2 entries (?)
     pub low_bytes: u32,
     pub high_bytes: u32,
 }
 
 #[derive(Copy, Clone, Debug)]
 pub struct DoubleData {
-    //TODO: this has to take up 2 entries (?)
+    // TODO: this has to take up 2 entries (?)
     pub low_bytes: f32,
     pub high_bytes: f32,
 }

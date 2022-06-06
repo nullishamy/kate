@@ -67,7 +67,7 @@ impl CodeData {
                 data.push(bytes.try_get_u8()?);
             }
 
-            attributes.push(CustomData { name, data })
+            attributes.push(CustomData { name, data });
         }
 
         Ok(Self {

@@ -121,7 +121,7 @@ impl LoadedClassFile {
             methods,
             constructors,
             attributes,
-            package: None, //TODO: implement packages
+            package: None, // TODO: implement packages
             has_clinit_called: AtomicBool::new(false),
         })
     }
