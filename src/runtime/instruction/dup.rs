@@ -9,14 +9,9 @@ pub fn dup(_vm: &Vm, ctx: &mut CallSite, _bytes: &mut Bytes) -> Result<()> {
     let st = &mut sf.operand_stack;
 
     let v = st.peek();
+    let v = v.ok_or_else(|| anyhow!("operand stack was empty"))?.clone();
 
-    if v.is_none() {
-        return Err(anyhow!("operand stack was empty"));
-    }
-
-    let v2 = v.unwrap().clone();
-
-    st.push(v2);
+    st.push(v);
 
     Ok(())
 }

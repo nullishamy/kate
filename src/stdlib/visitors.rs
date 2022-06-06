@@ -54,21 +54,19 @@ pub fn visit_system(class: Arc<LoadedClassFile>) {
         RefOrPrim::Reference(ReferenceType::Class(Arc::new(sysout))),
     );
 
-    let m = *class
-        .methods
-        .read()
-        .entries
+    let mut lock = class.methods.write();
+    let entries = &mut lock.entries;
+
+    let m = entries
         .iter()
         .enumerate()
-        .filter(|(_i, p)| p.name.str == "getSecurityManager")
+        .find(|(_i, p)| p.name.str == "getSecurityManager")
         .map(|(i, _p)| i)
-        .collect::<Vec<usize>>()
-        .first()
         .unwrap();
 
-    class.methods.write().entries.remove(m);
+    entries.remove(m);
 
-    class.methods.write().entries.push(Arc::new(MethodEntry {
+    entries.push(Arc::new(MethodEntry {
         access_flags: MethodAccessFlags::from_bits(
             (MethodAccessFlag::PUBLIC | MethodAccessFlag::STATIC).bits(),
         )
@@ -85,7 +83,7 @@ pub fn visit_system(class: Arc<LoadedClassFile>) {
                 max_stack: 0,
                 max_locals: 0,
                 // return null, this will bypass the checks
-                //FIXME hack
+                // FIXME hack
                 code: vec![1, 176],
                 exception_handlers: vec![],
                 attributes: vec![],
@@ -97,21 +95,19 @@ pub fn visit_system(class: Arc<LoadedClassFile>) {
 }
 
 pub fn visit_shutdown(class: Arc<LoadedClassFile>) {
-    let m = *class
-        .methods
-        .read()
-        .entries
+    let mut lock = class.methods.write();
+    let entries = &mut lock.entries;
+
+    let m = entries
         .iter()
         .enumerate()
-        .filter(|(_i, p)| p.name.str == "<clinit>")
+        .find(|(_i, p)| p.name.str == "<clinit>")
         .map(|(i, _p)| i)
-        .collect::<Vec<usize>>()
-        .first()
         .unwrap();
 
-    class.methods.write().entries.remove(m);
+    entries.remove(m);
 
-    class.methods.write().entries.push(Arc::new(MethodEntry {
+    entries.push(Arc::new(MethodEntry {
         access_flags: MethodAccessFlags::from_bits(
             (MethodAccessFlag::PUBLIC | MethodAccessFlag::STATIC).bits(),
         )
@@ -128,7 +124,7 @@ pub fn visit_shutdown(class: Arc<LoadedClassFile>) {
                 max_stack: 0,
                 max_locals: 0,
                 // return null, this will bypass the checks
-                //FIXME hack
+                // FIXME hack
                 code: vec![177],
                 exception_handlers: vec![],
                 attributes: vec![],
@@ -136,21 +132,16 @@ pub fn visit_shutdown(class: Arc<LoadedClassFile>) {
         },
     }));
 
-    let m = *class
-        .methods
-        .read()
-        .entries
+    let m = entries
         .iter()
         .enumerate()
-        .filter(|(_i, p)| p.name.str == "exit")
+        .find(|(_i, p)| p.name.str == "exit")
         .map(|(i, _p)| i)
-        .collect::<Vec<usize>>()
-        .first()
         .unwrap();
 
-    class.methods.write().entries.remove(m);
+    entries.remove(m);
 
-    class.methods.write().entries.push(Arc::new(MethodEntry {
+    entries.push(Arc::new(MethodEntry {
         access_flags: MethodAccessFlags::from_bits(
             (MethodAccessFlag::PUBLIC | MethodAccessFlag::STATIC | MethodAccessFlag::NATIVE).bits(),
         )
@@ -162,5 +153,5 @@ pub fn visit_shutdown(class: Arc<LoadedClassFile>) {
         attributes: Attributes { entries: vec![] },
     }));
 
-    debug!("finished writing to java/lang/Shutdown")
+    debug!("finished writing to java/lang/Shutdown");
 }

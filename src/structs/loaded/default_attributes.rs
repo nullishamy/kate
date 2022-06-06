@@ -52,7 +52,7 @@ impl CodeData {
                 end: bytes.try_get_u16()?,
                 handler: bytes.try_get_u16()?,
                 catch_type: bytes.try_get_u16()?,
-            })
+            });
         }
 
         let attribute_count = bytes.try_get_u16()?;
@@ -67,7 +67,7 @@ impl CodeData {
                 data.push(bytes.try_get_u8()?);
             }
 
-            attributes.push(CustomData { name, data })
+            attributes.push(CustomData { name, data });
         }
 
         Ok(Self {

@@ -81,7 +81,7 @@ impl LoadedClassFile {
 
             debug!("class has a superclass, {}", entry.name.str);
         } else {
-            debug!("class has no superclass")
+            debug!("class has no superclass");
         }
 
         let interfaces = create_interfaces(raw.interface_info, &const_pool)?;
@@ -90,10 +90,10 @@ impl LoadedClassFile {
             debug!("class as {} superinterfaces", interfaces.entries.len());
 
             for interface in &interfaces.entries {
-                debug!("\t{}", interface.name.str)
+                debug!("\t{}", interface.name.str);
             }
         } else {
-            debug!("class has no superinterfaces")
+            debug!("class has no superinterfaces");
         }
 
         let fields = RwLock::new(create_fields(raw.field_info, &const_pool)?);
@@ -121,7 +121,7 @@ impl LoadedClassFile {
             methods,
             constructors,
             attributes,
-            package: None, //TODO: implement packages
+            package: None, // TODO: implement packages
             has_clinit_called: AtomicBool::new(false),
         })
     }
@@ -146,17 +146,19 @@ impl LoadedClassFile {
 
         let clinit = self.methods.read().find(|m| m.name.str == "<clinit>");
 
-        if clinit.is_none() {
+        let clinit = if let Some(clinit) = clinit {
+            clinit
+        } else {
             warn!("clinit not found for {}", self.this_class.name.str);
             return Ok(());
-        }
+        };
 
         debug!("storing clinit state {}", self.this_class.name.str);
         self.has_clinit_called.store(true, Ordering::Release);
 
         debug!("calling clinit for {}", self.this_class.name.str);
         let res = vm.interpret(
-            CallSite::new(Arc::clone(self), ctx.thread, clinit.unwrap(), None),
+            CallSite::new(Arc::clone(self), ctx.thread, clinit, None),
             Args { entries: vec![] }, // empty args for clinit. it cannot take args, it is a class initialiser
             false,
         );

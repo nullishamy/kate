@@ -31,14 +31,14 @@ impl InternalData {
     pub fn message(&self) -> String {
         self.message
             .as_ref()
-            .map_or("unknown", |m| m.as_str())
+            .map_or("unknown", String::as_str)
             .to_owned()
     }
 
     pub fn file(&self) -> String {
         self.source_file
             .as_ref()
-            .map_or("unknown", |m| m.as_str())
+            .map_or("unknown", String::as_str)
             .to_owned()
     }
 }

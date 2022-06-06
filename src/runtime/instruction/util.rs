@@ -27,6 +27,7 @@ pub fn create_args(
         let from_t = from.get_type();
         let from_t = from_t.as_ref();
 
+        // FIXME: logic error - if from_t is None, the type wasn't a reference type, but a primitive
         if from_t.is_none() {
             // null case
             // pop because its quicker & more accurate.
@@ -34,7 +35,7 @@ pub fn create_args(
             args.push(
                 ops.pop()
                     .expect("somehow we could not pop the value? we just peeked it though..."),
-            )
+            );
         }
 
         let from_t = from_t.unwrap();
@@ -44,7 +45,7 @@ pub fn create_args(
             args.push(
                 ops.pop()
                     .expect("somehow we could not pop the value? we just peeked it though..."),
-            )
+            );
         } else {
             // invalid type
             return Err(anyhow!(

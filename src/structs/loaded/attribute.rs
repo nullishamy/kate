@@ -7,11 +7,6 @@ pub struct Attributes {
 
 impl Attributes {
     pub fn get(&self, key: &str) -> Option<&AttributeEntry> {
-        self.entries
-            .iter()
-            .filter(|a| a.name().str == key)
-            .collect::<Vec<&AttributeEntry>>()
-            .first()
-            .copied()
+        self.entries.iter().find(|a| a.name().str == key)
     }
 }

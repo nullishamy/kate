@@ -164,7 +164,7 @@ pub fn start_tui(
                         state.log_lines.push_back(msg);
                     }
                     TuiCommand::Refresh => {
-                        //no-op, this just causes a re-render
+                        // no-op, this just causes a re-render
                     }
                     TuiCommand::VmState(new_status) => {
                         state.vm_state = new_status;
@@ -338,7 +338,7 @@ where
         .log_lines
         .iter()
         .map(|msg| {
-            //TODO: make this more robust
+            // TODO: make this more robust
             let msg = msg.strip_prefix(' ').unwrap_or(msg);
             let (level, style) = if msg.starts_with("INFO") {
                 ("INFO", info_style)

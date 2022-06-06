@@ -46,7 +46,7 @@ pub fn ldc(vm: &Vm, ctx: &mut CallSite, bytes: &mut Bytes) -> Result<()> {
                     .filter(|f| {
                         f.as_array()
                             .filter(|a| {
-                                a._type
+                                a.type_
                                     .as_primitive()
                                     .filter(|p| **p == PrimitiveType::Char)
                                     .is_some()

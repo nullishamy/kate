@@ -21,12 +21,8 @@ pub fn ifnull(vm: &Vm, ctx: &mut CallSite, args: &mut Args, bytes: &mut Bytes) -
 
     let obj_ref = obj_ref.unwrap();
     let obj_ref = obj_ref.as_reference();
+    let obj_ref = obj_ref.ok_or_else(|| anyhow!("obj ref was a primitive, expected reference"))?;
 
-    if obj_ref.is_none() {
-        return Err(anyhow!("obj ref was a primitive, expected reference"));
-    }
-
-    let obj_ref = obj_ref.unwrap();
     let obj_ref = obj_ref.as_class();
 
     if obj_ref.is_none() {

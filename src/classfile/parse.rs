@@ -22,7 +22,7 @@ impl ClassFileParser {
     pub fn from_path(path: String) -> Result<Self> {
         info!("opening classfile '{}' for parsing from path", path);
 
-        let buffer = ClassFileParser::bytes(path.to_owned())?;
+        let buffer = ClassFileParser::bytes(path.clone())?;
         Ok(ClassFileParser::from_bytes(path, buffer))
     }
 
@@ -43,7 +43,7 @@ impl ClassFileParser {
         if path.starts_with("java/") {
             debug!("java stdlib detected, altering path");
 
-            path = format!("src/stdlib/{}", path)
+            path = format!("src/stdlib/{}", path);
         }
 
         path += ".class";

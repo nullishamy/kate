@@ -87,10 +87,10 @@ impl<'a> Parser<'a> {
             self.consume_next()?;
         }
 
-        let _type = self.parse_descriptor_type()?;
+        let type_ = self.parse_descriptor_type()?;
 
         Ok(DescriptorArrayType {
-            _type: Box::new(_type),
+            type_: Box::new(type_),
             dimensions: count,
         })
     }
@@ -127,23 +127,14 @@ impl<'a> Parser<'a> {
     }
 
     fn consume_next(&mut self) -> Result<char> {
-        let next = self.chars.next();
-
-        if next.is_none() {
-            return Err(anyhow!("out of chars"));
-        }
-
-        Ok(next.unwrap())
+        self.chars.next().ok_or_else(|| anyhow!("out of chars"))
     }
 
     fn peek_next(&mut self) -> Result<char> {
-        let next = self.chars.peek();
-
-        if next.is_none() {
-            return Err(anyhow!("out of chars"));
-        }
-
-        Ok(*next.unwrap())
+        self.chars
+            .peek()
+            .copied()
+            .ok_or_else(|| anyhow!("out of chars"))
     }
 
     fn expect_next(&mut self, expect: char) -> Result<()> {
@@ -157,14 +148,12 @@ impl<'a> Parser<'a> {
     }
 }
 
-/*
-    Examples:
-    (Ljava/lang/String;)V - 1 parameter, a reference type of java/lang/String
-    with a return type of void
-
-    (IDLjava/lang/Thread;)Ljava/lang/Object; - 3 parameters, int, double and reference type java/lang/Thread
-    with a return type of reference type java/lang/Object
-*/
+// Examples:
+// (Ljava/lang/String;)V - 1 parameter, a reference type of java/lang/String
+// with a return type of void
+//
+// (IDLjava/lang/Thread;)Ljava/lang/Object; - 3 parameters, int, double and reference type java/lang/Thread
+// with a return type of reference type java/lang/Object
 
 #[derive(Clone, Debug)]
 pub struct MethodDescriptor {
@@ -195,10 +184,10 @@ impl FieldDescriptor {
         debug!("parsing field descriptor {}", descriptor);
         let mut parser = Parser::new(descriptor);
 
-        let _type = parser.parse_descriptor_type()?;
+        let type_ = parser.parse_descriptor_type()?;
 
         Ok(Self {
-            _type,
+            _type: type_,
             raw: parser.raw,
         })
     }
@@ -214,7 +203,7 @@ pub enum DescriptorType {
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct DescriptorArrayType {
-    pub _type: Box<DescriptorType>,
+    pub type_: Box<DescriptorType>,
     pub dimensions: u16,
 }
 
@@ -236,14 +225,12 @@ impl ToString for MethodDescriptor {
 }
 
 pub fn test_descriptor_parsing() {
-    /*
-        one_array_param:([Ljava/lang/String;)V
-        two_array_params:([Ljava/lang/String;[Ljava/lang/String;)V
-        one_two_darray_param:([[Ljava/lang/String;)V
-        one_three_darray_param:([[[Ljava/lang/String;)V
-        one_ref_param:(Ljava/lang/String;)V
-        two_ref_params:(Ljava/lang/String;Ljava/lang/String;)V
-    */
+    // one_array_param:([Ljava/lang/String;)V
+    // two_array_params:([Ljava/lang/String;[Ljava/lang/String;)V
+    // one_two_darray_param:([[Ljava/lang/String;)V
+    // one_three_darray_param:([[[Ljava/lang/String;)V
+    // one_ref_param:(Ljava/lang/String;)V
+    // two_ref_params:(Ljava/lang/String;Ljava/lang/String;)V
 
     let one_array_param = "([Ljava/lang/String;)V";
     let two_array_params = "([Ljava/lang/String;[Ljava/lang/String;)V";

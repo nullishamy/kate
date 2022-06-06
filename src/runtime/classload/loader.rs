@@ -47,11 +47,13 @@ where
         let mut root = self.parent();
 
         while let Some(parent) = root {
-            if let Some(loaded) = parent.read().unwrap().find_loaded_class(internal_name) {
+            let lock = parent.read().unwrap();
+
+            if let Some(loaded) = lock.find_loaded_class(internal_name) {
                 return Ok(loaded);
             }
 
-            root = parent.read().unwrap().parent();
+            root = lock.parent();
         }
 
         self.define_class(self.find_class(internal_name)?)

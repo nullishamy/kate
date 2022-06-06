@@ -77,8 +77,3 @@ impl RefOrPrim {
         }
     }
 }
-
-/*
-ReferenceType::Class(c) => DescriptorType::Reference(DescriptorReferenceType { internal_name: "".to_string() }).
-                ReferenceType::Null => None
- */

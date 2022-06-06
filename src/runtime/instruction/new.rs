@@ -19,11 +19,7 @@ pub fn new(vm: &Vm, ctx: &mut CallSite, bytes: &mut Bytes) -> Result<()> {
 
     let data = &entry.data.as_class();
 
-    if data.is_none() {
-        return Err(anyhow!("expected class data, got {:?}", entry));
-    }
-
-    let cls = data.unwrap();
+    let cls = data.ok_or_else(|| anyhow!("expected class data, got {:?}", entry))?;
 
     let cls = vm
         .system_classloader

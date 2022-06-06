@@ -11,17 +11,14 @@ pub fn astore(_vm: &Vm, ctx: &mut CallSite, idx: u16) -> Result<()> {
 
     debug!("storing ref into {}", idx);
 
-    let _ref = sf.operand_stack.pop();
+    let ref_ = sf.operand_stack.pop();
+    let ref_ = ref_.ok_or_else(|| anyhow!("op stack was empty"))?;
 
-    if let Some(local) = _ref {
-        if let StackValue::Reference(_ref) = local {
-            sf.locals.insert(idx as usize, StackValue::Reference(_ref));
-            debug!("stored local");
-            Ok(())
-        } else {
-            Err(anyhow!("value was not a reference, invalid bytecode"))
-        }
+    if let StackValue::Reference(ref_) = ref_ {
+        sf.locals.insert(idx as usize, StackValue::Reference(ref_));
+        debug!("stored local");
+        Ok(())
     } else {
-        Err(anyhow!("op stack was empty"))
+        Err(anyhow!("value was not a reference, invalid bytecode"))
     }
 }

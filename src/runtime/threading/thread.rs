@@ -48,7 +48,7 @@ impl VmThread {
             Some(this),
         );
 
-        //TODO: change this to async once we implement async interpretation
+        // TODO: change this to async once we implement async interpretation
         spawn_blocking(|| {
             // any blocking operations will get transformed into async ones here, hopefully
             // in order for this to work, the entire interpreter needs to be async
@@ -70,7 +70,7 @@ pub struct StackFrame {
 
 impl StackFrame {
     pub fn new(callsite: CallSite) -> Self {
-        //FIXME: use attrs to determine these
+        // FIXME: use attrs to determine these
         Self {
             operand_stack: Stack::new(),
             locals: Vec::with_capacity(30),
