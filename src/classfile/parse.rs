@@ -1,9 +1,9 @@
 use std::fs::File;
-use std::io::Read;
+use std::io::{ErrorKind, Read};
 
 use anyhow::{anyhow, Result};
 use bytes::Bytes;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 use crate::classfile::parse_helper::{
     parse_attribute_info, parse_const_pool, parse_field_info, parse_interface_info,
@@ -38,27 +38,42 @@ impl ClassFileParser {
     pub fn bytes(path: String) -> Result<Vec<u8>> {
         info!("opening classfile '{}' to read bytes", path);
 
-        let mut path = path;
-
-        if path.starts_with("java/") {
+        let path = if path.starts_with("java/") {
             debug!("java stdlib detected, altering path");
+            format!("src/stdlib/{}", path)
+        } else {
+            path
+        };
+        let path_with_ext = format!("{}.class", path);
 
-            path = format!("src/stdlib/{}", path);
-        }
+        debug!("loading bytes from '{}'", path_with_ext);
 
-        path += ".class";
-        debug!("loading bytes from '{}'", path);
-        let file_handle = File::open(&path);
+        let mut file_handle = match File::open(&path_with_ext) {
+            Ok(handle) => handle,
+            Err(err) => match err.kind() {
+                ErrorKind::NotFound => {
+                    let handle = File::open(&path);
 
-        if let Err(e) = file_handle {
-            return Err(anyhow!(
-                "failed to open file {} because of error {}",
-                &path,
-                e
-            ));
-        }
+                    if let Err(e) = handle {
+                        return Err(anyhow!(
+                            "failed to open file '{}' because of error {}",
+                            path,
+                            e
+                        ));
+                    }
 
-        let mut file_handle = file_handle.unwrap();
+                    handle.unwrap()
+                }
+                _ => {
+                    return Err(anyhow!(
+                        "failed to open file '{}' because of error {}",
+                        path,
+                        err
+                    ))
+                }
+            },
+        };
+
         let mut buffer = Vec::new();
 
         if let Err(e) = file_handle.read_to_end(&mut buffer) {
