@@ -1,7 +1,7 @@
-use std::fs::File;
-use std::io::{ErrorKind, Read};
+use std::fs;
+use std::io::ErrorKind;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use bytes::Bytes;
 use tracing::{debug, info};
 
@@ -44,47 +44,23 @@ impl ClassFileParser {
         } else {
             path
         };
-        let path_with_ext = format!("{}.class", path);
 
-        debug!("loading bytes from '{}'", path_with_ext);
+        debug!("attempting to load bytes from '{}'", path);
 
-        let mut file_handle = match File::open(&path_with_ext) {
-            Ok(handle) => handle,
-            Err(err) => match err.kind() {
+        fs::read(&path)
+            .or_else(|err| match err.kind() {
                 ErrorKind::NotFound => {
-                    let handle = File::open(&path);
+                    let corrected_path = format!("{}.class", path);
+                    debug!(
+                        "failed to find file '{}', trying to read '{}'",
+                        path, corrected_path
+                    );
 
-                    if let Err(e) = handle {
-                        return Err(anyhow!(
-                            "failed to open file '{}' because of error {}",
-                            path,
-                            e
-                        ));
-                    }
-
-                    handle.unwrap()
+                    fs::read(format!("{}.class", corrected_path))
                 }
-                _ => {
-                    return Err(anyhow!(
-                        "failed to open file '{}' because of error {}",
-                        path,
-                        err
-                    ))
-                }
-            },
-        };
-
-        let mut buffer = Vec::new();
-
-        if let Err(e) = file_handle.read_to_end(&mut buffer) {
-            return Err(anyhow!(
-                "failed to open file '{}' because of error {}",
-                &path,
-                e
-            ));
-        }
-
-        Ok(buffer)
+                _ => Err(err), // file exists but there's another kind of error, don't reattempt
+            })
+            .context("failed to read bytes from file")
     }
 
     pub fn parse(&mut self) -> Result<RawClassFile> {
