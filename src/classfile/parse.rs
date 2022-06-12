@@ -3,7 +3,7 @@ use std::io::{ErrorKind, Read};
 
 use anyhow::{anyhow, Result};
 use bytes::Bytes;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 use crate::classfile::parse_helper::{
     parse_attribute_info, parse_const_pool, parse_field_info, parse_interface_info,
