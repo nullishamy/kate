@@ -1,7 +1,19 @@
 #![allow(dead_code)]
 
-extern crate core;
-
+//! kate is a JVM written in Rust designed for developers
+//!
+//! # Usage
+//!
+//! ## CLI
+//! kate has a CLI, used for running Java applications. See kate --help for help.
+//!
+//! ## TUI
+//! kate also has a TUI, used for real time monitoring of the JVM.
+//! Use the -t toggle to enable it.
+//!
+//! ## Programmatic interaction
+//! kate will have programmatic interaction with an API crate, which is still WIP.
+//!
 use std::process::exit;
 use std::sync::Arc;
 

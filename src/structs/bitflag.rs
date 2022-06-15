@@ -1,3 +1,7 @@
+//! defines the bitflags used in class file parsing
+//! these flags are used to determine access levels and features of various entities
+//! this module defines a private macro to generate flag implementations based on a flag struct
+
 use anyhow::Result;
 use bitflags::bitflags;
 use tracing::warn;
