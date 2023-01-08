@@ -1,7 +1,7 @@
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - main
 
 jobs:
   generate-docs:
@@ -27,12 +27,17 @@ jobs:
         run: cargo doc --release --no-deps
 
       - name: Create index.html for github pages
-        run: echo "<meta http-equiv=\"refresh\" content=\"0; url=kate\">" > target/doc/index.html
+        run: echo "<meta http-equiv=\"refresh\" content=\"0; url=cli\">" > target/doc/index.html
+
+      - name: Create .nojekyll to stop Jekyll builds
+        run: echo "." > target/doc/.nojekyll
 
       - name: Copy generated docs to docs folder
         run: cp -r ./target/doc ./docs
 
-      - name: Commit updated documentation
-        uses: stefanzweifel/git-auto-commit-action@v4
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4.4.1
         with:
-          commit_message: "docs: autogenerate documentation"
+          branch: gh-pages
+          folder: docs
+          clean: true

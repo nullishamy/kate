@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["create_attributes",""],["create_constant_pool",""],["create_fields",""],["create_interfaces",""],["create_methods",""]],"struct":[["ConstantPoolBuilder",""]]});

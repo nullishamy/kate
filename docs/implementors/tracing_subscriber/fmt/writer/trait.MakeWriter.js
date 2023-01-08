@@ -1,3 +1,0 @@
-(function() {var implementors = {};
-implementors["kate"] = [{"text":"impl <a class=\"trait\" href=\"https://docs.rs/tracing-subscriber/0.3.11/tracing_subscriber/fmt/writer/trait.MakeWriter.html\" title=\"trait tracing_subscriber::fmt::writer::MakeWriter\">MakeWriter</a>&lt;'_&gt; for <a class=\"struct\" href=\"kate/interface/tui/struct.LogWriter.html\" title=\"struct kate::interface::tui::LogWriter\">LogWriter</a>","synthetic":false,"types":["kate::interface::tui::LogWriter"]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

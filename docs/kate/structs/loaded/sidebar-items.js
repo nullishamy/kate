@@ -1,1 +1,0 @@
-initSidebarItems({"mod":[["attribute",""],["classfile",""],["classfile_helper",""],["constant_pool",""],["constructors",""],["default_attributes",""],["field",""],["interface",""],["method",""],["package",""]]});

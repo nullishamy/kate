@@ -1,0 +1,11 @@
+[package]
+name = "parse"
+version = "0.1.0"
+
+[dependencies]
+anyhow = { workspace = true }
+paste = { workspace = true }
+enum-as-inner = { workspace = true }
+bytes = { workspace = true }
+bitflags = "1.3.2"
+support = { path = '../support/' }

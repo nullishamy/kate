@@ -1,3 +1,0 @@
-(function() {var implementors = {};
-implementors["kate"] = [{"text":"impl Subcommand for <a class=\"enum\" href=\"kate/interface/cli/enum.CliCommand.html\" title=\"enum kate::interface::cli::CliCommand\">CliCommand</a>","synthetic":false,"types":["kate::interface::cli::CliCommand"]}];
-if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["main",""],["start",""]],"mod":[["classfile",""],["error",""],["interface",""],["runtime",""],["stdlib",""],["structs",""]]});
