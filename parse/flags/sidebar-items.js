@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["ClassFileAccessFlag","ClassFileAccessFlags","FieldAccessFlag","FieldAccessFlags","MethodAccessFlag","MethodAccessFlags"]};

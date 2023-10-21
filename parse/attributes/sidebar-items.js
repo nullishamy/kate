@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["Attribute","Attributes","BootstrapMethodsAttribute","CodeAttribute","ConstantValueAttribute","ExceptionEntry","NestHostAttribute","NestMembersAttribute","PermittedSubclassesAttribute","StackMapTableAttribute"],"trait":["KnownAttribute"]};

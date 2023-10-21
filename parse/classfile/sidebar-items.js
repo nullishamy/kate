@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["Addressed","ClassFile","Field","Fields","Interfaces","MetaData","Method","Methods"],"trait":["Resolvable"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["FloatingType","IntegralType"],"struct":["Floating","Integral"]};
