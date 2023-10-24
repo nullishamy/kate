@@ -25,6 +25,28 @@ macro_rules! nop {
   };
 }
 
+macro_rules! pop {
+    ($ctx: expr) => {
+        $ctx
+            .operands
+            .pop()
+            .context("no value to pop from the operand stack")?
+    };
+}
+
+macro_rules! arg {
+    ($ctx: expr, $side: expr => int) => {{
+        let val = pop!($ctx);
+
+        let val = val.as_integral().context(format!("{} was not an integral", $side))?;
+        if val.ty != IntegralType::Int {
+            return Err(anyhow!(format!("{} was not an int", $side)));
+        }
+
+        val.clone()
+    }}
+}
+
 nop!(Nop, Return);
 
 #[derive(Debug)]
@@ -88,10 +110,9 @@ impl Instruction for Ldc {
             ConstantEntry::Integer(data) => {
                 ctx.operands
                     .push(RuntimeValue::Integral((data.bytes as i32).into()));
-            },
+            }
             ConstantEntry::Float(data) => {
-                ctx.operands
-                    .push(RuntimeValue::Floating(data.bytes.into()));
+                ctx.operands.push(RuntimeValue::Floating(data.bytes.into()));
             }
             v => return Err(anyhow!("cannot load {:#?} with ldc", v)),
         };
@@ -105,24 +126,28 @@ pub struct Isub;
 
 impl Instruction for Isub {
     fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<i32> {
-        let rhs = ctx.operands.pop().context("no rhs for isub")?;
-        let lhs = ctx.operands.pop().context("no lhs for isub")?;
+        let rhs = arg!(ctx, "rhs" => int);
+        let lhs = arg!(ctx, "lhs" => int);
 
-        let rhs = rhs.as_integral().context("rhs was not an int")?;
-        let lhs = lhs.as_integral().context("lhs was not an int")?;
+        let result: i32 = (lhs.value as i32).wrapping_sub(rhs.value as i32);
+        ctx.operands.push(RuntimeValue::Integral(result.into()));
 
-        if rhs.ty != IntegralType::Int {
-            return Err(anyhow!("rhs was not an int, got {:#?}", rhs.ty))
-        }
-        
-        if lhs.ty != IntegralType::Int {
-            return Err(anyhow!("lhs was not an int, got {:#?}", lhs.ty))
-        }
+        Ok(ctx.pc)
+    }
+}
+
+#[derive(Debug)]
+pub struct Irem;
+
+impl Instruction for Irem {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<i32> {
+        let rhs = arg!(ctx, "rhs" => int);
+        let lhs = arg!(ctx, "lhs" => int);
 
         dbg!(&lhs);
         dbg!(&rhs);
 
-        let result: i32 = (lhs.value as i32).wrapping_sub(rhs.value as i32);
+        let result: i32 = (lhs.value as i32) % (rhs.value as i32);
         ctx.operands.push(RuntimeValue::Integral(result.into()));
 
         Ok(ctx.pc)

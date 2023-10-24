@@ -63,9 +63,12 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
             value: RuntimeValue::Floating((1.0_f64).into()),
         }),
         0x10 => b(ops::PushConst {
-            value: RuntimeValue::Integral(bytes.try_get_i8()?.into()),
+            value: RuntimeValue::Integral((bytes.try_get_i8()? as i32).into())
         }),
-        //  0x11 => Opcode::SIPUSH(bytes.try_get_i16()?),
+        0x11 => b(ops::PushConst {
+            // The intermediate value is then sign-extended to an int value.
+            value: RuntimeValue::Integral((bytes.try_get_i16()? as i32).into())
+        }),
         0x12 => b(ops::Ldc {
             index: bytes.try_get_u8()?
         }),
@@ -171,7 +174,7 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         //  0x6d => Opcode::LDIV,
         //  0x6e => Opcode::FDIV,
         //  0x6f => Opcode::DDIV,
-        //  0x70 => Opcode::IREM,
+        0x70 => b(ops::Irem),
         //  0x71 => Opcode::LREM,
         //  0x72 => Opcode::FREM,
         //  0x73 => Opcode::DREM,
