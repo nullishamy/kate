@@ -2,7 +2,7 @@ use std::{collections::HashMap, fmt, rc::Rc};
 
 use enum_as_inner::EnumAsInner;
 use parking_lot::RwLock;
-use parse::{classfile::{Method, Methods}, pool::ConstantPool};
+use parse::{classfile::{Method, Methods, Addressed}, pool::ConstantPool};
 
 use crate::native::{NativeFunction, NameAndDescriptor};
 

@@ -40,6 +40,36 @@ impl Instruction for PushConst {
 }
 
 #[derive(Debug)]
+pub struct Ldc2W {
+    pub(crate) index: u16,
+}
+
+impl Instruction for Ldc2W {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<i32> {
+        let value = ctx
+            .class
+            .read()
+            .constant_pool()
+            .address(self.index)
+            .try_resolve()
+            .context(format!("no value @ index {}", self.index))?;
+
+        match value {
+            ConstantEntry::Long(data) => {
+                ctx.operands
+                    .push(RuntimeValue::Integral((data.bytes as i64).into()));
+            }
+            ConstantEntry::Double(data) => {
+                ctx.operands.push(RuntimeValue::Floating(data.bytes.into()));
+            }
+            v => return Err(anyhow!("cannot load {:#?} with ldc2w", v)),
+        };
+
+        Ok(ctx.pc)
+    }
+}
+
+#[derive(Debug)]
 pub struct LoadLocal {
     pub(crate) index: usize,
 }
@@ -56,11 +86,11 @@ impl Instruction for LoadLocal {
 }
 
 #[derive(Debug)]
-pub struct PushLocal {
+pub struct StoreLocal {
     pub(crate) index: usize,
 }
 
-impl Instruction for PushLocal {
+impl Instruction for StoreLocal {
     fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<i32> {
         let locals = &mut ctx.locals;
         let index = self.index;
@@ -92,7 +122,8 @@ impl Instruction for InvokeStatic {
         // The unsigned indexbyte1 and indexbyte2 are used to construct an
         // index into the run-time constant pool of the current class (§2.6),
         let pool_entry = pool
-            .get(self.index - 1)
+            .address::<ConstantEntry>(self.index)
+            .try_resolve()
             .context(format!("no method at index {}", self.index))?;
 
         drop(cls);
@@ -211,9 +242,7 @@ impl Instruction for InvokeStatic {
                 ))?;
 
             match lookup {
-                NativeFunction::Static(func) => {
-                    func(Rc::clone(&loaded_class), args_for_call, vm)
-                }
+                NativeFunction::Static(func) => func(Rc::clone(&loaded_class), args_for_call, vm),
                 _ => {
                     return Err(anyhow!(
                         "attempted to INVOKESTATIC an instance native method"

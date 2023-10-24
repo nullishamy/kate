@@ -58,9 +58,11 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         //  0x11 => Opcode::SIPUSH(bytes.try_get_i16()?),
         //  0x12 => Opcode::LDC(bytes.try_get_u8()?),
         //  0x13 => Opcode::LDC_W(bytes.try_get_u16()?),
-        //  0x14 => Opcode::LDC2_W(bytes.try_get_u16()?),
+        0x14 => b(ops::Ldc2W {
+            index: bytes.try_get_u16()?
+        }),
         0x15 => b(ops::LoadLocal { index: bytes.try_get_u8()? as usize }),
-        //  0x16 => Opcode::LLOAD(bytes.try_get_u8()?),
+        0x16 => b(ops::LoadLocal { index: bytes.try_get_u8()? as usize }),
         0x17 => b(ops::LoadLocal { index: bytes.try_get_u8()? as usize }),
         //  0x18 => Opcode::DLOAD,
         //  0x19 => Opcode::ALOAD(bytes.try_get_u8()?),
@@ -92,18 +94,20 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         //  0x33 => Opcode::BALOAD,
         //  0x34 => Opcode::CALOAD,
         //  0x35 => Opcode::SALOAD,
-        0x36 => b(ops::PushLocal {
+        0x36 => b(ops::StoreLocal {
             index: bytes.try_get_u8()? as usize,
         }),
-        //  0x37 => Opcode::LSTORE(bytes.try_get_u8()?),
-        0x38 => b(ops::PushLocal {
+        0x37 => b(ops::StoreLocal {
+            index: bytes.try_get_u8()? as usize,
+        }),
+        0x38 => b(ops::StoreLocal {
             index: bytes.try_get_u8()? as usize,
         }),
         //  0x39 => Opcode::DSTORE,
         //  0x3a => Opcode::ASTORE(bytes.try_get_u8()?),
         //  0x3b => Opcode::ISTORE_0,
-        0x3c => b(ops::PushLocal { index: 1 }),
-        0x3d => b(ops::PushLocal { index: 2 }),
+        0x3c => b(ops::StoreLocal { index: 1 }),
+        0x3d => b(ops::StoreLocal { index: 2 }),
         //  0x3e => Opcode::ISTORE_3,
         //  0x3f => Opcode::LSTORE_0,
         //  0x40 => Opcode::LSTORE_1,
@@ -116,8 +120,8 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         //  0x47 => Opcode::DSTORE_0,
         //  0x48 => Opcode::DSTORE_1,
         //  0x49 => Opcode::DSTORE_2,
-        0x4a => b(ops::PushLocal { index: 3 }),
-        0x4b => b(ops::PushLocal { index: 0 }),
+        0x4a => b(ops::StoreLocal { index: 3 }),
+        0x4b => b(ops::StoreLocal { index: 0 }),
         //  0x4c => Opcode::ASTORE_1,
         //  0x4d => Opcode::ASTORE_2,
         //  0x4e => Opcode::ASTORE_3,

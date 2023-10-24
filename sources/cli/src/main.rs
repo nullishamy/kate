@@ -2,7 +2,7 @@ use std::process::exit;
 
 use args::Cli;
 use clap::Parser;
-use interpreter_two::{object::{classloader::ClassLoader, RuntimeValue}, Context, VM, native::NativeFunction, static_method};
+use interpreter_two::{object::classloader::ClassLoader, Context, VM, native::NativeFunction, static_method};
 use parse::attributes::CodeAttribute;
 use tracing::{error, info, Level};
 use tracing_subscriber::fmt;
@@ -70,6 +70,7 @@ fn main() {
                 printer!("(I)V"),
                 printer!("(B)V"),
                 printer!("(C)V"),
+                printer!("(J)V"),
                 printer!("(D)V"),
                 printer!("(F)V"),
                 printer!("(S)V"),

@@ -1,4 +1,4 @@
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum IntegralType {
   Byte,
   Short, // AKA Char
@@ -6,19 +6,19 @@ pub enum IntegralType {
   Long
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FloatingType {
   Double,
   Float
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Integral {
   pub value: i64,
   pub ty: IntegralType
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Floating {
   pub value: f64,
   pub ty: FloatingType

@@ -3,7 +3,7 @@ use std::{collections::HashMap, fs, path::PathBuf, rc::Rc};
 use anyhow::{anyhow, Result};
 use parking_lot::RwLock;
 use parse::{parser::Parser, classfile::Resolvable};
-use tracing::{info, debug};
+use tracing::debug;
 
 use super::{ClassObject, WrappedClassObject};
 

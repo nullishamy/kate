@@ -16,7 +16,7 @@ class Primitives {
       double d = 1.0;
       float f = 2.0f;
       int i = 3;
-      // long l = 4;
+      long l = 4;
       short s = 5;
       boolean z = false;
 
@@ -30,9 +30,8 @@ class Primitives {
       print(f);
       // CHECK: 3
       print(i);
-      // FIXME: Re-enable when we support ldc
-      // COM: CHECK 4
-      // print(l);
+      // CHECK 4
+      print(l);
       // CHECK: 5
       print(s);
       // CHECK: 0
