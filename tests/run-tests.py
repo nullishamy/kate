@@ -72,7 +72,8 @@ def run_tests(sources):
       )
 
       for run in run_cmds:
-        print(f'{Colours.BLUE}run:{Colours.END}', run)
+        # TODO: Only log this with verbose (todo: parse args for that)
+        # print(f'{Colours.BLUE}run:{Colours.END}', run)
         did_fail = False
 
         exec = run_cmd(run)
@@ -106,6 +107,9 @@ def main():
   print()
 
   passes, fails = run_tests(get_sources(['java']))
+  print()
+  print()
+  print()
   print(f'{Colours.PEACH}testing concluded{Colours.END}')
   print(f'{Colours.GREEN}pass:{Colours.END} {len(passes)} - {Colours.RED}fail:{Colours.END} {len(fails)}')
 
