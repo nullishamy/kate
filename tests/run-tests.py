@@ -11,7 +11,7 @@ RUN_REGEX = re.compile(r'RUN:\s*(.+)')
 SUBS = {
   '%s': lambda source: source,
   '%t': lambda _: TEMP_DIR,
-  'kate': lambda _: 'target/debug/cli'
+  'run-kate': lambda _: 'cargo run --'
 }
 
 class Colours:

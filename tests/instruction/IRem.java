@@ -1,5 +1,5 @@
 // RUN: javac %s -d %t
-// RUN: kate --test --cp %t IRem | filecheck %s
+// RUN: run-kate --test --cp %t IRem | filecheck %s
 class IRem {
   public static native void print(int i);
 

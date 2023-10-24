@@ -1,5 +1,5 @@
 // RUN: javac %s -d %t
-// RUN: kate --test --cp %t ISub | filecheck %s
+// RUN: run-kate --test --cp %t ISub | filecheck %s
 class ISub {
   public static native void print(int i);
 

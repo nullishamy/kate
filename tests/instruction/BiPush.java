@@ -1,5 +1,5 @@
 // RUN: javac %s -d %t
-// RUN: kate --test --cp %t BiPush | filecheck %s
+// RUN: run-kate --test --cp %t BiPush | filecheck %s
 class BiPush {
   public static native void print(int i);
 

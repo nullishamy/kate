@@ -1,5 +1,5 @@
 // RUN: javac %s -d %t
-// RUN: kate --test --cp %t LongConsts | filecheck %s
+// RUN: run-kate --test --cp %t LongConsts | filecheck %s
 class LongConsts {
   public static native void print(long l);
 

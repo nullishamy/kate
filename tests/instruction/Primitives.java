@@ -1,5 +1,5 @@
 // RUN: javac %s -d %t
-// RUN: kate --test --cp %t Primitives | filecheck %s
+// RUN: run-kate --test --cp %t Primitives | filecheck %s
 class Primitives {
     public static native void print(byte b);
     public static native void print(char c);
