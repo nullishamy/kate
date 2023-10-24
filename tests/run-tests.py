@@ -5,11 +5,13 @@ import subprocess
 import os
 
 THIS_FILE = os.path.dirname(os.path.realpath(__file__))
+TEMP_DIR = os.path.join(THIS_FILE, '.temp')
 RUN_REGEX = re.compile(r'RUN:\s*(.+)')
+
 SUBS = {
   '%s': lambda source: source,
-  '%t': lambda _: f'./.temp',
-  'kate': lambda _: '../target/debug/cli'
+  '%t': lambda _: TEMP_DIR,
+  'kate': lambda _: 'target/debug/cli'
 }
 
 class Colours:
@@ -95,7 +97,7 @@ def main():
     return
 
   print(f'{Colours.GREEN}cleaning...{Colours.END}')
-  clean = run_cmd('rm -rf .temp')
+  clean = run_cmd(f'rm -rf {TEMP_DIR}')
   if clean.returncode != 0:
     display_failure(clean)
     return
