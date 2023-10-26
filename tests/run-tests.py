@@ -3,6 +3,7 @@ import glob
 import re
 import subprocess
 import os
+import argparse
 
 THIS_FILE = os.path.dirname(os.path.realpath(__file__))
 TEMP_DIR = os.path.join(THIS_FILE, '.temp')
@@ -13,6 +14,16 @@ SUBS = {
   '%t': lambda _: TEMP_DIR,
   'run-kate': lambda _: 'cargo run --'
 }
+
+def make_parser():
+  parser = argparse.ArgumentParser(
+    prog='run-tests',
+    description='Runs the test suite',
+  )
+
+  parser.add_argument('--verbose', '-v', action='store_true')
+
+  return parser
 
 class Colours:
     PEACH = '\033[95m'
@@ -43,7 +54,9 @@ def perform_subs(run_cmd, subs, *args):
 
   return tmp
 
-def run_cmd(cmd):
+def run_cmd(cmd, display_command):
+  if display_command:
+    print(f'{Colours.BLUE}run:{Colours.END}', cmd)
   return subprocess.run(cmd, capture_output=True, shell=True)
 
 def display_failure(exec):
@@ -54,7 +67,7 @@ def display_failure(exec):
 {exec.stderr.decode('utf-8')}
   """)
 
-def run_tests(sources):
+def run_tests(sources, args):
   passes = []
   fails = []
 
@@ -72,11 +85,9 @@ def run_tests(sources):
       )
 
       for run in run_cmds:
-        # TODO: Only log this with verbose (todo: parse args for that)
-        # print(f'{Colours.BLUE}run:{Colours.END}', run)
         did_fail = False
 
-        exec = run_cmd(run)
+        exec = run_cmd(run, args.verbose)
         if exec.returncode != 0:
           display_failure(exec)
           did_fail = True
@@ -91,14 +102,15 @@ def run_tests(sources):
 
 
 def main():
+  args = make_parser().parse_args()
   print(f'{Colours.GREEN}building...{Colours.END}')
-  build = run_cmd("cargo build")
+  build = run_cmd("cargo build", args.verbose)
   if build.returncode != 0:
     display_failure(build)
     return
 
   print(f'{Colours.GREEN}cleaning...{Colours.END}')
-  clean = run_cmd(f'rm -rf {TEMP_DIR}')
+  clean = run_cmd(f'rm -rf {TEMP_DIR}', args.verbose)
   if clean.returncode != 0:
     display_failure(clean)
     return
@@ -106,7 +118,8 @@ def main():
   print(f'{Colours.GREEN}pre-run steps ok{Colours.END}')
   print()
 
-  passes, fails = run_tests(get_sources(['java']))
+  passes, fails = run_tests(get_sources(['java']), args)
+
   print()
   print()
   print()
