@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["decode_instruction"],"trait":["Instruction"]};
+window.SIDEBAR_ITEMS = {"enum":["Progression"],"fn":["decode_instruction"],"trait":["Instruction"]};

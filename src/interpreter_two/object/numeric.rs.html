@@ -50,11 +50,13 @@
 <a href="#50" id="50">50</a>
 <a href="#51" id="51">51</a>
 <a href="#52" id="52">52</a>
+<a href="#53" id="53">53</a>
 </pre></div><pre class="rust"><code><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 </span><span class="kw">pub enum </span>IntegralType {
   Byte,
-  Short, <span class="comment">// AKA Char
-  </span>Int,
+  Short,
+  Char,
+  Int,
   Long
 }
 
@@ -93,7 +95,7 @@
 
 <span class="macro">from_num!</span>(Integral &gt; i64,
   i8 =&gt; IntegralType::Byte,
-  i16 =&gt; IntegralType::Short,
+  i16 =&gt; IntegralType::Char,
   i32 =&gt; IntegralType::Int,
   i64 =&gt; IntegralType::Long
 );

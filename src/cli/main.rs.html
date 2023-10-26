@@ -109,12 +109,61 @@
 <a href="#109" id="109">109</a>
 <a href="#110" id="110">110</a>
 <a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::process::exit;
 
 <span class="kw">use </span>args::Cli;
 <span class="kw">use </span>clap::Parser;
-<span class="kw">use </span>interpreter_two::{object::classloader::ClassLoader, Context, VM, native::NativeFunction, static_method};
+<span class="kw">use </span>interpreter_two::{
+    native::NativeFunction,
+    object::{classloader::ClassLoader, string::Interner, RuntimeValue},
+    static_method, Context, VM,
+};
 <span class="kw">use </span>parse::attributes::CodeAttribute;
+<span class="kw">use </span>support::encoding::{decode_string, CompactEncoding};
 <span class="kw">use </span>tracing::{error, info, Level};
 <span class="kw">use </span>tracing_subscriber::fmt;
 
@@ -148,17 +197,22 @@
     }
 
     <span class="kw">let </span>source_root = <span class="macro">env!</span>(<span class="string">&quot;CARGO_MANIFEST_DIR&quot;</span>);
-    <span class="kw">let </span><span class="kw-2">mut </span>vm = VM {
-        class_loader: ClassLoader::new(),
-    };
+    <span class="kw">let </span><span class="kw-2">mut </span>class_loader = ClassLoader::new();
 
-    vm.class_loader
+    class_loader
         .add_path(<span class="macro">format!</span>(<span class="string">&quot;{source_root}/../../std/java.base&quot;</span>).into())
-        .add_path(<span class="string">&quot;.&quot;</span>.into());
+        .add_path(<span class="macro">format!</span>(<span class="string">&quot;{source_root}/../../samples&quot;</span>).into());
 
     <span class="kw">for </span>cp <span class="kw">in </span>args.classpath {
-        vm.class_loader.add_path(cp.into());
+        class_loader.add_path(cp.into());
     }
+
+    <span class="kw">let </span>(<span class="kw">_</span>, jls) = class_loader.bootstrap().unwrap();
+
+    <span class="kw">let </span><span class="kw-2">mut </span>vm = VM {
+        class_loader,
+        interner: Interner::new(jls),
+    };
 
     vm.class_loader.bootstrap().unwrap();
 
@@ -167,29 +221,63 @@
         <span class="kw">let </span><span class="kw-2">mut </span>cls = _cls.write();
         <span class="kw">if </span>args.test {
             <span class="macro">macro_rules! </span>printer {
-                (<span class="macro-nonterminal">$desc</span>: expr) =&gt; {
+                (<span class="macro-nonterminal">$desc</span>: expr, <span class="macro-nonterminal">$printer</span>: expr) =&gt; {
                     <span class="macro">static_method!</span>(name: <span class="string">&quot;print&quot;</span>, descriptor: <span class="macro-nonterminal">$desc </span>=&gt; |<span class="kw">_</span>, args, <span class="kw">_</span>| {
-                        <span class="kw">for </span>arg <span class="kw">in </span>args {
-                            <span class="macro">println!</span>(<span class="string">&quot;{}&quot;</span>, arg);
-                        }
+                        <span class="kw">let </span>printer = <span class="macro-nonterminal">$printer</span>;
+                        printer(args[<span class="number">0</span>].clone());
                         <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
+                    })
+                };
+                (<span class="macro-nonterminal">$desc</span>: expr) =&gt; {
+                    <span class="macro">printer!</span>(<span class="macro-nonterminal">$desc</span>, |a| {
+                        <span class="macro">println!</span>(<span class="string">&quot;{}&quot;</span>, a);
                     })
                 };
             }
 
             <span class="kw">for </span>printer <span class="kw">in </span>[
                 <span class="macro">printer!</span>(<span class="string">&quot;(I)V&quot;</span>),
-                <span class="macro">printer!</span>(<span class="string">&quot;(B)V&quot;</span>),
-                <span class="macro">printer!</span>(<span class="string">&quot;(C)V&quot;</span>),
+                <span class="macro">printer!</span>(<span class="string">&quot;(Z)V&quot;</span>, |a: RuntimeValue| {
+                    <span class="kw">let </span>int_value = a.as_integral().expect(<span class="string">&quot;was not an int (bool)&quot;</span>).value;
+                    <span class="kw">if </span>int_value == <span class="number">0 </span>{
+                        <span class="macro">println!</span>(<span class="string">&quot;false&quot;</span>)
+                    } <span class="kw">else </span>{
+                        <span class="macro">println!</span>(<span class="string">&quot;true&quot;</span>)
+                    }
+                }),
+                <span class="macro">printer!</span>(<span class="string">&quot;(C)V&quot;</span>, |a: RuntimeValue| {
+                    <span class="kw">let </span>char_value = a.as_integral().expect(<span class="string">&quot;was not an int (char)&quot;</span>).value;
+                    <span class="macro">println!</span>(
+                        <span class="string">&quot;{}&quot;</span>,
+                        char::from_u32(char_value <span class="kw">as </span>u32)
+                            .expect(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">&quot;{} was not a char&quot;</span>, char_value))
+                    )
+                }),
                 <span class="macro">printer!</span>(<span class="string">&quot;(J)V&quot;</span>),
                 <span class="macro">printer!</span>(<span class="string">&quot;(D)V&quot;</span>),
                 <span class="macro">printer!</span>(<span class="string">&quot;(F)V&quot;</span>),
                 <span class="macro">printer!</span>(<span class="string">&quot;(S)V&quot;</span>),
-                <span class="macro">printer!</span>(<span class="string">&quot;(Z)V&quot;</span>),
+                <span class="macro">printer!</span>(<span class="string">&quot;(B)V&quot;</span>),
+                <span class="macro">printer!</span>(<span class="string">&quot;(Ljava/lang/String;)V&quot;</span>, |a: RuntimeValue| {
+                    <span class="kw">let </span>string = a.as_object().expect(<span class="string">&quot;was not an object (string)&quot;</span>);
+                    <span class="kw">let </span>string = string.read();
+                    <span class="kw">let </span>bytes =
+                        string.get_instance_field((<span class="string">&quot;value&quot;</span>.to_string(), <span class="string">&quot;[B&quot;</span>.to_string())).expect(<span class="string">&quot;could not locate value field&quot;</span>);
+                    <span class="kw">let </span>bytes = bytes.as_array().expect(<span class="string">&quot;bytes was not an array (byte[])&quot;</span>);
+
+                    <span class="kw">let </span>bytes = bytes
+                        .values
+                        .iter()
+                        .map(|v| v.as_integral().expect(<span class="string">&quot;value was not an int (char)&quot;</span>))
+                        .map(|v| v.value <span class="kw">as </span>u8)
+                        .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+
+                    <span class="kw">let </span>str = decode_string((CompactEncoding::Utf16, bytes)).expect(<span class="string">&quot;could not decode string&quot;</span>);
+                    <span class="macro">println!</span>(<span class="string">&quot;{}&quot;</span>, str);
+                }),
             ] {
                 cls.register_native(printer.<span class="number">0</span>, printer.<span class="number">1</span>);
             }
-
         }
         <span class="kw">let </span>method = cls
             .get_method((<span class="string">&quot;main&quot;</span>.to_string(), <span class="string">&quot;([Ljava/lang/String;)V&quot;</span>.to_string()))

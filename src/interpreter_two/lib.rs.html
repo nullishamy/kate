@@ -139,11 +139,23 @@
 <a href="#139" id="139">139</a>
 <a href="#140" id="140">140</a>
 <a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>anyhow::Result;
 <span class="kw">use </span>bytecode::decode_instruction;
 <span class="kw">use </span>bytes::BytesMut;
 
-<span class="kw">use </span>object::{classloader::ClassLoader, RuntimeValue, WrappedClassObject};
+<span class="kw">use </span>object::{classloader::ClassLoader, RuntimeValue, WrappedClassObject, string::Interner};
 <span class="kw">use </span>parse::attributes::CodeAttribute;
 <span class="kw">use </span>tracing::info;
 
@@ -162,6 +174,7 @@
 
 <span class="kw">pub struct </span>VM {
     <span class="kw">pub </span>class_loader: ClassLoader,
+    <span class="kw">pub </span>interner: Interner
 }
 
 <span class="kw">impl </span>VM {
@@ -182,10 +195,17 @@
             <span class="macro">info!</span>(<span class="string">&quot;opcode: {:?} consumed {} bytes&quot;</span>, instruction, bytes_consumed_by_opcode);
 
             <span class="comment">// If the instruction doesn&#39;t want us to jump anywhere, proceed to the next instruction
-            </span><span class="kw">let </span>new_pc = instruction.handle(<span class="self">self</span>, <span class="kw-2">&amp;mut </span>ctx)<span class="question-mark">?</span>;
-            <span class="kw">if </span>new_pc == ctx.pc {
-                ctx.pc += bytes_consumed_by_opcode;
-            }
+            </span><span class="kw">match  </span>instruction.handle(<span class="self">self</span>, <span class="kw-2">&amp;mut </span>ctx)<span class="question-mark">? </span>{
+                bytecode::Progression::Jump(new_pc) =&gt; {
+                    ctx.pc = new_pc;
+                },
+                bytecode::Progression::Next =&gt; {
+                    ctx.pc += bytes_consumed_by_opcode;
+                },
+                bytecode::Progression::Return(return_value) =&gt; {
+                    <span class="kw">return </span><span class="prelude-val">Ok</span>(return_value)
+                },
+            };
         }
 
         <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
@@ -240,20 +260,24 @@
 </span><span class="kw">mod </span>tests {
     <span class="kw">use </span>parse::attributes::CodeAttribute;
 
-    <span class="kw">use crate</span>::{object::classloader::ClassLoader, Context, VM};
+    <span class="kw">use crate</span>::{object::{classloader::ClassLoader, string::Interner}, Context, VM};
 
     <span class="attr">#[test]
     </span><span class="kw">fn </span>it_runs_empty_main_functions() {
         <span class="kw">let </span>source_root = <span class="macro">env!</span>(<span class="string">&quot;CARGO_MANIFEST_DIR&quot;</span>);
-        <span class="kw">let </span><span class="kw-2">mut </span>vm = VM {
-            class_loader: ClassLoader::new(),
-        };
+        <span class="kw">let </span><span class="kw-2">mut </span>class_loader = ClassLoader::new();
 
-        vm.class_loader
+        class_loader
             .add_path(<span class="macro">format!</span>(<span class="string">&quot;{source_root}/../../std/java.base&quot;</span>).into())
             .add_path(<span class="macro">format!</span>(<span class="string">&quot;{source_root}/../../samples&quot;</span>).into());
 
-        vm.class_loader.bootstrap().unwrap();
+        <span class="kw">let </span>(<span class="kw">_</span>, jls) = class_loader.bootstrap().unwrap();
+
+        <span class="kw">let </span><span class="kw-2">mut </span>vm = VM {
+            class_loader,
+            interner: Interner::new(jls)
+        };
+
 
         <span class="kw">let </span>_cls = vm.class_loader.load_class(<span class="string">&quot;JustMain&quot;</span>.to_string()).unwrap();
         <span class="kw">let </span>cls = _cls.read();

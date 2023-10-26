@@ -78,6 +78,8 @@
 <a href="#78" id="78">78</a>
 <a href="#79" id="79">79</a>
 <a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{collections::HashMap, fs, path::PathBuf, rc::Rc};
 
 <span class="kw">use </span>anyhow::{anyhow, <span class="prelude-ty">Result</span>};
@@ -90,7 +92,7 @@
 <span class="kw">pub struct </span>ClassLoader {
     classes: HashMap&lt;String, WrappedClassObject&gt;,
     class_path: Vec&lt;PathBuf&gt;,
-    meta_class_object: <span class="prelude-ty">Option</span>&lt;WrappedClassObject&gt;,
+    meta_class_object: <span class="prelude-ty">Option</span>&lt;WrappedClassObject&gt;
 }
 
 <span class="kw">impl </span>ClassLoader {
@@ -108,7 +110,7 @@
     </span>}
 
     <span class="kw">pub fn </span>load_from_bytes(<span class="kw-2">&amp;mut </span><span class="self">self</span>, name: String, bytes: <span class="kw-2">&amp;</span>[u8]) -&gt; <span class="prelude-ty">Result</span>&lt;WrappedClassObject&gt; {
-            <span class="kw">let </span><span class="kw-2">mut </span>parser = Parser::new(<span class="kw-2">&amp;</span>bytes);
+            <span class="kw">let </span><span class="kw-2">mut </span>parser = Parser::new(bytes);
             <span class="kw">let </span>classfile = parser.parse()<span class="question-mark">?</span>;
 
             <span class="kw">let </span>object = Rc::new(RwLock::new(ClassObject::new(
@@ -128,7 +130,7 @@
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(object) = <span class="self">self</span>.classes.get(<span class="kw-2">&amp;</span>name) {
             <span class="macro">debug!</span>(<span class="string">&quot;Fast path: {}&quot;</span>, name);
-            <span class="kw">return </span><span class="prelude-val">Ok</span>(Rc::clone(<span class="kw-2">&amp;</span>object));
+            <span class="kw">return </span><span class="prelude-val">Ok</span>(Rc::clone(object));
         }
 
         <span class="macro">debug!</span>(<span class="string">&quot;Slow path: {}&quot;</span>, name);
@@ -151,11 +153,13 @@
         <span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;Could not locate classfile {}&quot;</span>, name))
     }
 
-    <span class="kw">pub fn </span>bootstrap(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+    <span class="kw">pub fn </span>bootstrap(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(WrappedClassObject, WrappedClassObject)&gt; {
         <span class="kw">let </span>meta_class = <span class="self">self</span>.load_class(<span class="string">&quot;java/lang/Class&quot;</span>.to_string())<span class="question-mark">?</span>;
         <span class="self">self</span>.meta_class_object = <span class="prelude-val">Some</span>(meta_class);
 
-        <span class="prelude-val">Ok</span>(())
+        <span class="kw">let </span>string_class = <span class="self">self</span>.load_class(<span class="string">&quot;java/lang/String&quot;</span>.to_string())<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>((<span class="self">self</span>.meta_class_object.clone().unwrap(), string_class))
     }
 }
 </code></pre></div></section></main></body></html>

@@ -351,9 +351,48 @@
 <a href="#351" id="351">351</a>
 <a href="#352" id="352">352</a>
 <a href="#353" id="353">353</a>
+<a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::rc::Rc;
 
-<span class="kw">use </span><span class="kw">super</span>::Instruction;
+<span class="kw">use super</span>::{Instruction, Progression};
 <span class="kw">use crate</span>::{
     native::NativeFunction,
     object::{
@@ -400,7 +439,20 @@
     }}
 }
 
-<span class="macro">nop!</span>(Nop, Return);
+<span class="macro">nop!</span>(Nop, VoidReturn);
+
+
+<span class="attr">#[derive(Debug)]
+</span><span class="kw">pub struct </span>ValueReturn {
+}
+
+<span class="kw">impl </span>Instruction <span class="kw">for </span>ValueReturn {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+        <span class="kw">let </span>return_value = ctx.operands.pop().context(<span class="string">&quot;no return value popped&quot;</span>)<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>(Progression::Return(<span class="prelude-val">Some</span>(return_value)))
+    }
+}
 
 <span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>PushConst {
@@ -408,9 +460,9 @@
 }
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>PushConst {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;i32&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
         ctx.operands.push(<span class="self">self</span>.value.clone());
-        <span class="prelude-val">Ok</span>(ctx.pc)
+        <span class="prelude-val">Ok</span>(Progression::Next)
     }
 }
 
@@ -420,7 +472,7 @@
 }
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>Ldc2W {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;i32&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
         <span class="kw">let </span>value = ctx
             .class
             .read()
@@ -440,7 +492,7 @@
             v =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;cannot load {:#?} with ldc2w&quot;</span>, v)),
         };
 
-        <span class="prelude-val">Ok</span>(ctx.pc)
+        <span class="prelude-val">Ok</span>(Progression::Next)
     }
 }
 
@@ -450,7 +502,7 @@
 }
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>Ldc {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;i32&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
         <span class="kw">let </span>value = ctx
             .class
             .read()
@@ -467,10 +519,16 @@
             ConstantEntry::Float(data) =&gt; {
                 ctx.operands.push(RuntimeValue::Floating(data.bytes.into()));
             }
+            ConstantEntry::String(data) =&gt; {
+                <span class="kw">let </span>str = data.string();
+                <span class="kw">let </span>obj = vm.interner.intern(str)<span class="question-mark">?</span>;
+
+                ctx.operands.push(RuntimeValue::Object(obj))
+            }
             v =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;cannot load {:#?} with ldc&quot;</span>, v)),
         };
 
-        <span class="prelude-val">Ok</span>(ctx.pc)
+        <span class="prelude-val">Ok</span>(Progression::Next)
     }
 }
 
@@ -478,14 +536,29 @@
 </span><span class="kw">pub struct </span>Isub;
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>Isub {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;i32&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
         <span class="kw">let </span>rhs = <span class="macro">arg!</span>(ctx, <span class="string">&quot;rhs&quot; </span>=&gt; int);
         <span class="kw">let </span>lhs = <span class="macro">arg!</span>(ctx, <span class="string">&quot;lhs&quot; </span>=&gt; int);
 
         <span class="kw">let </span>result: i32 = (lhs.value <span class="kw">as </span>i32).wrapping_sub(rhs.value <span class="kw">as </span>i32);
         ctx.operands.push(RuntimeValue::Integral(result.into()));
 
-        <span class="prelude-val">Ok</span>(ctx.pc)
+        <span class="prelude-val">Ok</span>(Progression::Next)
+    }
+}
+
+<span class="attr">#[derive(Debug)]
+</span><span class="kw">pub struct </span>Iadd;
+
+<span class="kw">impl </span>Instruction <span class="kw">for </span>Iadd {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+        <span class="kw">let </span>rhs = <span class="macro">arg!</span>(ctx, <span class="string">&quot;rhs&quot; </span>=&gt; int);
+        <span class="kw">let </span>lhs = <span class="macro">arg!</span>(ctx, <span class="string">&quot;lhs&quot; </span>=&gt; int);
+
+        <span class="kw">let </span>result: i32 = (lhs.value <span class="kw">as </span>i32).wrapping_add(rhs.value <span class="kw">as </span>i32);
+        ctx.operands.push(RuntimeValue::Integral(result.into()));
+
+        <span class="prelude-val">Ok</span>(Progression::Next)
     }
 }
 
@@ -493,7 +566,7 @@
 </span><span class="kw">pub struct </span>Irem;
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>Irem {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;i32&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
         <span class="kw">let </span>rhs = <span class="macro">arg!</span>(ctx, <span class="string">&quot;rhs&quot; </span>=&gt; int);
         <span class="kw">let </span>lhs = <span class="macro">arg!</span>(ctx, <span class="string">&quot;lhs&quot; </span>=&gt; int);
 
@@ -503,7 +576,7 @@
         <span class="kw">let </span>result: i32 = (lhs.value <span class="kw">as </span>i32) % (rhs.value <span class="kw">as </span>i32);
         ctx.operands.push(RuntimeValue::Integral(result.into()));
 
-        <span class="prelude-val">Ok</span>(ctx.pc)
+        <span class="prelude-val">Ok</span>(Progression::Next)
     }
 }
 
@@ -513,37 +586,42 @@
 }
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>LoadLocal {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;i32&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
         <span class="kw">let </span>local = ctx
             .locals
             .get(<span class="self">self</span>.index)
             .context(<span class="macro">format!</span>(<span class="string">&quot;no local @ {}&quot;</span>, <span class="self">self</span>.index))<span class="question-mark">?</span>;
+
         ctx.operands.push(local.clone());
-        <span class="prelude-val">Ok</span>(ctx.pc)
+        <span class="prelude-val">Ok</span>(Progression::Next)
     }
 }
 
 <span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>StoreLocal {
     <span class="kw">pub</span>(<span class="kw">crate</span>) index: usize,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) store_next: bool
 }
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>StoreLocal {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;i32&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
         <span class="kw">let </span>locals = <span class="kw-2">&amp;mut </span>ctx.locals;
-        <span class="kw">let </span>index = <span class="self">self</span>.index;
+        <span class="kw">let </span>target_index = <span class="kw">if </span><span class="self">self</span>.store_next { <span class="self">self</span>.index + <span class="number">1 </span>} <span class="kw">else </span>{ <span class="self">self</span>.index };
         <span class="kw">let </span>value = ctx.operands.pop().context(<span class="string">&quot;no operand to pop&quot;</span>)<span class="question-mark">?</span>.clone();
 
         <span class="comment">// Fill enough slots to be able to store at an arbitrary index
         // FIXME: We should probably keep a track of which locals are filled with &quot;real&quot;
         // values and which are just sentinels so we can provide more accurate diagnostics
         // for invalid store / get ops
-        </span><span class="kw">while </span>locals.len() &lt;= index {
+        </span><span class="kw">while </span>locals.len() &lt;= target_index {
             locals.push(RuntimeValue::Null);
         }
 
-        locals[index] = value;
-        <span class="prelude-val">Ok</span>(ctx.pc)
+        locals[<span class="self">self</span>.index] = value.clone();
+        <span class="kw">if </span><span class="self">self</span>.store_next {
+            locals[<span class="self">self</span>.index + <span class="number">1</span>] = value;
+        }
+        <span class="prelude-val">Ok</span>(Progression::Next)
     }
 }
 
@@ -553,7 +631,7 @@
 }
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>InvokeStatic {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;i32&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
         <span class="kw">let </span>cls = ctx.class.read();
         <span class="kw">let </span>pool = cls.constant_pool();
 
@@ -701,7 +779,7 @@
             ctx.operands.push(return_value);
         }
 
-        <span class="prelude-val">Ok</span>(ctx.pc)
+        <span class="prelude-val">Ok</span>(Progression::Next)
     }
 }
 </code></pre></div></section></main></body></html>
