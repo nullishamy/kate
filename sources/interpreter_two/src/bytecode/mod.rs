@@ -6,9 +6,15 @@ use bytes::BytesMut;
 use support::bytes_ext::SafeBuf;
 mod ops;
 
+pub enum Progression {
+    Jump(i32),
+    Next,
+    Return(Option<RuntimeValue>)
+}
+
 pub trait Instruction: fmt::Debug {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<i32> {
-        Ok(ctx.pc)
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+        Ok(Progression::Next)
     }
 }
 
@@ -262,12 +268,12 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         //      })
         //  }
         //  0xab => Opcode::LOOKUPSWITCH,
-        //  0xac => Opcode::IRETURN,
+        0xac => b(ops::ValueReturn {}),
         //  0xad => Opcode::LRETURN,
         //  0xae => Opcode::FRETURN,
         //  0xaf => Opcode::DRETURN,
         //  0xb0 => Opcode::ARETURN,
-        0xb1 => b(ops::Return {}),
+        0xb1 => b(ops::VoidReturn {}),
 
         //  // References
         //  0xb2 => Opcode::GETSTATIC(bytes.try_get_u16()?),

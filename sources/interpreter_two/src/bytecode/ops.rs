@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use super::Instruction;
+use super::{Instruction, Progression};
 use crate::{
     native::NativeFunction,
     object::{
@@ -47,7 +47,20 @@ macro_rules! arg {
     }}
 }
 
-nop!(Nop, Return);
+nop!(Nop, VoidReturn);
+
+
+#[derive(Debug)]
+pub struct ValueReturn {
+}
+
+impl Instruction for ValueReturn {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+        let return_value = ctx.operands.pop().context("no return value popped")?;
+
+        Ok(Progression::Return(Some(return_value)))
+    }
+}
 
 #[derive(Debug)]
 pub struct PushConst {
@@ -55,9 +68,9 @@ pub struct PushConst {
 }
 
 impl Instruction for PushConst {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<i32> {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
         ctx.operands.push(self.value.clone());
-        Ok(ctx.pc)
+        Ok(Progression::Next)
     }
 }
 
@@ -67,7 +80,7 @@ pub struct Ldc2W {
 }
 
 impl Instruction for Ldc2W {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<i32> {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
         let value = ctx
             .class
             .read()
@@ -87,7 +100,7 @@ impl Instruction for Ldc2W {
             v => return Err(anyhow!("cannot load {:#?} with ldc2w", v)),
         };
 
-        Ok(ctx.pc)
+        Ok(Progression::Next)
     }
 }
 
@@ -97,7 +110,7 @@ pub struct Ldc {
 }
 
 impl Instruction for Ldc {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<i32> {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
         let value = ctx
             .class
             .read()
@@ -117,7 +130,7 @@ impl Instruction for Ldc {
             v => return Err(anyhow!("cannot load {:#?} with ldc", v)),
         };
 
-        Ok(ctx.pc)
+        Ok(Progression::Next)
     }
 }
 
@@ -125,14 +138,14 @@ impl Instruction for Ldc {
 pub struct Isub;
 
 impl Instruction for Isub {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<i32> {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
         let rhs = arg!(ctx, "rhs" => int);
         let lhs = arg!(ctx, "lhs" => int);
 
         let result: i32 = (lhs.value as i32).wrapping_sub(rhs.value as i32);
         ctx.operands.push(RuntimeValue::Integral(result.into()));
 
-        Ok(ctx.pc)
+        Ok(Progression::Next)
     }
 }
 
@@ -140,7 +153,7 @@ impl Instruction for Isub {
 pub struct Irem;
 
 impl Instruction for Irem {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<i32> {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
         let rhs = arg!(ctx, "rhs" => int);
         let lhs = arg!(ctx, "lhs" => int);
 
@@ -150,7 +163,7 @@ impl Instruction for Irem {
         let result: i32 = (lhs.value as i32) % (rhs.value as i32);
         ctx.operands.push(RuntimeValue::Integral(result.into()));
 
-        Ok(ctx.pc)
+        Ok(Progression::Next)
     }
 }
 
@@ -160,13 +173,14 @@ pub struct LoadLocal {
 }
 
 impl Instruction for LoadLocal {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<i32> {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
         let local = ctx
             .locals
             .get(self.index)
             .context(format!("no local @ {}", self.index))?;
+
         ctx.operands.push(local.clone());
-        Ok(ctx.pc)
+        Ok(Progression::Next)
     }
 }
 
@@ -176,7 +190,7 @@ pub struct StoreLocal {
 }
 
 impl Instruction for StoreLocal {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<i32> {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
         let locals = &mut ctx.locals;
         let index = self.index;
         let value = ctx.operands.pop().context("no operand to pop")?.clone();
@@ -190,7 +204,7 @@ impl Instruction for StoreLocal {
         }
 
         locals[index] = value;
-        Ok(ctx.pc)
+        Ok(Progression::Next)
     }
 }
 
@@ -200,7 +214,7 @@ pub struct InvokeStatic {
 }
 
 impl Instruction for InvokeStatic {
-    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<i32> {
+    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
         let cls = ctx.class.read();
         let pool = cls.constant_pool();
 
@@ -348,6 +362,6 @@ impl Instruction for InvokeStatic {
             ctx.operands.push(return_value);
         }
 
-        Ok(ctx.pc)
+        Ok(Progression::Next)
     }
 }

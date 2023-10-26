@@ -41,10 +41,17 @@ impl VM {
             info!("opcode: {:?} consumed {} bytes", instruction, bytes_consumed_by_opcode);
 
             // If the instruction doesn't want us to jump anywhere, proceed to the next instruction
-            let new_pc = instruction.handle(self, &mut ctx)?;
-            if new_pc == ctx.pc {
-                ctx.pc += bytes_consumed_by_opcode;
-            }
+            match  instruction.handle(self, &mut ctx)? {
+                bytecode::Progression::Jump(new_pc) => {
+                    ctx.pc = new_pc;
+                },
+                bytecode::Progression::Next => {
+                    ctx.pc += bytes_consumed_by_opcode;
+                },
+                bytecode::Progression::Return(return_value) => {
+                    return Ok(return_value)
+                },
+            };
         }
 
         Ok(None)
