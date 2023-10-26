@@ -4,6 +4,7 @@ import re
 import subprocess
 import os
 import argparse
+import time
 
 THIS_FILE = os.path.dirname(os.path.realpath(__file__))
 TEMP_DIR = os.path.join(THIS_FILE, '.temp')
@@ -22,6 +23,7 @@ def make_parser():
   )
 
   parser.add_argument('--verbose', '-v', action='store_true')
+  parser.add_argument('--filter', '-f', default=".*")
 
   return parser
 
@@ -35,6 +37,13 @@ class Colours:
     END = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
+
+def filter_sources(sources, excluded_filename):
+  reg = re.compile(excluded_filename)
+  def filter_one(source):
+    return reg.match(source) != None
+
+  return list(filter(filter_one, sources))
 
 def get_sources(types):
   files_grabbed = []
@@ -73,7 +82,7 @@ def run_tests(sources, args):
 
   if not len(sources):
     print(f'{Colours.WARNING}warn:{Colours.END} no sources found')
-    return
+    return passes, fails
 
   for source_location in sources:
     print(f'{Colours.PEACH}test:{Colours.END}', source_location)
@@ -118,12 +127,15 @@ def main():
   print(f'{Colours.GREEN}pre-run steps ok{Colours.END}')
   print()
 
-  passes, fails = run_tests(get_sources(['java']), args)
+  start = time.time()
+  passes, fails = run_tests(filter_sources(get_sources(['java']), args.filter), args)
+  end = time.time()
+  duration = end - start
 
   print()
   print()
   print()
-  print(f'{Colours.PEACH}testing concluded{Colours.END}')
+  print(f'{Colours.PEACH}testing concluded{Colours.END} ({round(duration, 3)}s)')
   print(f'{Colours.GREEN}pass:{Colours.END} {len(passes)} - {Colours.RED}fail:{Colours.END} {len(fails)}')
 
 main()
