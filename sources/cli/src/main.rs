@@ -68,7 +68,8 @@ fn main() {
             macro_rules! printer {
                 ($desc: expr, $printer: expr) => {
                     static_method!(name: "print", descriptor: $desc => |_, args, _| {
-                        $printer(args[0].clone());
+                        let printer = $printer;
+                        printer(args[0].clone());
                         Ok(None)
                     })
                 };

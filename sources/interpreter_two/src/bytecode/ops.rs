@@ -10,11 +10,10 @@ use crate::{
     Context, VM,
 };
 use anyhow::{anyhow, Context as AnyhowContext, Result};
-use parking_lot::RwLock;
 use parse::{
     attributes::CodeAttribute, classfile::Resolvable, flags::MethodAccessFlag, pool::ConstantEntry,
 };
-use support::{descriptor::MethodType, encoding::encode_string};
+use support::descriptor::MethodType;
 
 macro_rules! nop {
   ($( $x:ident ),* ) => {

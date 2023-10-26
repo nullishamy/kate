@@ -28,7 +28,7 @@ impl ClassLoader {
     }
 
     pub fn load_from_bytes(&mut self, name: String, bytes: &[u8]) -> Result<WrappedClassObject> {
-            let mut parser = Parser::new(&bytes);
+            let mut parser = Parser::new(bytes);
             let classfile = parser.parse()?;
 
             let object = Rc::new(RwLock::new(ClassObject::new(
@@ -48,7 +48,7 @@ impl ClassLoader {
 
         if let Some(object) = self.classes.get(&name) {
             debug!("Fast path: {}", name);
-            return Ok(Rc::clone(&object));
+            return Ok(Rc::clone(object));
         }
 
         debug!("Slow path: {}", name);
