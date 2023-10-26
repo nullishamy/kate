@@ -57,11 +57,11 @@ class Return {
     print(b);
 
     double c = doubleReturn();
-    // CHECK: 1.00
+    // CHECK: 1
     print(c);
     
     float d = floatReturn();
-    // CHECK: 0.00
+    // CHECK: 0
     print(d);
 
     int e = intReturn();

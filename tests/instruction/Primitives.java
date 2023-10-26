@@ -12,7 +12,7 @@ class Primitives {
 
     public static void main(String[] args) {
       byte b = -1;
-      char c = 0; // Java char does not support assignment from negative values
+      char c = 'a'; // Java char does not support assignment from negative values
       double d = 1.0;
       float f = 2.0f;
       int i = 3;
@@ -22,7 +22,7 @@ class Primitives {
 
       // CHECK: -1
       print(b);
-      // CHECK: 0
+      // CHECK: a
       print(c);
       // CHECK: 1
       print(d);
@@ -34,7 +34,7 @@ class Primitives {
       print(l);
       // CHECK: 5
       print(s);
-      // CHECK: 0
+      // CHECK: false
       print(z);
   }
 }

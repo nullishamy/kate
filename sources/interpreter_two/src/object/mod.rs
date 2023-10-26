@@ -192,7 +192,7 @@ impl fmt::Display for RuntimeValue {
                     .join(", ")
             ),
             RuntimeValue::Integral(data) => write!(f, "{}", data.value),
-            RuntimeValue::Floating(data) => write!(f, "{:.2}", data.value),
+            RuntimeValue::Floating(data) => write!(f, "{:.}", data.value),
             RuntimeValue::Null => write!(f, "null"),
         }
     }
