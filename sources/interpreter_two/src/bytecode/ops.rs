@@ -157,6 +157,21 @@ impl Instruction for Isub {
 }
 
 #[derive(Debug)]
+pub struct Iadd;
+
+impl Instruction for Iadd {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+        let rhs = arg!(ctx, "rhs" => int);
+        let lhs = arg!(ctx, "lhs" => int);
+
+        let result: i32 = (lhs.value as i32).wrapping_add(rhs.value as i32);
+        ctx.operands.push(RuntimeValue::Integral(result.into()));
+
+        Ok(Progression::Next)
+    }
+}
+
+#[derive(Debug)]
 pub struct Irem;
 
 impl Instruction for Irem {

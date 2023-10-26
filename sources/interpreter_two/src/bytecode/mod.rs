@@ -174,7 +174,7 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         //  0x5d => Opcode::DUP2_X1,
         //  0x5e => Opcode::DUP2_X2,
         //  0x5f => Opcode::SWAP,
-        //  0x60 => Opcode::IADD,
+        0x60 => b(ops::Iadd { }),
         //  0x61 => Opcode::LADD,
         //  0x62 => Opcode::FADD,
         //  0x63 => Opcode::DADD,
