@@ -187,23 +187,27 @@ impl Instruction for LoadLocal {
 #[derive(Debug)]
 pub struct StoreLocal {
     pub(crate) index: usize,
+    pub(crate) store_next: bool
 }
 
 impl Instruction for StoreLocal {
     fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
         let locals = &mut ctx.locals;
-        let index = self.index;
+        let target_index = if self.store_next { self.index + 1 } else { self.index };
         let value = ctx.operands.pop().context("no operand to pop")?.clone();
 
         // Fill enough slots to be able to store at an arbitrary index
         // FIXME: We should probably keep a track of which locals are filled with "real"
         // values and which are just sentinels so we can provide more accurate diagnostics
         // for invalid store / get ops
-        while locals.len() <= index {
+        while locals.len() <= target_index {
             locals.push(RuntimeValue::Null);
         }
 
-        locals[index] = value;
+        locals[self.index] = value.clone();
+        if self.store_next {
+            locals[self.index + 1] = value;
+        }
         Ok(Progression::Next)
     }
 }

@@ -91,7 +91,7 @@ impl fmt::Display for RuntimeValue {
             RuntimeValue::Object(_) => write!(f, "[object Object]"),
             RuntimeValue::Array(data) => write!(f, "[{}]", data.values.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(", ")),
             RuntimeValue::Integral(data) => write!(f, "{}", data.value),
-            RuntimeValue::Floating(data) => write!(f, "{}", data.value),
+            RuntimeValue::Floating(data) => write!(f, "{:.2}", data.value),
             RuntimeValue::Null => write!(f, "null"),
         }
     }

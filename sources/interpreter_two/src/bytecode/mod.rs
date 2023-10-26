@@ -13,7 +13,7 @@ pub enum Progression {
 }
 
 pub trait Instruction: fmt::Debug {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+    fn handle(&self, _vm: &mut VM, _ctx: &mut Context) -> Result<Progression> {
         Ok(Progression::Next)
     }
 }
@@ -57,8 +57,12 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         0x0a => b(ops::PushConst {
             value: RuntimeValue::Integral((1_i64).into()),
         }),
-        //  0x0b => Opcode::FCONST_0,
-        //  0x0c => Opcode::FCONST_1,
+        0x0b => b(ops::PushConst {
+            value: RuntimeValue::Floating((0.0_f32).into()),
+        }),
+        0x0c => b(ops::PushConst {
+            value: RuntimeValue::Floating((1.0_f32).into()),
+        }),
         0x0d => b(ops::PushConst {
             value: RuntimeValue::Floating((2.0_f32).into()),
         }),
@@ -117,31 +121,34 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         //  0x35 => Opcode::SALOAD,
         0x36 => b(ops::StoreLocal {
             index: bytes.try_get_u8()? as usize,
+            store_next: false
         }),
         0x37 => b(ops::StoreLocal {
             index: bytes.try_get_u8()? as usize,
+            store_next: true
         }),
         0x38 => b(ops::StoreLocal {
             index: bytes.try_get_u8()? as usize,
+            store_next: false
         }),
         //  0x39 => Opcode::DSTORE,
         //  0x3a => Opcode::ASTORE(bytes.try_get_u8()?),
         //  0x3b => Opcode::ISTORE_0,
-        0x3c => b(ops::StoreLocal { index: 1 }),
-        0x3d => b(ops::StoreLocal { index: 2 }),
-        0x3e => b(ops::StoreLocal { index: 3 }),
-        //  0x3f => Opcode::LSTORE_0,
-        0x40 => b(ops::StoreLocal { index: 1 }),
-        0x41 => b(ops::StoreLocal { index: 2 }),
-        0x42 => b(ops::StoreLocal { index: 3 }),
+        0x3c => b(ops::StoreLocal { index: 1, store_next: false }),
+        0x3d => b(ops::StoreLocal { index: 2, store_next: false }),
+        0x3e => b(ops::StoreLocal { index: 3, store_next: false }),
+        0x3f => b(ops::StoreLocal { index: 0, store_next: true }),
+        0x40 => b(ops::StoreLocal { index: 1, store_next: true }),
+        0x41 => b(ops::StoreLocal { index: 2, store_next: true }),
+        0x42 => b(ops::StoreLocal { index: 3, store_next: true }),
         //  0x44 => Opcode::FSTORE_1,
         //  0x45 => Opcode::FSTORE_2,
         //  0x46 => Opcode::FSTORE_3,
         //  0x47 => Opcode::DSTORE_0,
         //  0x48 => Opcode::DSTORE_1,
         //  0x49 => Opcode::DSTORE_2,
-        0x4a => b(ops::StoreLocal { index: 3 }),
-        0x4b => b(ops::StoreLocal { index: 0 }),
+        0x4a => b(ops::StoreLocal { index: 3, store_next: true }),
+        0x4b => b(ops::StoreLocal { index: 0, store_next: false }),
         //  0x4c => Opcode::ASTORE_1,
         //  0x4d => Opcode::ASTORE_2,
         //  0x4e => Opcode::ASTORE_3,
@@ -269,10 +276,10 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         //  }
         //  0xab => Opcode::LOOKUPSWITCH,
         0xac => b(ops::ValueReturn {}),
-        //  0xad => Opcode::LRETURN,
-        //  0xae => Opcode::FRETURN,
-        //  0xaf => Opcode::DRETURN,
-        //  0xb0 => Opcode::ARETURN,
+        0xad => b(ops::ValueReturn {}),
+        0xae => b(ops::ValueReturn {}),
+        0xaf => b(ops::ValueReturn {}),
+        0xb0 => b(ops::ValueReturn {}),
         0xb1 => b(ops::VoidReturn {}),
 
         //  // References

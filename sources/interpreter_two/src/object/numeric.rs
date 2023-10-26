@@ -1,7 +1,8 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum IntegralType {
   Byte,
-  Short, // AKA Char
+  Short,
+  Char,
   Int,
   Long
 }
@@ -41,7 +42,7 @@ macro_rules! from_num {
 
 from_num!(Integral > i64,
   i8 => IntegralType::Byte,
-  i16 => IntegralType::Short,
+  i16 => IntegralType::Char,
   i32 => IntegralType::Int,
   i64 => IntegralType::Long
 );

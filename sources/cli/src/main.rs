@@ -2,7 +2,7 @@ use std::process::exit;
 
 use args::Cli;
 use clap::Parser;
-use interpreter_two::{object::classloader::ClassLoader, Context, VM, native::NativeFunction, static_method};
+use interpreter_two::{object::{classloader::ClassLoader, RuntimeValue}, Context, VM, native::NativeFunction, static_method};
 use parse::attributes::CodeAttribute;
 use tracing::{error, info, Level};
 use tracing_subscriber::fmt;
@@ -56,25 +56,38 @@ fn main() {
         let mut cls = _cls.write();
         if args.test {
             macro_rules! printer {
-                ($desc: expr) => {
+                ($desc: expr, $printer: expr) => {
                     static_method!(name: "print", descriptor: $desc => |_, args, _| {
-                        for arg in args {
-                            println!("{}", arg);
-                        }
+                        $printer(args[0].clone());
                         Ok(None)
+                    })
+                };
+                ($desc: expr) => {
+                    printer!($desc, |a| {
+                        println!("{}", a);
                     })
                 };
             }
 
             for printer in [
                 printer!("(I)V"),
-                printer!("(B)V"),
-                printer!("(C)V"),
+                printer!("(Z)V", |a: RuntimeValue| {
+                    let int_value = a.as_integral().expect("was not an int (bool)").value;
+                    if int_value == 0 {
+                        println!("false")
+                    } else {
+                        println!("true")
+                    }
+                }),
+                printer!("(C)V", |a: RuntimeValue| {
+                    let char_value = a.as_integral().expect("was not an int (char)").value;
+                    println!("{}", char::from_u32(char_value as u32).expect(&format!("{} was not a char", char_value)))
+                }),
                 printer!("(J)V"),
                 printer!("(D)V"),
                 printer!("(F)V"),
                 printer!("(S)V"),
-                printer!("(Z)V"),
+                printer!("(B)V"),
             ] {
                 cls.register_native(printer.0, printer.1);
             }
