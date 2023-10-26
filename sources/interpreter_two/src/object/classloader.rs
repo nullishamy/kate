@@ -10,7 +10,7 @@ use super::{ClassObject, WrappedClassObject};
 pub struct ClassLoader {
     classes: HashMap<String, WrappedClassObject>,
     class_path: Vec<PathBuf>,
-    meta_class_object: Option<WrappedClassObject>,
+    meta_class_object: Option<WrappedClassObject>
 }
 
 impl ClassLoader {
@@ -71,10 +71,12 @@ impl ClassLoader {
         Err(anyhow!("Could not locate classfile {}", name))
     }
 
-    pub fn bootstrap(&mut self) -> Result<()> {
+    pub fn bootstrap(&mut self) -> Result<(WrappedClassObject, WrappedClassObject)> {
         let meta_class = self.load_class("java/lang/Class".to_string())?;
         self.meta_class_object = Some(meta_class);
 
-        Ok(())
+        let string_class = self.load_class("java/lang/String".to_string())?;
+
+        Ok((self.meta_class_object.clone().unwrap(), string_class))
     }
 }

@@ -10,10 +10,11 @@ use crate::{
     Context, VM,
 };
 use anyhow::{anyhow, Context as AnyhowContext, Result};
+use parking_lot::RwLock;
 use parse::{
     attributes::CodeAttribute, classfile::Resolvable, flags::MethodAccessFlag, pool::ConstantEntry,
 };
-use support::descriptor::MethodType;
+use support::{descriptor::MethodType, encoding::encode_string};
 
 macro_rules! nop {
   ($( $x:ident ),* ) => {
@@ -110,7 +111,7 @@ pub struct Ldc {
 }
 
 impl Instruction for Ldc {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
         let value = ctx
             .class
             .read()
@@ -126,6 +127,12 @@ impl Instruction for Ldc {
             }
             ConstantEntry::Float(data) => {
                 ctx.operands.push(RuntimeValue::Floating(data.bytes.into()));
+            }
+            ConstantEntry::String(data) => {
+                let str = data.string();
+                let obj = vm.interner.intern(str)?;
+
+                ctx.operands.push(RuntimeValue::Object(obj))
             }
             v => return Err(anyhow!("cannot load {:#?} with ldc", v)),
         };

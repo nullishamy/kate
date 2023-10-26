@@ -2,8 +2,13 @@ use std::process::exit;
 
 use args::Cli;
 use clap::Parser;
-use interpreter_two::{object::{classloader::ClassLoader, RuntimeValue}, Context, VM, native::NativeFunction, static_method};
+use interpreter_two::{
+    native::NativeFunction,
+    object::{classloader::ClassLoader, string::Interner, RuntimeValue},
+    static_method, Context, VM,
+};
 use parse::attributes::CodeAttribute;
+use support::encoding::{decode_string, CompactEncoding};
 use tracing::{error, info, Level};
 use tracing_subscriber::fmt;
 
@@ -37,17 +42,22 @@ fn main() {
     }
 
     let source_root = env!("CARGO_MANIFEST_DIR");
-    let mut vm = VM {
-        class_loader: ClassLoader::new(),
-    };
+    let mut class_loader = ClassLoader::new();
 
-    vm.class_loader
+    class_loader
         .add_path(format!("{source_root}/../../std/java.base").into())
-        .add_path(".".into());
+        .add_path(format!("{source_root}/../../samples").into());
 
     for cp in args.classpath {
-        vm.class_loader.add_path(cp.into());
+        class_loader.add_path(cp.into());
     }
+
+    let (_, jls) = class_loader.bootstrap().unwrap();
+
+    let mut vm = VM {
+        class_loader,
+        interner: Interner::new(jls),
+    };
 
     vm.class_loader.bootstrap().unwrap();
 
@@ -81,17 +91,37 @@ fn main() {
                 }),
                 printer!("(C)V", |a: RuntimeValue| {
                     let char_value = a.as_integral().expect("was not an int (char)").value;
-                    println!("{}", char::from_u32(char_value as u32).expect(&format!("{} was not a char", char_value)))
+                    println!(
+                        "{}",
+                        char::from_u32(char_value as u32)
+                            .expect(&format!("{} was not a char", char_value))
+                    )
                 }),
                 printer!("(J)V"),
                 printer!("(D)V"),
                 printer!("(F)V"),
                 printer!("(S)V"),
                 printer!("(B)V"),
+                printer!("(Ljava/lang/String;)V", |a: RuntimeValue| {
+                    let string = a.as_object().expect("was not an object (string)");
+                    let string = string.read();
+                    let bytes =
+                        string.get_instance_field(("value".to_string(), "[B".to_string())).expect("could not locate value field");
+                    let bytes = bytes.as_array().expect("bytes was not an array (byte[])");
+
+                    let bytes = bytes
+                        .values
+                        .iter()
+                        .map(|v| v.as_integral().expect("value was not an int (char)"))
+                        .map(|v| v.value as u8)
+                        .collect::<Vec<_>>();
+
+                    let str = decode_string((CompactEncoding::Utf16, bytes)).expect("could not decode string");
+                    println!("{}", str);
+                }),
             ] {
                 cls.register_native(printer.0, printer.1);
             }
-
         }
         let method = cls
             .get_method(("main".to_string(), "([Ljava/lang/String;)V".to_string()))

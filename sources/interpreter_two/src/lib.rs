@@ -2,7 +2,7 @@ use anyhow::Result;
 use bytecode::decode_instruction;
 use bytes::BytesMut;
 
-use object::{classloader::ClassLoader, RuntimeValue, WrappedClassObject};
+use object::{classloader::ClassLoader, RuntimeValue, WrappedClassObject, string::Interner};
 use parse::attributes::CodeAttribute;
 use tracing::info;
 
@@ -21,6 +21,7 @@ pub struct Context {
 
 pub struct VM {
     pub class_loader: ClassLoader,
+    pub interner: Interner
 }
 
 impl VM {
@@ -106,20 +107,24 @@ impl VM {
 mod tests {
     use parse::attributes::CodeAttribute;
 
-    use crate::{object::classloader::ClassLoader, Context, VM};
+    use crate::{object::{classloader::ClassLoader, string::Interner}, Context, VM};
 
     #[test]
     fn it_runs_empty_main_functions() {
         let source_root = env!("CARGO_MANIFEST_DIR");
-        let mut vm = VM {
-            class_loader: ClassLoader::new(),
-        };
+        let mut class_loader = ClassLoader::new();
 
-        vm.class_loader
+        class_loader
             .add_path(format!("{source_root}/../../std/java.base").into())
             .add_path(format!("{source_root}/../../samples").into());
 
-        vm.class_loader.bootstrap().unwrap();
+        let (_, jls) = class_loader.bootstrap().unwrap();
+
+        let mut vm = VM {
+            class_loader,
+            interner: Interner::new(jls)
+        };
+
 
         let _cls = vm.class_loader.load_class("JustMain".to_string()).unwrap();
         let cls = _cls.read();

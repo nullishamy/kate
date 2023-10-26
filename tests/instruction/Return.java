@@ -9,6 +9,7 @@ class Return {
   public static native void print(long l);
   public static native void print(short s);
   public static native void print(boolean b);
+  public static native void print(String s);
 
   static byte byteReturn() {
     return 1;
@@ -40,6 +41,10 @@ class Return {
 
   static boolean booleanReturn() {
     return true;
+  }
+
+  static String stringReturn() {
+    return "string";
   }
 
   public static void main(String[] args) {
@@ -74,5 +79,9 @@ class Return {
     boolean h = booleanReturn();
     // CHECK: true
     print(h);
+
+    String i = stringReturn();
+    // CHECK: string
+    print(i);
   }
 }

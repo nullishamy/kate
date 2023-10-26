@@ -90,7 +90,7 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         0x16 => b(ops::LoadLocal { index: bytes.try_get_u8()? as usize }),
         0x17 => b(ops::LoadLocal { index: bytes.try_get_u8()? as usize }),
         //  0x18 => Opcode::DLOAD,
-        //  0x19 => Opcode::ALOAD(bytes.try_get_u8()?),
+        0x19 => b(ops::LoadLocal { index: bytes.try_get_u8()? as usize }),
         //  0x1a => Opcode::ILOAD_0,
         0x1b => b(ops::LoadLocal { index: 1 }),
         0x1c => b(ops::LoadLocal { index: 2 }),
@@ -132,7 +132,10 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
             store_next: false
         }),
         //  0x39 => Opcode::DSTORE,
-        //  0x3a => Opcode::ASTORE(bytes.try_get_u8()?),
+        0x3a => b(ops::StoreLocal {
+            index: bytes.try_get_u8()? as usize,
+            store_next: false
+        }),
         //  0x3b => Opcode::ISTORE_0,
         0x3c => b(ops::StoreLocal { index: 1, store_next: false }),
         0x3d => b(ops::StoreLocal { index: 2, store_next: false }),
