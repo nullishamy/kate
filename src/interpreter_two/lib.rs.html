@@ -151,6 +151,13 @@
 <a href="#151" id="151">151</a>
 <a href="#152" id="152">152</a>
 <a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>anyhow::Result;
 <span class="kw">use </span>bytecode::decode_instruction;
 <span class="kw">use </span>bytes::BytesMut;
@@ -196,13 +203,20 @@
 
             <span class="comment">// If the instruction doesn&#39;t want us to jump anywhere, proceed to the next instruction
             </span><span class="kw">match  </span>instruction.handle(<span class="self">self</span>, <span class="kw-2">&amp;mut </span>ctx)<span class="question-mark">? </span>{
-                bytecode::Progression::Jump(new_pc) =&gt; {
+                bytecode::Progression::JumpAbs(new_pc) =&gt; {
+                    <span class="macro">info!</span>(<span class="string">&quot;Jumping from {} to {}&quot;</span>, ctx.pc, new_pc);
                     ctx.pc = new_pc;
                 },
+                bytecode::Progression::JumpRel(offset) =&gt; {
+                    <span class="macro">info!</span>(<span class="string">&quot;Jumping from {} by {} (new: {})&quot;</span>, ctx.pc, offset, ctx.pc + offset);
+                    ctx.pc += offset;
+                },
                 bytecode::Progression::Next =&gt; {
+                    <span class="macro">info!</span>(<span class="string">&quot;Moving to next (jump by {} bytes)&quot;</span>, bytes_consumed_by_opcode);
                     ctx.pc += bytes_consumed_by_opcode;
                 },
                 bytecode::Progression::Return(return_value) =&gt; {
+                    <span class="macro">info!</span>(<span class="string">&quot;Returning&quot;</span>);
                     <span class="kw">return </span><span class="prelude-val">Ok</span>(return_value)
                 },
             };

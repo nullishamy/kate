@@ -200,6 +200,18 @@
 <a href="#200" id="200">200</a>
 <a href="#201" id="201">201</a>
 <a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>anyhow::{Context, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>std::{collections::HashMap, fmt, rc::Rc};
 
@@ -380,6 +392,9 @@
     Null,
 }
 
+<span class="kw">const </span>UPPER_SCIENCE_BOUND: f64 = <span class="number">1_000_000.0</span>;
+<span class="kw">const </span>LOWER_SCIENCE_BOUND: f64 = <span class="number">0.0_000_001</span>;
+
 <span class="kw">impl </span>fmt::Display <span class="kw">for </span>RuntimeValue {
     <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter&lt;<span class="lifetime">&#39;_</span>&gt;) -&gt; fmt::Result {
         <span class="kw">match </span><span class="self">self </span>{
@@ -394,7 +409,16 @@
                     .join(<span class="string">&quot;, &quot;</span>)
             ),
             RuntimeValue::Integral(data) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{}&quot;</span>, data.value),
-            RuntimeValue::Floating(data) =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;{:.}&quot;</span>, data.value),
+            RuntimeValue::Floating(data) =&gt; {
+                <span class="comment">// Just our custom implementation of floats, so we get reasonable output
+                </span><span class="kw">if </span>data.value &gt; UPPER_SCIENCE_BOUND {
+                    <span class="macro">write!</span>(f, <span class="string">&quot;{:+e}&quot;</span>, data.value)
+                } <span class="kw">else if </span>data.value &lt; LOWER_SCIENCE_BOUND {
+                    <span class="macro">write!</span>(f, <span class="string">&quot;{:-e}&quot;</span>, data.value)
+                } <span class="kw">else </span>{
+                    <span class="macro">write!</span>(f, <span class="string">&quot;{:.3}&quot;</span>, data.value)
+                }
+            },
             RuntimeValue::Null =&gt; <span class="macro">write!</span>(f, <span class="string">&quot;null&quot;</span>),
         }
     }
