@@ -4,7 +4,7 @@ use super::{Instruction, Progression};
 use crate::{
     native::NativeFunction,
     object::{
-        numeric::{FloatingType, IntegralType},
+        numeric::{FloatingType, IntegralType, Integral},
         RuntimeValue,
     },
     Context, VM,
@@ -45,6 +45,25 @@ macro_rules! arg {
 
         val.clone()
     }}
+}
+
+macro_rules! binop {
+    ($ins: ident (int) => $op: expr) => {
+        #[derive(Debug)]
+        pub struct $ins;
+
+        impl Instruction for $ins {
+            fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+                let rhs = arg!(ctx, "rhs" => int);
+                let lhs = arg!(ctx, "lhs" => int);
+
+                let result: i32 = $op(lhs, rhs);
+                ctx.operands.push(RuntimeValue::Integral(result.into()));
+
+                Ok(Progression::Next)
+            }
+        }
+    };
 }
 
 nop!(Nop, VoidReturn);
@@ -140,53 +159,17 @@ impl Instruction for Ldc {
     }
 }
 
-#[derive(Debug)]
-pub struct Isub;
+binop!(Isub (int) => |lhs: Integral, rhs: Integral| {
+    (lhs.value as i32).wrapping_sub(rhs.value as i32)
+});
 
-impl Instruction for Isub {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
-        let rhs = arg!(ctx, "rhs" => int);
-        let lhs = arg!(ctx, "lhs" => int);
+binop!(Iadd (int) => |lhs: Integral, rhs: Integral| {
+    (lhs.value as i32).wrapping_add(rhs.value as i32)
+});
 
-        let result: i32 = (lhs.value as i32).wrapping_sub(rhs.value as i32);
-        ctx.operands.push(RuntimeValue::Integral(result.into()));
-
-        Ok(Progression::Next)
-    }
-}
-
-#[derive(Debug)]
-pub struct Iadd;
-
-impl Instruction for Iadd {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
-        let rhs = arg!(ctx, "rhs" => int);
-        let lhs = arg!(ctx, "lhs" => int);
-
-        let result: i32 = (lhs.value as i32).wrapping_add(rhs.value as i32);
-        ctx.operands.push(RuntimeValue::Integral(result.into()));
-
-        Ok(Progression::Next)
-    }
-}
-
-#[derive(Debug)]
-pub struct Irem;
-
-impl Instruction for Irem {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
-        let rhs = arg!(ctx, "rhs" => int);
-        let lhs = arg!(ctx, "lhs" => int);
-
-        dbg!(&lhs);
-        dbg!(&rhs);
-
-        let result: i32 = (lhs.value as i32) % (rhs.value as i32);
-        ctx.operands.push(RuntimeValue::Integral(result.into()));
-
-        Ok(Progression::Next)
-    }
-}
+binop!(Irem (int) => |lhs: Integral, rhs: Integral| {
+    (lhs.value as i32) % (rhs.value as i32)
+});
 
 #[derive(Debug)]
 pub struct LoadLocal {
