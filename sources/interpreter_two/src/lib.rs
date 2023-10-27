@@ -43,13 +43,20 @@ impl VM {
 
             // If the instruction doesn't want us to jump anywhere, proceed to the next instruction
             match  instruction.handle(self, &mut ctx)? {
-                bytecode::Progression::Jump(new_pc) => {
+                bytecode::Progression::JumpAbs(new_pc) => {
+                    info!("Jumping from {} to {}", ctx.pc, new_pc);
                     ctx.pc = new_pc;
                 },
+                bytecode::Progression::JumpRel(offset) => {
+                    info!("Jumping from {} by {} (new: {})", ctx.pc, offset, ctx.pc + offset);
+                    ctx.pc += offset;
+                },
                 bytecode::Progression::Next => {
+                    info!("Moving to next (jump by {} bytes)", bytes_consumed_by_opcode);
                     ctx.pc += bytes_consumed_by_opcode;
                 },
                 bytecode::Progression::Return(return_value) => {
+                    info!("Returning");
                     return Ok(return_value)
                 },
             };

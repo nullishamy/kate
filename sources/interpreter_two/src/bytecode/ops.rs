@@ -64,10 +64,30 @@ macro_rules! binop {
             }
         }
     };
+    ($ins: ident (int cond) => $op: expr) => {
+        #[derive(Debug)]
+        pub struct $ins {
+            pub(crate) jump_to: i16
+        }
+
+        impl Instruction for $ins {
+            fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+                let rhs = arg!(ctx, "rhs" => int);
+                let lhs = arg!(ctx, "lhs" => int);
+
+                let result: bool = $op(lhs, rhs);
+                tracing::info!("{}, lhs: {:?}, rhs: {:?}, res: {}", stringify!($ins), lhs, rhs, result);
+                if (result) {
+                    Ok(Progression::JumpRel(self.jump_to as i32))
+                } else {
+                    Ok(Progression::Next)
+                }
+            }
+        }
+    };
 }
 
 nop!(Nop, VoidReturn);
-
 
 #[derive(Debug)]
 pub struct ValueReturn {
@@ -78,6 +98,17 @@ impl Instruction for ValueReturn {
         let return_value = ctx.operands.pop().context("no return value popped")?;
 
         Ok(Progression::Return(Some(return_value)))
+    }
+}
+
+#[derive(Debug)]
+pub struct Goto {
+    pub(crate) jump_to: i16
+}
+
+impl Instruction for Goto {
+    fn handle(&self, _vm: &mut VM, _ctx: &mut Context) -> Result<Progression> {
+        Ok(Progression::JumpRel(self.jump_to as i32))
     }
 }
 
@@ -159,6 +190,11 @@ impl Instruction for Ldc {
     }
 }
 
+/*
+    Binary operators & Comparison operators
+*/
+
+// Bin
 binop!(Isub (int) => |lhs: Integral, rhs: Integral| {
     (lhs.value as i32).wrapping_sub(rhs.value as i32)
 });
@@ -169,6 +205,32 @@ binop!(Iadd (int) => |lhs: Integral, rhs: Integral| {
 
 binop!(Irem (int) => |lhs: Integral, rhs: Integral| {
     (lhs.value as i32) % (rhs.value as i32)
+});
+
+// Eq
+
+binop!(Ieq (int cond) => |lhs: Integral, rhs: Integral| {
+    lhs.value == rhs.value
+});
+
+binop!(Ine (int cond) => |lhs: Integral, rhs: Integral| {
+    lhs.value != rhs.value
+});
+
+binop!(Ile (int cond) => |lhs: Integral, rhs: Integral| {
+    lhs.value <= rhs.value
+});
+
+binop!(Ige (int cond) => |lhs: Integral, rhs: Integral| {
+    lhs.value >= rhs.value
+});
+
+binop!(Igt (int cond) => |lhs: Integral, rhs: Integral| {
+    lhs.value > rhs.value
+});
+
+binop!(Ilt (int cond) => |lhs: Integral, rhs: Integral| {
+    lhs.value < rhs.value
 });
 
 #[derive(Debug)]

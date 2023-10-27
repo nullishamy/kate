@@ -7,7 +7,8 @@ use support::bytes_ext::SafeBuf;
 mod ops;
 
 pub enum Progression {
-    Jump(i32),
+    JumpAbs(i32),
+    JumpRel(i32),
     Next,
     Return(Option<RuntimeValue>)
 }
@@ -239,17 +240,17 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         //  0x9c => Opcode::IFGE(bytes.try_get_i16()?),
         //  0x9d => Opcode::IFGT(bytes.try_get_i16()?),
         //  0x9e => Opcode::IFLE(bytes.try_get_i16()?),
-        //  0x9f => Opcode::IF_ICMPEQ(bytes.try_get_i16()?),
-        //  0xa0 => Opcode::IF_ICMPNE(bytes.try_get_i16()?),
-        //  0xa1 => Opcode::IF_ICMPLT(bytes.try_get_i16()?),
-        //  0xa2 => Opcode::IF_ICMPGE(bytes.try_get_i16()?),
-        //  0xa3 => Opcode::IF_ICMPGT(bytes.try_get_i16()?),
-        //  0xa4 => Opcode::IF_ICMPLE(bytes.try_get_i16()?),
+        0x9f => b(ops::Ieq { jump_to: bytes.try_get_i16()? }),
+        0xa0 => b(ops::Ine { jump_to: bytes.try_get_i16()? }),
+        0xa1 => b(ops::Ilt { jump_to: bytes.try_get_i16()? }),
+        0xa2 => b(ops::Ige { jump_to: bytes.try_get_i16()? }),
+        0xa3 => b(ops::Igt { jump_to: bytes.try_get_i16()? }),
+        0xa4 => b(ops::Ile { jump_to: bytes.try_get_i16()? }),
         //  0xa5 => Opcode::IF_ACMPEQ(bytes.try_get_i16()?),
         //  0xa6 => Opcode::IF_ACMPNE(bytes.try_get_i16()?),
 
         //  // Control
-        //  0xa7 => Opcode::GOTO(bytes.try_get_i16()?),
+        0xa7 => b(ops::Goto{ jump_to: bytes.try_get_i16()? }),
         //  0xa8 => Opcode::JSR,
         //  0xa9 => Opcode::RET,
         //  0xaa => {
