@@ -178,6 +178,9 @@ pub enum RuntimeValue {
     Null,
 }
 
+const UPPER_SCIENCE_BOUND: f64 = 1_000_000.0;
+const LOWER_SCIENCE_BOUND: f64 = 0.0_000_001;
+
 impl fmt::Display for RuntimeValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -192,7 +195,16 @@ impl fmt::Display for RuntimeValue {
                     .join(", ")
             ),
             RuntimeValue::Integral(data) => write!(f, "{}", data.value),
-            RuntimeValue::Floating(data) => write!(f, "{:.}", data.value),
+            RuntimeValue::Floating(data) => {
+                // Just our custom implementation of floats, so we get reasonable output
+                if data.value > UPPER_SCIENCE_BOUND {
+                    write!(f, "{:+e}", data.value)
+                } else if data.value < LOWER_SCIENCE_BOUND {
+                    write!(f, "{:-e}", data.value)
+                } else {
+                    write!(f, "{:.3}", data.value)
+                }
+            },
             RuntimeValue::Null => write!(f, "null"),
         }
     }

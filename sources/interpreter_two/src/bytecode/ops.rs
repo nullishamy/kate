@@ -4,7 +4,7 @@ use super::{Instruction, Progression};
 use crate::{
     native::NativeFunction,
     object::{
-        numeric::{FloatingType, IntegralType, Integral},
+        numeric::{FloatingType, IntegralType, Integral, Floating},
         RuntimeValue,
     },
     Context, VM,
@@ -44,7 +44,17 @@ macro_rules! arg {
         }
 
         val.clone()
-    }}
+    }};
+    ($ctx: expr, $side: expr => float) => {{
+        let val = pop!($ctx);
+
+        let val = val.as_floating().context(format!("{} was not a float", $side))?;
+        if val.ty != FloatingType::Float {
+            return Err(anyhow!(format!("{} was not a float", $side)));
+        }
+
+        val.clone()
+    }};
 }
 
 macro_rules! binop {
@@ -64,6 +74,23 @@ macro_rules! binop {
             }
         }
     };
+    ($ins: ident (long) => $op: expr) => {
+        #[derive(Debug)]
+        pub struct $ins;
+
+        impl Instruction for $ins {
+            fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+                let rhs = arg!(ctx, "rhs" => int);
+                let lhs = arg!(ctx, "lhs" => int);
+
+                let result: i64 = $op(lhs, rhs);
+                ctx.operands.push(RuntimeValue::Integral(result.into()));
+                ctx.operands.push(RuntimeValue::Integral(result.into()));
+
+                Ok(Progression::Next)
+            }
+        }
+    };
     ($ins: ident (int cond) => $op: expr) => {
         #[derive(Debug)]
         pub struct $ins {
@@ -76,12 +103,27 @@ macro_rules! binop {
                 let lhs = arg!(ctx, "lhs" => int);
 
                 let result: bool = $op(lhs, rhs);
-                tracing::info!("{}, lhs: {:?}, rhs: {:?}, res: {}", stringify!($ins), lhs, rhs, result);
                 if (result) {
                     Ok(Progression::JumpRel(self.jump_to as i32))
                 } else {
                     Ok(Progression::Next)
                 }
+            }
+        }
+    };
+    ($ins: ident (float) => $op: expr) => {
+        #[derive(Debug)]
+        pub struct $ins;
+
+        impl Instruction for $ins {
+            fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+                let rhs = arg!(ctx, "rhs" => float);
+                let lhs = arg!(ctx, "lhs" => float);
+
+                let result: f64 = $op(lhs, rhs);
+                ctx.operands.push(RuntimeValue::Floating(result.into()));
+
+                Ok(Progression::Next)
             }
         }
     };
@@ -156,7 +198,7 @@ impl Instruction for Ldc2W {
 
 #[derive(Debug)]
 pub struct Ldc {
-    pub(crate) index: u8,
+    pub(crate) index: u16,
 }
 
 impl Instruction for Ldc {
@@ -165,7 +207,7 @@ impl Instruction for Ldc {
             .class
             .read()
             .constant_pool()
-            .address(self.index as u16)
+            .address(self.index)
             .try_resolve()
             .context(format!("no value @ index {}", self.index))?;
 
@@ -207,8 +249,19 @@ binop!(Irem (int) => |lhs: Integral, rhs: Integral| {
     (lhs.value as i32) % (rhs.value as i32)
 });
 
-// Eq
+binop!(Lsub (long) => |lhs: Integral, rhs: Integral| {
+    lhs.value - rhs.value
+});
 
+binop!(Ladd (long) => |lhs: Integral, rhs: Integral| {
+    lhs.value + rhs.value
+});
+
+binop!(Fadd (float) => |lhs: Floating, rhs: Floating| {
+    lhs.value + rhs.value
+});
+
+// Eq
 binop!(Ieq (int cond) => |lhs: Integral, rhs: Integral| {
     lhs.value == rhs.value
 });
