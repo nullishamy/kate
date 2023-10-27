@@ -68,16 +68,15 @@ macro_rules! arg {
 
 
 #[derive(Debug)]
-pub struct Nop {}
+pub struct Nop;
 impl Instruction for Nop { }
 
 #[derive(Debug)]
-pub struct VoidReturn {}
+pub struct VoidReturn;
 impl Instruction for VoidReturn { }
 
 #[derive(Debug)]
-pub struct ValueReturn {
-}
+pub struct ValueReturn;
 
 impl Instruction for ValueReturn {
     fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {

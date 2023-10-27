@@ -31,7 +31,7 @@ fn b<T>(v: T) -> Box<T> {
 pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Instruction>> {
     let instruction = bytes.try_get_u8()?;
     Ok(match instruction {
-        0x00 => b(ops::Nop {}),
+        0x00 => b(ops::Nop),
 
         // Constants Loads Stores
         0x01 => b(ops::PushConst {
@@ -189,7 +189,7 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         //  0x55 => Opcode::CASTORE,
         //  0x56 => Opcode::SASTORE,
 
-        //  // Stack Math Conversions
+        // Stack Math Conversions
         //  0x57 => Opcode::POP,
         //  0x58 => Opcode::POP2,
         //  0x59 => Opcode::DUP,
@@ -253,7 +253,7 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         //  0x92 => Opcode::I2C,
         //  0x93 => Opcode::I2S,
 
-        //  // Comparisons
+        // Comparisons
         //  0x94 => Opcode::LCMP,
         //  0x95 => Opcode::FCMPL,
         //  0x96 => Opcode::FCMPG,
@@ -304,12 +304,12 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         //      })
         //  }
         //  0xab => Opcode::LOOKUPSWITCH,
-        0xac => b(ops::ValueReturn {}),
-        0xad => b(ops::ValueReturn {}),
-        0xae => b(ops::ValueReturn {}),
-        0xaf => b(ops::ValueReturn {}),
-        0xb0 => b(ops::ValueReturn {}),
-        0xb1 => b(ops::VoidReturn {}),
+        0xac => b(ops::ValueReturn),
+        0xad => b(ops::ValueReturn),
+        0xae => b(ops::ValueReturn),
+        0xaf => b(ops::ValueReturn),
+        0xb0 => b(ops::ValueReturn),
+        0xb1 => b(ops::VoidReturn),
 
         //  // References
         //  0xb2 => Opcode::GETSTATIC(bytes.try_get_u16()?),
@@ -337,7 +337,7 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         //  0xc2 => Opcode::MONITORENTER,
         //  0xc3 => Opcode::MONITOREXIT,
 
-        //  // Extended
+        // Extended
         //  0xc4 => Opcode::WIDE,
         //  0xc5 => Opcode::MULTIANEWARRAY,
         //  0xc6 => Opcode::IFNULL(bytes.try_get_i16()?),
@@ -345,10 +345,10 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         //  0xc8 => Opcode::GOTO_W,
         //  0xc9 => Opcode::JSR_W,
 
-        //  // Reserved
-        //  0xca => Opcode::BREAKPOINT,
-        //  0xfe => Opcode::IMPDEP1,
-        //  0xff => Opcode::IMPDEP2,
+        // Reserved
+        0xca => b(ops::Nop),
+        0xfe => b(ops::Nop),
+        0xff => b(ops::Nop),
         e => return Err(anyhow!("unknown opcode {:#01x}", e)),
     })
 }
