@@ -58,13 +58,13 @@ class FAdd {
         var y = 1549700.4f;
         var z = -2.1339336E8f;
 
-        // CHECK: +1.5496937692213058e6
+        // CHECK: +1.54969375e6        
         print(x + y);
 
-        // CHECK: -2.133933666057787e8
+        // CHECK: -2.1339336e8
         print(x + z);
 
-        // CHECK: -2.11843659625e8
+        // CHECK: -2.11843664e8
         print(y + z);
     }
 }

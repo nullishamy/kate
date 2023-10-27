@@ -4,6 +4,10 @@ use crate::{object::RuntimeValue, Context, VM};
 use anyhow::{anyhow, Result};
 use bytes::BytesMut;
 use support::bytes_ext::SafeBuf;
+
+mod binary;
+mod unary;
+mod invoke;
 mod ops;
 
 pub enum Progression {
@@ -198,27 +202,27 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         0x60 => b(ops::Iadd),
         0x61 => b(ops::Ladd),
         0x62 => b(ops::Fadd),
-        //  0x63 => Opcode::DADD,
+        0x63 => b(ops::Dadd),
         0x64 => b(ops::Isub),
-        //  0x65 => Opcode::LSUB,
-        //  0x66 => Opcode::FSUB,
-        //  0x67 => Opcode::DSUB,
-        //  0x68 => Opcode::IMUL,
-        //  0x69 => Opcode::LMUL,
-        //  0x6a => Opcode::FMUL,
-        //  0x6b => Opcode::DMUL,
-        //  0x6c => Opcode::IDIV,
-        //  0x6d => Opcode::LDIV,
-        //  0x6e => Opcode::FDIV,
-        //  0x6f => Opcode::DDIV,
+        0x65 => b(ops::Lsub),
+        0x66 => b(ops::Fsub),
+        0x67 => b(ops::Dsub),
+        0x68 => b(ops::Imul),
+        0x69 => b(ops::Lmul),
+        0x6a => b(ops::Fmul),
+        0x6b => b(ops::Dmul),
+        0x6c => b(ops::Idiv),
+        0x6d => b(ops::Ldiv),
+        0x6e => b(ops::Fdiv),
+        0x6f => b(ops::Ddiv),
         0x70 => b(ops::Irem),
-        //  0x71 => Opcode::LREM,
-        //  0x72 => Opcode::FREM,
-        //  0x73 => Opcode::DREM,
-        //  0x74 => Opcode::INEG,
-        //  0x75 => Opcode::LNEG,
-        //  0x76 => Opcode::FNEG,
-        //  0x77 => Opcode::DNEG,
+        0x71 => b(ops::Lrem),
+        0x72 => b(ops::Frem),
+        0x73 => b(ops::Drem),
+        0x74 => b(ops::Ineg),
+        0x75 => b(ops::Lneg),
+        0x76 => b(ops::Fneg),
+        0x77 => b(ops::Dneg),
         //  0x78 => Opcode::ISHL,
         //  0x79 => Opcode::LSHL,
         //  0x7a => Opcode::ISHR,
@@ -232,7 +236,8 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         //  0x82 => Opcode::IXOR,
         //  0x83 => Opcode::LXOR,
         //  0x84 => Opcode::IINC(bytes.try_get_u8()?, bytes.try_get_i8()?),
-        //  0x85 => Opcode::I2L,
+
+        0x85 => b(ops::I2l),
         //  0x86 => Opcode::I2F,
         //  0x87 => Opcode::I2D,
         //  0x88 => Opcode::L2I,
