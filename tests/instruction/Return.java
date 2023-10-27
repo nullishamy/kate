@@ -1,87 +1,97 @@
 // RUN: javac %s -d %t
 // RUN: run-kate --test --cp %t Return | filecheck %s
+
 class Return {
-  public static native void print(byte b);
-  public static native void print(char c);
-  public static native void print(double d);
-  public static native void print(float f);
-  public static native void print(int i);
-  public static native void print(long l);
-  public static native void print(short s);
-  public static native void print(boolean b);
-  public static native void print(String s);
 
-  static byte byteReturn() {
-    return 1;
-  }
+    public static native void print(byte b);
 
-  static char charReturn() {
-    return 'a';
-  }
+    public static native void print(char c);
 
-  static double doubleReturn() {
-    return 1.0;
-  }
+    public static native void print(double d);
 
-  static float floatReturn() {
-    return 0.0f;
-  }
+    public static native void print(float f);
 
-  static int intReturn() {
-    return 2;
-  }
+    public static native void print(int i);
 
-  static long longReturn() {
-    return 3;
-  }
+    public static native void print(long l);
 
-  static short shortReturn() {
-    return 4;
-  }
+    public static native void print(short s);
 
-  static boolean booleanReturn() {
-    return true;
-  }
+    public static native void print(boolean b);
 
-  static String stringReturn() {
-    return "string";
-  }
+    public static native void print(String s);
 
-  public static void main(String[] args) {
-    byte a = byteReturn();
-    // CHECK: 1
-    print(a);
+    static byte byteReturn() {
+        return 1;
+    }
 
-    char b = charReturn();
-    // CHECK: a
-    print(b);
+    static char charReturn() {
+        return 'a';
+    }
 
-    double c = doubleReturn();
-    // CHECK: 1
-    print(c);
-    
-    float d = floatReturn();
-    // CHECK: 0
-    print(d);
+    static double doubleReturn() {
+        return 1.0;
+    }
 
-    int e = intReturn();
-    // CHECK: 2
-    print(e);
+    static float floatReturn() {
+        return 0.0f;
+    }
 
-    long f = longReturn();
-    // CHECK: 3
-    print(f);
+    static int intReturn() {
+        return 2;
+    }
 
-    short g = shortReturn();
-    // CHECK: 4
-    print(g);
+    static long longReturn() {
+        return 3;
+    }
 
-    boolean h = booleanReturn();
-    // CHECK: true
-    print(h);
+    static short shortReturn() {
+        return 4;
+    }
 
-    String i = stringReturn();
-    // CHECK: string
-    print(i);
-  }
+    static boolean booleanReturn() {
+        return true;
+    }
+
+    static String stringReturn() {
+        return "string";
+    }
+
+    public static void main(String[] args) {
+        byte a = byteReturn();
+        // CHECK: 1
+        print(a);
+
+        char b = charReturn();
+        // CHECK: a
+        print(b);
+
+        double c = doubleReturn();
+        // CHECK: 1
+        print(c);
+
+        float d = floatReturn();
+        // CHECK: 0
+        print(d);
+
+        int e = intReturn();
+        // CHECK: 2
+        print(e);
+
+        long f = longReturn();
+        // CHECK: 3
+        print(f);
+
+        short g = shortReturn();
+        // CHECK: 4
+        print(g);
+
+        boolean h = booleanReturn();
+        // CHECK: true
+        print(h);
+
+        String i = stringReturn();
+        // CHECK: string
+        print(i);
+    }
 }
