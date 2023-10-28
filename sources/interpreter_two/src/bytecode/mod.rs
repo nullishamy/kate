@@ -8,8 +8,8 @@ use support::bytes_ext::SafeBuf;
 mod binary;
 mod invoke;
 mod load_store;
-mod unary;
 mod ops;
+mod unary;
 
 pub enum Progression {
     JumpAbs(i32),
@@ -394,10 +394,12 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         0xb0 => b(ops::ValueReturn),
         0xb1 => b(ops::VoidReturn),
 
-        //  // References
+        // References
         //  0xb2 => Opcode::GETSTATIC(bytes.try_get_u16()?),
         //  0xb3 => Opcode::PUTSTATIC(bytes.try_get_u16()?),
-        //  0xb4 => Opcode::GETFIELD(bytes.try_get_u16()?),
+        0xb4 => b(ops::GetField {
+            index: bytes.try_get_u16()?,
+        }),
         //  0xb5 => Opcode::PUTFIELD(bytes.try_get_u16()?),
         0xb6 => b(ops::InvokeVirtual {
             index: bytes.try_get_u16()?,

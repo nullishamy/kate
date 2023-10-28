@@ -1,9 +1,11 @@
-use crate::{object::RuntimeValue, VM, Context};
-use anyhow::{Result, Context as AnyhowContext, anyhow};
-use parse::{classfile::Resolvable, pool::ConstantEntry};
+use crate::{arg, object::RuntimeValue, pop, Context, VM};
+use anyhow::{anyhow, Context as AnyhowContext, Result};
+use parse::{
+    classfile::Resolvable,
+    pool::{ConstantEntry, ConstantField},
+};
 
 use super::{Instruction, Progression};
-
 
 #[derive(Debug)]
 pub struct PushConst {
@@ -103,13 +105,17 @@ impl Instruction for LoadLocal {
 #[derive(Debug)]
 pub struct StoreLocal {
     pub(crate) index: usize,
-    pub(crate) store_next: bool
+    pub(crate) store_next: bool,
 }
 
 impl Instruction for StoreLocal {
     fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
         let locals = &mut ctx.locals;
-        let target_index = if self.store_next { self.index + 1 } else { self.index };
+        let target_index = if self.store_next {
+            self.index + 1
+        } else {
+            self.index
+        };
         let value = ctx.operands.pop().context("no operand to pop")?.clone();
 
         // Fill enough slots to be able to store at an arbitrary index
@@ -124,6 +130,46 @@ impl Instruction for StoreLocal {
         if self.store_next {
             locals[self.index + 1] = value;
         }
+        Ok(Progression::Next)
+    }
+}
+
+#[derive(Debug)]
+pub struct GetField {
+    pub(crate) index: u16,
+}
+
+impl Instruction for GetField {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+
+        // The run-time constant pool entry at the index must be a symbolic
+        // reference to a field (§5.1), which gives the name and descriptor of
+        // the field as well as a symbolic reference to the class in which the
+        // field is to be found.
+        let field: ConstantField = ctx
+            .class
+            .read()
+            .constant_pool()
+            .address(self.index)
+            .try_resolve()?;
+
+        // The referenced field is resolved (§5.4.3.2).
+        // TODO: Field resolution (through super classes etc)
+
+        let name_and_type = field.name_and_type.resolve();
+        let (name, descriptor) = (
+          name_and_type.name.resolve().string(),
+          name_and_type.descriptor.resolve().string(),
+        );
+        
+        // The objectref, which must be of type reference but not an array
+        // type, is popped from the operand stack. 
+        let objectref = arg!(ctx, "objectref" => Object);
+
+        // The value of the reference field in objectref is fetched and pushed onto the operand stack.
+        let value = objectref.read().get_instance_field((name, descriptor))?;
+        ctx.operands.push(value);
+
         Ok(Progression::Next)
     }
 }
