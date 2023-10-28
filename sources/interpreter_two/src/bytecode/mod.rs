@@ -415,7 +415,7 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         //  0xbb => Opcode::NEW(bytes.try_get_u16()?),
         //  0xbc => Opcode::NEWARRAY(bytes.try_get_u8()?),
         //  0xbd => Opcode::ANEWARRAY(bytes.try_get_u16()?),
-        //  0xbe => Opcode::ARRAYLENGTH,
+        0xbe => b(ops::ArrayLength),
         //  0xbf => Opcode::ATHROW,
         //  0xc0 => Opcode::CHECKCAST(bytes.try_get_u16()?),
         //  0xc1 => Opcode::INSTANCEOF(bytes.try_get_u16()?),

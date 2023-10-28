@@ -1,4 +1,5 @@
 use super::{Instruction, Progression};
+use crate::object::RuntimeValue;
 use crate::{
     Context, VM,
 };
@@ -61,6 +62,12 @@ macro_rules! arg {
 
         val.clone()
     }};
+    ($ctx: expr, $side: expr => Array) => {{
+        let val = pop!($ctx);
+
+        let val = val.as_array().context(format!("{} was not an array", $side))?;
+        val.clone()
+    }};
 }
 
 
@@ -91,5 +98,23 @@ pub struct Goto {
 impl Instruction for Goto {
     fn handle(&self, _vm: &mut VM, _ctx: &mut Context) -> Result<Progression> {
         Ok(Progression::JumpRel(self.jump_to as i32))
+    }
+}
+
+
+#[derive(Debug)]
+pub struct ArrayLength;
+
+impl Instruction for ArrayLength {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+        // The arrayref must be of type reference and must refer to an array. It is popped from the operand stack.
+        let array = arg!(ctx, "array" => Array);
+
+        // The length of the array it references is determined.
+        let len = array.read().len() as i32;
+
+        // That length is pushed onto the operand stack as an int.
+        ctx.operands.push(RuntimeValue::Integral(len.into()));
+        Ok(Progression::Next)
     }
 }
