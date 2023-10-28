@@ -1,3 +1,5 @@
+use anyhow::{anyhow, Result};
+
 use super::{RuntimeValue, WrappedClassObject};
 
 
@@ -14,8 +16,8 @@ pub enum ArrayPrimitive {
 }
 
 impl ArrayPrimitive {
-    pub fn from_tag(tag: u8) -> Self {
-        match tag {
+    pub fn from_tag(tag: u8) -> Result<Self> {
+        Ok(match tag {
             4 => Self::Bool,
             5 => Self::Char,
             6 => Self::Float,
@@ -24,8 +26,8 @@ impl ArrayPrimitive {
             9 => Self::Short,
             10 => Self::Int,
             11 => Self::Long,
-            _ => todo!("unknown array type {}", tag),
-        }
+            _ => return Err(anyhow!("unknown array type {}", tag))
+        })
     }
 }
 

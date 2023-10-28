@@ -138,14 +138,16 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         0x2b => b(ops::LoadLocal { index: 1 }),
         0x2c => b(ops::LoadLocal { index: 2 }),
         0x2d => b(ops::LoadLocal { index: 3 }),
-        //  0x2e => Opcode::IALOAD,
-        //  0x2f => Opcode::LALOAD,
-        //  0x30 => Opcode::FALOAD,
-        //  0x31 => Opcode::DALOAD,
-        //  0x32 => Opcode::AALOAD,
-        //  0x33 => Opcode::BALOAD,
-        //  0x34 => Opcode::CALOAD,
-        //  0x35 => Opcode::SALOAD,
+
+        0x2e => b(ops::ArrayLoad),
+        0x2f => b(ops::ArrayLoad),
+        0x30 => b(ops::ArrayLoad),
+        0x31 => b(ops::ArrayLoad),
+        0x32 => b(ops::ArrayLoad),
+        0x33 => b(ops::ArrayLoad),
+        0x34 => b(ops::ArrayLoad),
+        0x35 => b(ops::ArrayLoad),
+
         0x36 => b(ops::StoreLocal {
             index: bytes.try_get_u8()? as usize,
             store_next: false,
@@ -250,14 +252,15 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
             index: 3,
             store_next: false,
         }),
-        //  0x4f => Opcode::IASTORE,
-        //  0x50 => Opcode::LASTORE,
-        //  0x51 => Opcode::FASTORE,
-        //  0x52 => Opcode::DASTORE,
-        //  0x53 => Opcode::AASTORE,
-        //  0x54 => Opcode::BASTORE,
-        //  0x55 => Opcode::CASTORE,
-        //  0x56 => Opcode::SASTORE,
+
+        0x4f => b(ops::ArrayStore),
+        0x50 => b(ops::ArrayStore),
+        0x51 => b(ops::ArrayStore),
+        0x52 => b(ops::ArrayStore),
+        0x53 => b(ops::ArrayStore),
+        0x54 => b(ops::ArrayStore),
+        0x55 => b(ops::ArrayStore),
+        0x56 => b(ops::ArrayStore),
 
         // Stack Math Conversions
         //  0x57 => Opcode::POP,
@@ -367,7 +370,7 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         //  0xa5 => Opcode::IF_ACMPEQ(bytes.try_get_i16()?),
         //  0xa6 => Opcode::IF_ACMPNE(bytes.try_get_i16()?),
 
-        //  // Control
+        // Control
         0xa7 => b(ops::Goto {
             jump_to: bytes.try_get_i16()?,
         }),
@@ -433,11 +436,13 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         //  ),
         //  0xba => Opcode::INVOKEDYNAMIC,
         0xbb => b(ops::New {
-            index: bytes.try_get_u16()?
+            index: bytes.try_get_u16()?,
         }),
-        //  0xbc => Opcode::NEWARRAY(bytes.try_get_u8()?),
+        0xbc => b(ops::NewArray {
+            type_tag: bytes.try_get_u8()?,
+        }),
         0xbd => b(ops::ANewArray {
-            type_index: bytes.try_get_u16()?
+            type_index: bytes.try_get_u16()?,
         }),
         0xbe => b(ops::ArrayLength),
         //  0xbf => Opcode::ATHROW,

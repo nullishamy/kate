@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use super::{Instruction, Progression};
-use crate::object::array::{ArrayType, Array};
+use crate::object::array::{ArrayType, Array, ArrayPrimitive};
 use crate::object::numeric::IntegralType;
 use crate::object::RuntimeValue;
 use crate::{Context, VM};
@@ -169,8 +169,8 @@ impl Instruction for ANewArray {
         };
 
         // All components of the new array are initialized to null, the default value for reference types (§2.4).
-        let mut values = Vec::with_capacity(count.value as usize);
-        values.fill(RuntimeValue::Null);
+        let mut values = Vec::with_capacity(count.value as usize + 1);
+        values.resize_with(count.value as usize + 1, || RuntimeValue::Null);
 
         // A new array with components of that type, of length count, is allocated
         // from the garbage-collected heap.
@@ -182,6 +182,72 @@ impl Instruction for ANewArray {
         //  and a arrayref to this new array object is pushed onto the operand stack.
         let array_ref = Rc::new(RwLock::new(array));
         ctx.operands.push(RuntimeValue::Array(array_ref));
+
+        Ok(Progression::Next)
+    }
+}
+
+#[derive(Debug)]
+pub struct NewArray {
+    pub(crate) type_tag: u8,
+}
+
+impl Instruction for NewArray {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+        // The count must be of type int. It is popped off the operand stack.
+        let count = arg!(ctx, "count" => i32);
+
+        // The atype is a code that indicates the type of array to create.
+        let atype = ArrayPrimitive::from_tag(self.type_tag)?;
+        let array_ty = ArrayType::Primitive(atype);
+
+        let mut values = Vec::with_capacity(count.value as usize + 1);
+        // TODO: Proper default values
+        values.resize_with(count.value as usize + 1, || RuntimeValue::Integral((0_i32).into()));
+
+        // A new array whose components are of type atype and of length
+        // count is allocated from the garbage-collected heap.
+        let array = Array {
+            ty: array_ty,
+            values,
+        };
+
+        // and an arrayref to this new array object is pushed onto the operand stack.
+        let array_ref = Rc::new(RwLock::new(array));
+        ctx.operands.push(RuntimeValue::Array(array_ref));
+
+        Ok(Progression::Next)
+    }
+}
+
+#[derive(Debug)]
+pub struct ArrayStore;
+
+impl Instruction for ArrayStore {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+        let value = pop!(ctx);
+        let index = arg!(ctx, "index" => i32);
+        let array = arg!(ctx, "array" => Array);
+
+        let mut array = array.write();
+        array.values[index.value as usize] = value;
+
+        Ok(Progression::Next)
+    }
+}
+
+
+#[derive(Debug)]
+pub struct ArrayLoad;
+
+impl Instruction for ArrayLoad {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+        let index = arg!(ctx, "index" => i32);
+        let array = arg!(ctx, "array" => Array);
+
+        let array = array.read();
+        let value = array.values[index.value as usize].clone();
+        ctx.operands.push(value);
 
         Ok(Progression::Next)
     }
