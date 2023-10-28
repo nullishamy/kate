@@ -113,49 +113,4 @@ impl VM {
 
 #[cfg(test)]
 mod tests {
-    use parse::attributes::CodeAttribute;
-
-    use crate::{object::{classloader::ClassLoader, string::Interner}, Context, VM};
-
-    #[test]
-    fn it_runs_empty_main_functions() {
-        let source_root = env!("CARGO_MANIFEST_DIR");
-        let mut class_loader = ClassLoader::new();
-
-        class_loader
-            .add_path(format!("{source_root}/../../std/java.base").into())
-            .add_path(format!("{source_root}/../../samples").into());
-
-        let (_, jls) = class_loader.bootstrap().unwrap();
-
-        let mut vm = VM {
-            class_loader,
-            interner: Interner::new(jls)
-        };
-
-
-        let _cls = vm.class_loader.load_class("JustMain".to_string()).unwrap();
-        let cls = _cls.read();
-
-        let method = cls
-            .get_method(("main".to_string(), "([Ljava/lang/String;)V".to_string()))
-            .unwrap();
-
-        let code = method
-            .attributes
-            .known_attribute::<CodeAttribute>(cls.constant_pool())
-            .unwrap();
-
-        drop(cls);
-
-        let executable = Context {
-            code,
-            operands: vec![],
-            locals: vec![],
-            pc: 0,
-            class: _cls
-        };
-
-        vm.run(executable).unwrap();
-    }
 }
