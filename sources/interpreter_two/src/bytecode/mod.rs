@@ -432,7 +432,9 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         //      bytes.try_get_u8()?,
         //  ),
         //  0xba => Opcode::INVOKEDYNAMIC,
-        //  0xbb => Opcode::NEW(bytes.try_get_u16()?),
+        0xbb => b(ops::New {
+            index: bytes.try_get_u16()?
+        }),
         //  0xbc => Opcode::NEWARRAY(bytes.try_get_u8()?),
         0xbd => b(ops::ANewArray {
             type_index: bytes.try_get_u16()?

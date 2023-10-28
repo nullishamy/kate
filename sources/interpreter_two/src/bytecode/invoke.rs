@@ -688,3 +688,39 @@ fn method_can_override(base: &Method, derived: &Method) -> bool {
     // TODO: Try resolving package information before returning true
     true
 }
+
+#[derive(Debug)]
+pub struct New {
+    pub(crate) index: u16,
+}
+
+impl Instruction for New {
+    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+        // The run-time constant pool entry at the index must be a symbolic
+        // reference to a class or interface type. The named class or interface
+        // type is resolved (§5.4.3.1) and should result in a class type.
+        let entry: ConstantEntry = ctx
+            .class
+            .read()
+            .constant_pool()
+            .address(self.index)
+            .resolve();
+        let object_ty = match entry {
+            ConstantEntry::Class(data) => {
+                let class_name = data.name.resolve().string();
+                vm.class_loader.load_class(class_name)?
+            }
+            e => return Err(anyhow!("{:#?} cannot be used to create a new object", e)),
+        };
+
+        // Memory for a new instance of that class is allocated from the
+        // garbage-collected heap, and the instance variables of the new
+        // object are initialized to their default initial values (§2.3, §2.4).
+        // TODO: Init the fields
+
+        // The objectref, a reference to the instance, is pushed onto the operand stack.
+        let objectref = Rc::new(RwLock::new(RuntimeObject::new(object_ty)));
+        ctx.operands.push(RuntimeValue::Object(objectref));
+        Ok(Progression::Next)
+    }
+}

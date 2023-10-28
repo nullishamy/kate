@@ -20,6 +20,7 @@ use self::{
 pub mod array;
 pub mod classloader;
 pub mod numeric;
+pub mod statics;
 pub mod string;
 
 /// Any Java Object. We implement a ClassObject type which represents the java/lang/Class of an object.
@@ -34,6 +35,49 @@ pub trait Object: fmt::Debug {
     fn access_flags(&self) -> ClassFileAccessFlags;
     fn is_interface(&self) -> bool {
         self.access_flags().has(ClassFileAccessFlag::INTERFACE)
+    }
+}
+
+
+#[derive(Debug)]
+pub struct RuntimeObject {
+    pub class_object: WrappedClassObject,
+    instance_fields: HashMap<NameAndDescriptor, RuntimeValue>,
+}
+
+impl RuntimeObject {
+    pub fn new(class_object: WrappedClassObject) -> Self {
+        Self {
+            class_object,
+            instance_fields: HashMap::new()
+        }
+    }    
+}
+
+impl Object for RuntimeObject {
+    fn class(&self) -> Option<WrappedClassObject> {
+        Some(Rc::clone(&self.class_object))
+    }
+
+    fn super_class(&self) -> Option<WrappedClassObject> {
+        self.class_object.read().super_class()
+    }
+
+    fn get_instance_field(&self, field: NameAndDescriptor) -> Result<RuntimeValue> {
+        self.instance_fields
+            .get(&field)
+            .cloned()
+            .context(format!("no field {:#?}", field))
+    }
+
+    fn set_instance_field(&mut self, field: NameAndDescriptor, value: RuntimeValue) -> Result<()> {
+        self.instance_fields.insert(field, value);
+
+        Ok(())
+    }
+
+    fn access_flags(&self) -> ClassFileAccessFlags {
+        self.class_object.read().flags
     }
 }
 
@@ -173,7 +217,6 @@ impl StringObject {
             instance_fields: HashMap::new(),
         };
 
-        // TODO: Set COMPACT_STRINGS static field based on the method vv
         let (_method, bytes) = encode_string(value)?;
         let arr = RuntimeValue::Array(Rc::new(RwLock::new(Array {
             ty: array::ArrayType::Primitive(array::ArrayPrimitive::Byte),
@@ -184,6 +227,8 @@ impl StringObject {
         })));
 
         s.set_instance_field(("value".to_string(), "[B".to_string()), arr)?;
+        s.set_instance_field(("coder".to_string(), "B".to_string()), RuntimeValue::Integral((1_i32).into()))?;
+        
 
         Ok(s)
     }
