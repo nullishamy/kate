@@ -395,8 +395,12 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         0xb1 => b(ops::VoidReturn),
 
         // References
-        //  0xb2 => Opcode::GETSTATIC(bytes.try_get_u16()?),
-        //  0xb3 => Opcode::PUTSTATIC(bytes.try_get_u16()?),
+        0xb2 => b(ops::GetStatic {
+            index: bytes.try_get_u16()?,
+        }),
+        0xb3 => b(ops::PutStatic {
+            index: bytes.try_get_u16()?,
+        }),
         0xb4 => b(ops::GetField {
             index: bytes.try_get_u16()?,
         }),

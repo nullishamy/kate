@@ -1,4 +1,10 @@
-use crate::{arg, object::RuntimeValue, pop, Context, VM};
+use std::rc::Rc;
+
+use crate::{
+    arg,
+    object::{statics::StaticFieldRef, RuntimeValue},
+    pop, Context, VM,
+};
 use anyhow::{anyhow, Context as AnyhowContext, Result};
 use parse::{
     classfile::Resolvable,
@@ -141,7 +147,6 @@ pub struct GetField {
 
 impl Instruction for GetField {
     fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
-
         // The run-time constant pool entry at the index must be a symbolic
         // reference to a field (§5.1), which gives the name and descriptor of
         // the field as well as a symbolic reference to the class in which the
@@ -158,12 +163,12 @@ impl Instruction for GetField {
 
         let name_and_type = field.name_and_type.resolve();
         let (name, descriptor) = (
-          name_and_type.name.resolve().string(),
-          name_and_type.descriptor.resolve().string(),
+            name_and_type.name.resolve().string(),
+            name_and_type.descriptor.resolve().string(),
         );
-        
+
         // The objectref, which must be of type reference but not an array
-        // type, is popped from the operand stack. 
+        // type, is popped from the operand stack.
         let objectref = arg!(ctx, "objectref" => Object);
 
         // The value of the reference field in objectref is fetched and pushed onto the operand stack.
@@ -173,3 +178,104 @@ impl Instruction for GetField {
         Ok(Progression::Next)
     }
 }
+
+#[derive(Debug)]
+pub struct GetStatic {
+    pub(crate) index: u16,
+}
+
+impl Instruction for GetStatic {
+    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+        // The run-time constant pool entry at the index must be a symbolic
+        // reference to a field (§5.1), which gives the name and descriptor of
+        // the field as well as a symbolic reference to the class in which the
+        // field is to be found.
+        let field: ConstantField = ctx
+            .class
+            .read()
+            .constant_pool()
+            .address(self.index)
+            .try_resolve()?;
+
+        // The referenced field is resolved (§5.4.3.2).
+        // TODO: Field resolution (through super classes etc)
+
+        // On successful resolution of the field, the class or interface that
+        // declared the resolved field is initialized if that class or interface
+        // has not already been initialized (§5.5).
+        let class_name = field.class.resolve().name.resolve().string();
+        let class = vm.class_loader.load_class(class_name.clone())?;
+        vm.initialise_class(Rc::clone(&class))?;
+
+        let name_and_type = field.name_and_type.resolve();
+        let (name, descriptor) = (
+            name_and_type.name.resolve().string(),
+            name_and_type.descriptor.resolve().string(),
+        );
+
+        // The value of the class or interface field is fetched and pushed onto the operand stack.
+        let value = vm
+            .statics
+            .get_field(StaticFieldRef::new(
+                class_name,
+                name.clone(),
+                descriptor.clone(),
+            ))
+            .context(format!(
+                "no field {} ({}) in {}",
+                name,
+                descriptor,
+                class.read().get_class_name().clone()
+            ))?;
+
+        ctx.operands.push(value);
+
+        Ok(Progression::Next)
+    }
+}
+
+#[derive(Debug)]
+pub struct PutStatic {
+    pub(crate) index: u16,
+}
+
+impl Instruction for PutStatic {
+    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+        // The run-time constant pool entry at the index must be a symbolic
+        // reference to a field (§5.1), which gives the name and descriptor of
+        // the field as well as a symbolic reference to the class in which the
+        // field is to be found.
+        let field: ConstantField = ctx
+            .class
+            .read()
+            .constant_pool()
+            .address(self.index)
+            .try_resolve()?;
+
+        // The referenced field is resolved (§5.4.3.2).
+        // TODO: Field resolution (through super classes etc)
+
+        // On successful resolution of the field, the class or interface that
+        // declared the resolved field is initialized if that class or interface
+        // has not already been initialized (§5.5).
+        let class_name = field.class.resolve().name.resolve().string();
+        let class = vm.class_loader.load_class(class_name.clone())?;
+        vm.initialise_class(Rc::clone(&class))?;
+
+        let name_and_type = field.name_and_type.resolve();
+        let (name, descriptor) = (
+            name_and_type.name.resolve().string(),
+            name_and_type.descriptor.resolve().string(),
+        );
+
+        // TODO: Type check & convert as needed
+        let value = pop!(ctx);
+        vm.statics.set_field(
+            StaticFieldRef::new(class_name, name.clone(), descriptor.clone()),
+            value,
+        );
+
+        Ok(Progression::Next)
+    }
+}
+

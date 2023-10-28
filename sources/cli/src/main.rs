@@ -4,7 +4,12 @@ use args::Cli;
 use clap::Parser;
 use interpreter_two::{
     native::NativeFunction,
-    object::{classloader::ClassLoader, string::Interner, RuntimeValue},
+    object::{
+        classloader::ClassLoader,
+        statics::{StaticFieldRef, StaticFields},
+        string::Interner,
+        RuntimeValue,
+    },
     static_method, Context, VM,
 };
 use parse::attributes::CodeAttribute;
@@ -56,6 +61,7 @@ fn main() {
 
     let mut vm = VM {
         class_loader,
+        statics: StaticFields::new(),
         interner: Interner::new(jls),
     };
 
@@ -106,8 +112,9 @@ fn main() {
                 printer!("(Ljava/lang/String;)V", |a: RuntimeValue| {
                     let string = a.as_object().expect("was not an object (string)");
                     let string = string.read();
-                    let bytes =
-                        string.get_instance_field(("value".to_string(), "[B".to_string())).expect("could not locate value field");
+                    let bytes = string
+                        .get_instance_field(("value".to_string(), "[B".to_string()))
+                        .expect("could not locate value field");
                     let bytes = bytes.as_array().expect("bytes was not an array (byte[])");
 
                     let bytes = bytes
@@ -118,7 +125,8 @@ fn main() {
                         .map(|v| v.value as u8)
                         .collect::<Vec<_>>();
 
-                    let str = decode_string((CompactEncoding::Utf16, bytes)).expect("could not decode string");
+                    let str = decode_string((CompactEncoding::Utf16, bytes))
+                        .expect("could not decode string");
                     println!("{}", str);
                 }),
             ] {
