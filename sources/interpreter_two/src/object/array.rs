@@ -1,4 +1,4 @@
-use super::{RuntimeValue, WrappedObject};
+use super::{RuntimeValue, WrappedObject, WrappedClassObject};
 
 
 #[derive(Clone, Debug)]
@@ -31,7 +31,7 @@ impl ArrayPrimitive {
 
 #[derive(Debug, Clone)]
 pub enum ArrayType {
-    Object(WrappedObject),
+    Object(WrappedClassObject),
     Primitive(ArrayPrimitive),
 }
 
