@@ -18,7 +18,7 @@ use parse::{
     flags::MethodAccessFlag,
     pool::ConstantEntry,
 };
-use support::descriptor::MethodType;
+use support::{descriptor::MethodType, encoding::{decode_string, CompactEncoding}};
 use tracing::info;
 
 #[derive(Debug)]
@@ -91,8 +91,8 @@ impl Instruction for InvokeVirtual {
 
         if let Err(e) = exec_result {
             return Err(e.context(format!(
-                "when interpreting {} in {}",
-                method_name, class_name
+                "at {}.{}",
+                class_name, method_name
             )));
         }
 
@@ -165,8 +165,8 @@ impl Instruction for InvokeSpecial {
 
         if let Err(e) = exec_result {
             return Err(e.context(format!(
-                "when interpreting {} in {}",
-                method_name, class_name
+                "at {}.{}",
+                class_name, method_name
             )));
         }
 
@@ -242,8 +242,8 @@ impl Instruction for InvokeStatic {
 
         if let Err(e) = exec_result {
             return Err(e.context(format!(
-                "when interpreting {} in {}",
-                method_name, class_name
+                "at {}.{}",
+                class_name, method_name
             )));
         }
 
@@ -314,7 +314,12 @@ fn resolve_method(
 
     // • Otherwise, method lookup fails.
 
-    Err(anyhow!("could not resolve method {} ({}) in {}", method_name, method_descriptor, class.read().get_class_name()))
+    Err(anyhow!(
+        "could not resolve method {} ({}) in {}",
+        method_name,
+        method_descriptor,
+        class.read().get_class_name()
+    ))
 }
 
 fn select_method(
@@ -578,9 +583,56 @@ fn do_call(
 
         match lookup {
             NativeFunction::Static(func) => func(Rc::clone(&class), args, vm),
-            NativeFunction::Instance(_) => {
-                todo!("native instance methods")
+            NativeFunction::Instance(func) => {
+                let this_ref = args.get(0).unwrap().as_object().unwrap().clone();
+                func(this_ref, args, vm)
             }
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct Athrow;
+
+impl Instruction for Athrow {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+        let throwable = pop!(ctx);
+        let throwable = throwable
+            .as_object()
+            .context("throwable was not an object")?
+            .clone();
+        let throwable = throwable.read();
+
+        let class_name = throwable
+            .class()
+            .context("expected throwable to have a class")?
+            .read()
+            .get_class_name()
+            .clone();
+
+        let message = throwable.get_instance_field((
+            "detailMessage".to_string(),
+            "Ljava/lang/String;".to_string(),
+        ))?;
+
+        let message = message.as_object().context("message was not an object")?;
+        let message = message.read();
+
+        let bytes = message
+            .get_instance_field(("value".to_string(), "[B".to_string()))
+            .context("could not locate value field")?;
+
+        let bytes = bytes.as_array().context("bytes was not an array (byte[])")?;
+        let bytes = bytes
+            .read()
+            .values
+            .iter()
+            .map(|v| v.as_integral().expect("value was not an int (char)"))
+            .map(|v| v.value as u8)
+            .collect::<Vec<_>>();
+
+        let str = decode_string((CompactEncoding::Utf16, bytes)).expect("could not decode string");
+
+        Ok(Progression::Throw(anyhow!("{}: {}", class_name, str)))
     }
 }

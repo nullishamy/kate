@@ -3,8 +3,10 @@ use bytecode::decode_instruction;
 use bytes::BytesMut;
 
 use object::{classloader::ClassLoader, RuntimeValue, WrappedClassObject, string::Interner, statics::StaticFields};
-use parse::attributes::CodeAttribute;
+use parse::{attributes::CodeAttribute, classfile::Resolvable};
 use tracing::info;
+
+use crate::native::NativeModule;
 
 pub mod bytecode;
 pub mod native;
@@ -60,6 +62,10 @@ impl VM {
                     info!("Returning");
                     return Ok(return_value)
                 },
+                bytecode::Progression::Throw(err) => {
+                    info!("Throwing {:?}", err);
+                    return Err(err)
+                }
             };
         }
 
@@ -106,6 +112,17 @@ impl VM {
             // needless method lookups
             locked_class.set_initialised(true);
         }
+
+        Ok(())
+    }
+
+    pub fn bootstrap(&mut self) -> Result<()> {
+        self.class_loader.bootstrap()?;
+
+        // Load native modules
+        use native::lang;
+        lang::Class::register(self)?;
+        lang::Throwable::register(self)?;
 
         Ok(())
     }

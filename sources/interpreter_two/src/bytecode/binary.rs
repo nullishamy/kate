@@ -2,16 +2,17 @@
 
 use super::{Instruction, Progression};
 use crate::{
+    arg,
     object::{
-        numeric::{FloatingType, IntegralType, Integral, Floating},
+        numeric::{Floating, FloatingType, Integral, IntegralType},
         RuntimeValue,
     },
-    Context, VM, arg, pop
+    pop, Context, VM,
 };
 use anyhow::{anyhow, Context as AnyhowContext, Result};
 
 macro_rules! binop {
-    // Generic value transformation 
+    // Generic value transformation
     ($ins: ident, $res_ty: ident, $res_trans: expr => $op: expr) => {
         #[derive(Debug)]
         pub struct $ins;
@@ -28,7 +29,7 @@ macro_rules! binop {
             }
         }
     };
-    // Generic duplicated value transformation 
+    // Generic duplicated value transformation
     (x2 $ins: ident, $res_ty: ident, $res_trans: expr => $op: expr) => {
         #[derive(Debug)]
         pub struct $ins;
@@ -113,6 +114,10 @@ binop!(Ishr (int) => |lhs: Integral, rhs: Integral| {
     (lhs.value as i32).wrapping_shr(rhs.value as u32)
 });
 
+binop!(Iushr (int) => |lhs: Integral, rhs: Integral| {
+    ((lhs.value as u32) >> (rhs.value as u32)) as i32
+});
+
 // Binary (long)
 binop!(Lsub (long) => |lhs: Integral, rhs: Integral| {
     lhs.value.wrapping_sub(rhs.value)
@@ -140,6 +145,10 @@ binop!(Lshl (long) => |lhs: Integral, rhs: Integral| {
 
 binop!(Lshr (long) => |lhs: Integral, rhs: Integral| {
     lhs.value.wrapping_shr(rhs.value as u32)
+});
+
+binop!(Lushr (long) => |lhs: Integral, rhs: Integral| {
+    ((lhs.value as u64) >> (rhs.value as u64)) as i64
 });
 
 // Binary (float)

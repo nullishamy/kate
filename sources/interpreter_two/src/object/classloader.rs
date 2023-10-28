@@ -43,7 +43,7 @@ impl ClassLoader {
                 classfile.constant_pool,
                 classfile.access_flags,
                 classfile.this_class.resolve().name.resolve().try_string()?
-            )));
+            )?));
 
             self.classes.insert(name.clone(), Rc::clone(&object));
 

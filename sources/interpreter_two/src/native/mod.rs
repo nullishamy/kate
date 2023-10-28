@@ -2,6 +2,8 @@ use anyhow::Result;
 
 use crate::{object::{RuntimeValue, WrappedClassObject, WrappedObject}, VM};
 
+pub mod lang;
+
 pub type NameAndDescriptor = (String, String);
 
 pub type NativeStaticFunction = fn(

@@ -2,16 +2,17 @@
 
 use super::{Instruction, Progression};
 use crate::{
+    arg,
     object::{
-        numeric::{FloatingType, IntegralType, Integral, Floating},
+        numeric::{Floating, FloatingType, Integral, IntegralType},
         RuntimeValue,
     },
-    Context, VM, arg, pop
+    pop, Context, VM,
 };
 use anyhow::{anyhow, Context as AnyhowContext, Result};
 
 macro_rules! unop {
-    // Generic value transformation 
+    // Generic value transformation
     ($ins: ident, $res_ty: ident, $res_trans: expr => $op: expr) => {
         #[derive(Debug)]
         pub struct $ins;
@@ -27,7 +28,7 @@ macro_rules! unop {
             }
         }
     };
-    // Generic duplicated value transformation 
+    // Generic duplicated value transformation
     (x2 $ins: ident, $res_ty: ident, $res_trans: expr => $op: expr) => {
         #[derive(Debug)]
         pub struct $ins;
@@ -130,3 +131,53 @@ unop!(IfGt (int cond) => |val: Integral| {
 unop!(IfGe (int cond) => |val: Integral| {
     val.value >= 0
 });
+
+// If[Not]null
+#[derive(Debug)]
+pub struct IfNull {
+    pub(crate) jump_to: i16,
+}
+
+impl Instruction for IfNull {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+        let val = pop!(ctx);
+
+        if val.is_null() {
+            Ok(Progression::JumpRel(self.jump_to as i32))
+        } else {
+            Ok(Progression::Next)
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct IfNotNull {
+    pub(crate) jump_to: i16,
+}
+
+impl Instruction for IfNotNull {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+        let val = pop!(ctx);
+
+        if val.is_null() {
+            Ok(Progression::Next)
+        } else {
+            Ok(Progression::JumpRel(self.jump_to as i32))
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Pop {
+    pub(crate) amount: u8,
+}
+
+impl Instruction for Pop {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+        for _ in 0..self.amount {
+            pop!(ctx);
+        }
+
+        Ok(Progression::Next)
+    }
+}

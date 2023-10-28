@@ -1,5 +1,6 @@
 use std::process::exit;
 
+use anyhow::Context as AnyhowContext;
 use args::Cli;
 use clap::Parser;
 use interpreter_two::{
@@ -65,10 +66,10 @@ fn main() {
         interner: Interner::new(jls),
     };
 
-    vm.class_loader.bootstrap().unwrap();
+    vm.bootstrap().unwrap();
 
-    for class in args.classes {
-        let _cls = vm.class_loader.load_class(class).unwrap();
+    for class_name in args.classes {
+        let _cls = vm.class_loader.load_class(class_name.clone()).unwrap();
         let mut cls = _cls.write();
         if args.test {
             macro_rules! printer {
@@ -152,10 +153,17 @@ fn main() {
             pc: 0,
         };
 
-        let res = vm.run(ctx);
+        let res = vm.run(ctx).context(format!("at {}.main", class_name));
 
         if let Err(e) = res {
-            error!("Execution error: {:?}", e);
+            let mut chain = e.chain().collect::<Vec<_>>();
+            let source = chain.pop().unwrap();
+            chain.reverse();
+
+            println!("{}", source);
+            for err in chain {
+                println!("    {}", err);
+            }
             exit(1);
         } else {
             info!("Execution concluded without error")

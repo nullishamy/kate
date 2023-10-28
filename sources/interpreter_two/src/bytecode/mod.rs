@@ -1,7 +1,7 @@
 use std::fmt;
 
 use crate::{object::RuntimeValue, Context, VM};
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Result, Error};
 use bytes::BytesMut;
 use support::bytes_ext::SafeBuf;
 
@@ -16,6 +16,7 @@ pub enum Progression {
     JumpRel(i32),
     Next,
     Return(Option<RuntimeValue>),
+    Throw(Error)
 }
 
 pub trait Instruction: fmt::Debug {
@@ -263,8 +264,8 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         0x56 => b(ops::ArrayStore),
 
         // Stack Math Conversions
-        //  0x57 => Opcode::POP,
-        //  0x58 => Opcode::POP2,
+        0x57 => b(ops::Pop { amount: 1 }),
+        0x58 => b(ops::Pop { amount: 2 }),
         0x59 => b(ops::Dup),
         //  0x5a => Opcode::DUP_X1,
         //  0x5b => Opcode::DUP_X2,
@@ -300,8 +301,8 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         0x79 => b(ops::Lshl),
         0x7a => b(ops::Ishr),
         0x7b => b(ops::Lshr),
-        //  0x7c => Opcode::IUSHR,
-        //  0x7d => Opcode::LUSHR,
+        0x7c => b(ops::Iushr),
+        0x7d => b(ops::Lushr),
         //  0x7e => Opcode::IAND,
         //  0x7f => Opcode::LAND,
         //  0x80 => Opcode::IOR,
@@ -419,7 +420,9 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         0xb4 => b(ops::GetField {
             index: bytes.try_get_u16()?,
         }),
-        //  0xb5 => Opcode::PUTFIELD(bytes.try_get_u16()?),
+        0xb5 => b(ops::PutField {
+            index: bytes.try_get_u16()?,
+        }),
         0xb6 => b(ops::InvokeVirtual {
             index: bytes.try_get_u16()?,
         }),
@@ -445,7 +448,7 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
             type_index: bytes.try_get_u16()?,
         }),
         0xbe => b(ops::ArrayLength),
-        //  0xbf => Opcode::ATHROW,
+        0xbf => b(ops::Athrow),
         //  0xc0 => Opcode::CHECKCAST(bytes.try_get_u16()?),
         //  0xc1 => Opcode::INSTANCEOF(bytes.try_get_u16()?),
         //  0xc2 => Opcode::MONITORENTER,
@@ -454,8 +457,8 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         // Extended
         //  0xc4 => Opcode::WIDE,
         //  0xc5 => Opcode::MULTIANEWARRAY,
-        //  0xc6 => Opcode::IFNULL(bytes.try_get_i16()?),
-        //  0xc7 => Opcode::IFNONNULL(bytes.try_get_i16()?),
+        0xc6 => b(ops::IfNull { jump_to: bytes.try_get_i16()? }),
+        0xc7 => b(ops::IfNotNull { jump_to: bytes.try_get_i16()? }),
         //  0xc8 => Opcode::GOTO_W,
         //  0xc9 => Opcode::JSR_W,
 

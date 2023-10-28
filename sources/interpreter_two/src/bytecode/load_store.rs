@@ -185,6 +185,46 @@ impl Instruction for GetField {
 }
 
 #[derive(Debug)]
+pub struct PutField {
+    pub(crate) index: u16,
+}
+
+impl Instruction for PutField {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+        // The run-time constant pool entry at the index must be a symbolic
+        // reference to a field (§5.1), which gives the name and descriptor of
+        // the field as well as a symbolic reference to the class in which the
+        // field is to be found.
+        let field: ConstantField = ctx
+            .class
+            .read()
+            .constant_pool()
+            .address(self.index)
+            .try_resolve()?;
+
+        // The referenced field is resolved (§5.4.3.2).
+        // TODO: Field resolution (through super classes etc)
+
+        let name_and_type = field.name_and_type.resolve();
+        let (name, descriptor) = (
+            name_and_type.name.resolve().string(),
+            name_and_type.descriptor.resolve().string(),
+        );
+
+        // TODO: Type check & convert as needed
+
+        //The value and objectref are popped from the operand stack.
+        let value = pop!(ctx);
+        let objectref = arg!(ctx, "objectref" => Object);
+
+        // Otherwise, the referenced field in objectref is set to value
+        objectref.write().set_instance_field((name, descriptor), value)?;
+
+        Ok(Progression::Next)
+    }
+}
+
+#[derive(Debug)]
 pub struct GetStatic {
     pub(crate) index: u16,
 }
