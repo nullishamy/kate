@@ -40,3 +40,9 @@ pub struct Array {
     pub ty: ArrayType,
     pub values: Vec<RuntimeValue>
 }
+
+impl Array {
+    pub fn len(&self) -> usize {
+        self.values.len()
+    }
+}

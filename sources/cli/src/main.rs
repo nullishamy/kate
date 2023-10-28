@@ -111,6 +111,7 @@ fn main() {
                     let bytes = bytes.as_array().expect("bytes was not an array (byte[])");
 
                     let bytes = bytes
+                        .read()
                         .values
                         .iter()
                         .map(|v| v.as_integral().expect("value was not an int (char)"))

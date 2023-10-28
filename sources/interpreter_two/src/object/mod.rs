@@ -5,13 +5,17 @@ use enum_as_inner::EnumAsInner;
 use parking_lot::RwLock;
 use parse::{
     classfile::{Method, Methods},
-    pool::ConstantPool, flags::{ClassFileAccessFlags, ClassFileAccessFlag},
+    flags::{ClassFileAccessFlag, ClassFileAccessFlags},
+    pool::ConstantPool,
 };
 use support::encoding::encode_string;
 
 use crate::native::{NameAndDescriptor, NativeFunction};
 
-use self::numeric::{Floating, Integral};
+use self::{
+    array::Array,
+    numeric::{Floating, Integral},
+};
 
 pub mod array;
 pub mod classloader;
@@ -168,16 +172,16 @@ impl StringObject {
             native_methods: HashMap::new(),
             instance_fields: HashMap::new(),
         };
-        
+
         // TODO: Set COMPACT_STRINGS static field based on the method vv
         let (_method, bytes) = encode_string(value)?;
-        let arr = RuntimeValue::Array(array::Array {
+        let arr = RuntimeValue::Array(Rc::new(RwLock::new(Array {
             ty: array::ArrayType::Primitive(array::ArrayPrimitive::Byte),
             values: bytes
                 .iter()
                 .map(|b| RuntimeValue::Integral((*b as i8).into()))
                 .collect(),
-        });
+        })));
 
         s.set_instance_field(("value".to_string(), "[B".to_string()), arr)?;
 
@@ -200,7 +204,7 @@ impl StringObject {
 #[derive(Debug, Clone, EnumAsInner)]
 pub enum RuntimeValue {
     Object(WrappedObject),
-    Array(array::Array),
+    Array(WrappedArray),
     Integral(Integral),
     Floating(Floating),
     Null,
@@ -216,7 +220,8 @@ impl fmt::Display for RuntimeValue {
             RuntimeValue::Array(data) => write!(
                 f,
                 "[{}]",
-                data.values
+                data.read()
+                    .values
                     .iter()
                     .map(|v| v.to_string())
                     .collect::<Vec<_>>()
@@ -232,7 +237,7 @@ impl fmt::Display for RuntimeValue {
                 } else {
                     write!(f, "{:.3}", data.value)
                 }
-            },
+            }
             RuntimeValue::Null => write!(f, "null"),
         }
     }
@@ -240,3 +245,4 @@ impl fmt::Display for RuntimeValue {
 
 pub type WrappedClassObject = Rc<RwLock<ClassObject>>;
 pub type WrappedObject = Rc<RwLock<dyn Object>>;
+pub type WrappedArray = Rc<RwLock<Array>>;
