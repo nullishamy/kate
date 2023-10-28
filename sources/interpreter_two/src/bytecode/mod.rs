@@ -262,7 +262,7 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         // Stack Math Conversions
         //  0x57 => Opcode::POP,
         //  0x58 => Opcode::POP2,
-        //  0x59 => Opcode::DUP,
+        0x59 => b(ops::Dup),
         //  0x5a => Opcode::DUP_X1,
         //  0x5b => Opcode::DUP_X2,
         //  0x5c => Opcode::DUP2,

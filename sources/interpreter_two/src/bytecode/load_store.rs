@@ -279,3 +279,14 @@ impl Instruction for PutStatic {
     }
 }
 
+#[derive(Debug)]
+pub struct Dup;
+
+impl Instruction for Dup {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+        let value = pop!(ctx);
+        ctx.operands.push(value.clone());
+        ctx.operands.push(value);
+        Ok(Progression::Next)
+    }
+}
