@@ -38,7 +38,6 @@ pub trait Object: fmt::Debug {
     }
 }
 
-
 #[derive(Debug)]
 pub struct RuntimeObject {
     pub class_object: WrappedClassObject,
@@ -49,9 +48,9 @@ impl RuntimeObject {
     pub fn new(class_object: WrappedClassObject) -> Self {
         Self {
             class_object,
-            instance_fields: HashMap::new()
+            instance_fields: HashMap::new(),
         }
-    }    
+    }
 }
 
 impl Object for RuntimeObject {
@@ -227,8 +226,10 @@ impl StringObject {
         })));
 
         s.set_instance_field(("value".to_string(), "[B".to_string()), arr)?;
-        s.set_instance_field(("coder".to_string(), "B".to_string()), RuntimeValue::Integral((1_i32).into()))?;
-        
+        s.set_instance_field(
+            ("coder".to_string(), "B".to_string()),
+            RuntimeValue::Integral((1_i32).into()),
+        )?;
 
         Ok(s)
     }
@@ -253,6 +254,24 @@ pub enum RuntimeValue {
     Integral(Integral),
     Floating(Floating),
     Null,
+}
+
+impl RuntimeValue {
+    pub fn hash_code(&self) -> i32 {
+        match self {
+            RuntimeValue::Object(data) => {
+                let pt = Rc::as_ptr(data);
+                pt as *const () as i32
+            },
+            RuntimeValue::Array(data) => {
+                let pt = Rc::as_ptr(data);
+                pt as *const () as i32
+            },
+            RuntimeValue::Integral(data) => data.value as i32,
+            RuntimeValue::Floating(data) => data.value as i32,
+            RuntimeValue::Null => 0,
+        }
+    }
 }
 
 const UPPER_SCIENCE_BOUND: f64 = 1_000_000.0;

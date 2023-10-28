@@ -34,7 +34,7 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
     Ok(match instruction {
         0x00 => b(ops::Nop),
 
-        // Constants Loads Stores
+        // Constants / Loads / Stores
         0x01 => b(ops::PushConst {
             value: RuntimeValue::Null,
         }),
