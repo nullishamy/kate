@@ -24,6 +24,7 @@ def make_parser():
 
   parser.add_argument('--verbose', '-v', action='store_true')
   parser.add_argument('--filter', '-f', default=".*")
+  parser.add_argument('--watch', '-w', action='store_true')
 
   return parser
 
@@ -136,34 +137,44 @@ async def run_tests(sources, args):
 
 async def main():
   args = make_parser().parse_args()
-  print(f'{Colours.GREEN}building...{Colours.END}')
-  build = await run_cmd("cargo build", args.verbose)
-  build = await build.wait()
-  if build != 0:
-    await display_failure(build, "build")
-    return
+  while True:
+    print(f'{Colours.GREEN}building...{Colours.END}')
+    build = await run_cmd("cargo build", args.verbose)
+    build = await build.wait()
+    if build != 0:
+      await display_failure(build, "build")
+      return
 
-  print(f'{Colours.GREEN}cleaning...{Colours.END}')
-  clean = await run_cmd(f'rm -rf {TEMP_DIR}', args.verbose)
-  clean = await clean.wait()
-  if clean != 0:
-    await display_failure(clean, "clean")
-    return
-  
-  print(f'{Colours.GREEN}pre-run steps ok{Colours.END}')
-  print()
-  print(f'{Colours.GREEN}running...{Colours.END}')
-  print()
+    print(f'{Colours.GREEN}cleaning...{Colours.END}')
+    clean = await run_cmd(f'rm -rf {TEMP_DIR}', args.verbose)
+    clean = await clean.wait()
+    if clean != 0:
+      await display_failure(clean, "clean")
+      return
+    
+    print(f'{Colours.GREEN}pre-run steps ok{Colours.END}')
+    print()
+    print(f'{Colours.GREEN}running...{Colours.END}')
+    print()
 
-  start = time.time()
-  passes, fails = await run_tests(filter_sources(get_sources(['java']), args.filter), args)
-  end = time.time()
-  duration = end - start
+    start = time.time()
+    passes, fails = await run_tests(filter_sources(get_sources(['java']), args.filter), args)
+    end = time.time()
+    duration = end - start
 
-  print()
-  print()
-  print(f'{Colours.PEACH}testing concluded{Colours.END} ({round(duration, 3)}s)')
-  print(f'{Colours.GREEN}pass:{Colours.END} {len(passes)} - {Colours.RED}fail:{Colours.END} {len(fails)}')
+    print()
+    print()
+    print(f'{Colours.PEACH}testing concluded{Colours.END} ({round(duration, 3)}s)')
+    print(f'{Colours.GREEN}pass:{Colours.END} {len(passes)} - {Colours.RED}fail:{Colours.END} {len(fails)}')
+
+    # Do-while emulation
+    if not args.watch:
+      break
+
+    input("Press any key to rerun: ")
 
 if __name__ == '__main__':
-  asyncio.run(main())
+  try:
+    asyncio.run(main())
+  except KeyboardInterrupt:
+    exit(0)
