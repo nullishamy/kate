@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt, rc::Rc};
 
-use anyhow::{Result};
+use anyhow::Result;
 use enum_as_inner::EnumAsInner;
 use parking_lot::Mutex;
 use parse::{
