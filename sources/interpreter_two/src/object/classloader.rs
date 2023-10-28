@@ -31,10 +31,17 @@ impl ClassLoader {
             let mut parser = Parser::new(bytes);
             let classfile = parser.parse()?;
 
+            let mut super_class: Option<WrappedClassObject> = None;
+            if let Some(cls) = classfile.super_class {
+                super_class = Some(self.load_class(cls.resolve().name.resolve().string())?);
+            }
+
             let object = Rc::new(RwLock::new(ClassObject::new(
                 self.meta_class_object.as_ref().cloned(),
+                super_class,
                 classfile.methods,
                 classfile.constant_pool,
+                classfile.access_flags,
                 classfile.this_class.resolve().name.resolve().try_string()?
             )));
 

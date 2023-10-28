@@ -5,7 +5,7 @@ use enum_as_inner::EnumAsInner;
 use parking_lot::RwLock;
 use parse::{
     classfile::{Method, Methods},
-    pool::ConstantPool,
+    pool::ConstantPool, flags::{ClassFileAccessFlags, ClassFileAccessFlag},
 };
 use support::encoding::encode_string;
 
@@ -22,18 +22,26 @@ pub mod string;
 /// There's some weird structuring going on here because all objects have a Class object, but Class objects are also objects.
 pub trait Object: fmt::Debug {
     fn class(&self) -> Option<WrappedClassObject>;
-    // FIXME: type this properly
+    fn super_class(&self) -> Option<WrappedClassObject>;
+
     fn get_instance_field(&self, field: NameAndDescriptor) -> Result<RuntimeValue>;
     fn set_instance_field(&mut self, field: NameAndDescriptor, value: RuntimeValue) -> Result<()>;
+
+    fn access_flags(&self) -> ClassFileAccessFlags;
+    fn is_interface(&self) -> bool {
+        self.access_flags().has(ClassFileAccessFlag::INTERFACE)
+    }
 }
 
 #[derive(Debug)]
 pub struct ClassObject {
     // java/lang/Class, because all "class objects" are based on this class
     pub meta_class_object: Option<WrappedClassObject>,
+    super_class: Option<WrappedClassObject>,
 
     native_methods: HashMap<NameAndDescriptor, NativeFunction>,
     instance_fields: HashMap<NameAndDescriptor, RuntimeValue>,
+    flags: ClassFileAccessFlags,
     methods: Methods,
     pool: ConstantPool,
     is_initialised: bool,
@@ -43,6 +51,14 @@ pub struct ClassObject {
 impl Object for ClassObject {
     fn class(&self) -> Option<WrappedClassObject> {
         self.meta_class_object.clone()
+    }
+
+    fn super_class(&self) -> Option<WrappedClassObject> {
+        self.super_class.clone()
+    }
+
+    fn access_flags(&self) -> ClassFileAccessFlags {
+        self.flags
     }
 
     fn get_instance_field(&self, field: NameAndDescriptor) -> Result<RuntimeValue> {
@@ -62,15 +78,19 @@ impl Object for ClassObject {
 impl ClassObject {
     pub fn new(
         meta: Option<WrappedClassObject>,
+        super_class: Option<WrappedClassObject>,
         methods: Methods,
         pool: ConstantPool,
+        flags: ClassFileAccessFlags,
         name: String,
     ) -> Self {
         Self {
             meta_class_object: meta,
+            super_class,
             native_methods: HashMap::new(),
             instance_fields: HashMap::new(),
             methods,
+            flags,
             pool,
             is_initialised: false,
             class_name: name,
@@ -119,6 +139,10 @@ impl Object for StringObject {
         Some(Rc::clone(&self.string_class))
     }
 
+    fn super_class(&self) -> Option<WrappedClassObject> {
+        self.string_class.read().super_class()
+    }
+
     fn get_instance_field(&self, field: NameAndDescriptor) -> Result<RuntimeValue> {
         self.instance_fields
             .get(&field)
@@ -130,6 +154,10 @@ impl Object for StringObject {
         self.instance_fields.insert(field, value);
 
         Ok(())
+    }
+
+    fn access_flags(&self) -> ClassFileAccessFlags {
+        self.string_class.read().flags
     }
 }
 

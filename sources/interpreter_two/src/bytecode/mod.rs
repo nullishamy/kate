@@ -6,15 +6,16 @@ use bytes::BytesMut;
 use support::bytes_ext::SafeBuf;
 
 mod binary;
-mod unary;
 mod invoke;
+mod load_store;
+mod unary;
 mod ops;
 
 pub enum Progression {
     JumpAbs(i32),
     JumpRel(i32),
     Next,
-    Return(Option<RuntimeValue>)
+    Return(Option<RuntimeValue>),
 }
 
 pub trait Instruction: fmt::Debug {
@@ -35,7 +36,7 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
 
         // Constants Loads Stores
         0x01 => b(ops::PushConst {
-            value: RuntimeValue::Null
+            value: RuntimeValue::Null,
         }),
         0x02 => b(ops::PushConst {
             value: RuntimeValue::Integral((-1_i32).into()),
@@ -66,7 +67,6 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
             value: RuntimeValue::Integral((1_i64).into()),
         }),
         0x0b => b(ops::PushConst {
-
             value: RuntimeValue::Floating((0.0_f32).into()),
         }),
         0x0c => b(ops::PushConst {
@@ -83,26 +83,36 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
             value: RuntimeValue::Floating((1.0_f64).into()),
         }),
         0x10 => b(ops::PushConst {
-            value: RuntimeValue::Integral((bytes.try_get_i8()? as i32).into())
+            value: RuntimeValue::Integral((bytes.try_get_i8()? as i32).into()),
         }),
         0x11 => b(ops::PushConst {
             // The intermediate value is then sign-extended to an int value.
-            value: RuntimeValue::Integral((bytes.try_get_i16()? as i32).into())
+            value: RuntimeValue::Integral((bytes.try_get_i16()? as i32).into()),
         }),
         0x12 => b(ops::Ldc {
-            index: bytes.try_get_u8()? as u16
+            index: bytes.try_get_u8()? as u16,
         }),
         0x13 => b(ops::Ldc {
-            index: bytes.try_get_u8()? as u16
+            index: bytes.try_get_u8()? as u16,
         }),
         0x14 => b(ops::Ldc2W {
-            index: bytes.try_get_u16()?
+            index: bytes.try_get_u16()?,
         }),
-        0x15 => b(ops::LoadLocal { index: bytes.try_get_u8()? as usize }),
-        0x16 => b(ops::LoadLocal { index: bytes.try_get_u8()? as usize }),
-        0x17 => b(ops::LoadLocal { index: bytes.try_get_u8()? as usize }),
-        0x18 => b(ops::LoadLocal { index: bytes.try_get_u8()? as usize }),
-        0x19 => b(ops::LoadLocal { index: bytes.try_get_u8()? as usize }),
+        0x15 => b(ops::LoadLocal {
+            index: bytes.try_get_u8()? as usize,
+        }),
+        0x16 => b(ops::LoadLocal {
+            index: bytes.try_get_u8()? as usize,
+        }),
+        0x17 => b(ops::LoadLocal {
+            index: bytes.try_get_u8()? as usize,
+        }),
+        0x18 => b(ops::LoadLocal {
+            index: bytes.try_get_u8()? as usize,
+        }),
+        0x19 => b(ops::LoadLocal {
+            index: bytes.try_get_u8()? as usize,
+        }),
 
         0x1a => b(ops::LoadLocal { index: 0 }),
         0x1b => b(ops::LoadLocal { index: 1 }),
@@ -138,48 +148,108 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         //  0x35 => Opcode::SALOAD,
         0x36 => b(ops::StoreLocal {
             index: bytes.try_get_u8()? as usize,
-            store_next: false
+            store_next: false,
         }),
         0x37 => b(ops::StoreLocal {
             index: bytes.try_get_u8()? as usize,
-            store_next: true
+            store_next: true,
         }),
         0x38 => b(ops::StoreLocal {
             index: bytes.try_get_u8()? as usize,
-            store_next: false
+            store_next: false,
         }),
         0x39 => b(ops::StoreLocal {
             index: bytes.try_get_u8()? as usize,
-            store_next: true
+            store_next: true,
         }),
         0x3a => b(ops::StoreLocal {
             index: bytes.try_get_u8()? as usize,
-            store_next: false
+            store_next: false,
         }),
-        0x3b => b(ops::StoreLocal { index: 0, store_next: false }),
-        0x3c => b(ops::StoreLocal { index: 1, store_next: false }),
-        0x3d => b(ops::StoreLocal { index: 2, store_next: false }),
-        0x3e => b(ops::StoreLocal { index: 3, store_next: false }),
+        0x3b => b(ops::StoreLocal {
+            index: 0,
+            store_next: false,
+        }),
+        0x3c => b(ops::StoreLocal {
+            index: 1,
+            store_next: false,
+        }),
+        0x3d => b(ops::StoreLocal {
+            index: 2,
+            store_next: false,
+        }),
+        0x3e => b(ops::StoreLocal {
+            index: 3,
+            store_next: false,
+        }),
 
-        0x3f => b(ops::StoreLocal { index: 0, store_next: true }),
-        0x40 => b(ops::StoreLocal { index: 1, store_next: true }),
-        0x41 => b(ops::StoreLocal { index: 2, store_next: true }),
-        0x42 => b(ops::StoreLocal { index: 3, store_next: true }),
+        0x3f => b(ops::StoreLocal {
+            index: 0,
+            store_next: true,
+        }),
+        0x40 => b(ops::StoreLocal {
+            index: 1,
+            store_next: true,
+        }),
+        0x41 => b(ops::StoreLocal {
+            index: 2,
+            store_next: true,
+        }),
+        0x42 => b(ops::StoreLocal {
+            index: 3,
+            store_next: true,
+        }),
 
-        0x43 => b(ops::StoreLocal { index: 0, store_next: false }),
-        0x44 => b(ops::StoreLocal { index: 1, store_next: false }),
-        0x45 => b(ops::StoreLocal { index: 2, store_next: false }),
-        0x46 => b(ops::StoreLocal { index: 3, store_next: false }),
+        0x43 => b(ops::StoreLocal {
+            index: 0,
+            store_next: false,
+        }),
+        0x44 => b(ops::StoreLocal {
+            index: 1,
+            store_next: false,
+        }),
+        0x45 => b(ops::StoreLocal {
+            index: 2,
+            store_next: false,
+        }),
+        0x46 => b(ops::StoreLocal {
+            index: 3,
+            store_next: false,
+        }),
 
-        0x47 => b(ops::StoreLocal { index: 0, store_next: false }),
-        0x48 => b(ops::StoreLocal { index: 1, store_next: false }),
-        0x49 => b(ops::StoreLocal { index: 2, store_next: false }),
-        0x4a => b(ops::StoreLocal { index: 3, store_next: true }),
+        0x47 => b(ops::StoreLocal {
+            index: 0,
+            store_next: false,
+        }),
+        0x48 => b(ops::StoreLocal {
+            index: 1,
+            store_next: false,
+        }),
+        0x49 => b(ops::StoreLocal {
+            index: 2,
+            store_next: false,
+        }),
+        0x4a => b(ops::StoreLocal {
+            index: 3,
+            store_next: true,
+        }),
 
-        0x4b => b(ops::StoreLocal { index: 0, store_next: false }),
-        0x4c => b(ops::StoreLocal { index: 1, store_next: false }),
-        0x4d => b(ops::StoreLocal { index: 2, store_next: false }),
-        0x4e => b(ops::StoreLocal { index: 3, store_next: false }),
+        0x4b => b(ops::StoreLocal {
+            index: 0,
+            store_next: false,
+        }),
+        0x4c => b(ops::StoreLocal {
+            index: 1,
+            store_next: false,
+        }),
+        0x4d => b(ops::StoreLocal {
+            index: 2,
+            store_next: false,
+        }),
+        0x4e => b(ops::StoreLocal {
+            index: 3,
+            store_next: false,
+        }),
         //  0x4f => Opcode::IASTORE,
         //  0x50 => Opcode::LASTORE,
         //  0x51 => Opcode::FASTORE,
@@ -236,7 +306,6 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         //  0x82 => Opcode::IXOR,
         //  0x83 => Opcode::LXOR,
         //  0x84 => Opcode::IINC(bytes.try_get_u8()?, bytes.try_get_i8()?),
-
         0x85 => b(ops::I2l),
         //  0x86 => Opcode::I2F,
         //  0x87 => Opcode::I2D,
@@ -265,17 +334,31 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         //  0x9c => Opcode::IFGE(bytes.try_get_i16()?),
         //  0x9d => Opcode::IFGT(bytes.try_get_i16()?),
         //  0x9e => Opcode::IFLE(bytes.try_get_i16()?),
-        0x9f => b(ops::Ieq { jump_to: bytes.try_get_i16()? }),
-        0xa0 => b(ops::Ine { jump_to: bytes.try_get_i16()? }),
-        0xa1 => b(ops::Ilt { jump_to: bytes.try_get_i16()? }),
-        0xa2 => b(ops::Ige { jump_to: bytes.try_get_i16()? }),
-        0xa3 => b(ops::Igt { jump_to: bytes.try_get_i16()? }),
-        0xa4 => b(ops::Ile { jump_to: bytes.try_get_i16()? }),
+        0x9f => b(ops::Ieq {
+            jump_to: bytes.try_get_i16()?,
+        }),
+        0xa0 => b(ops::Ine {
+            jump_to: bytes.try_get_i16()?,
+        }),
+        0xa1 => b(ops::Ilt {
+            jump_to: bytes.try_get_i16()?,
+        }),
+        0xa2 => b(ops::Ige {
+            jump_to: bytes.try_get_i16()?,
+        }),
+        0xa3 => b(ops::Igt {
+            jump_to: bytes.try_get_i16()?,
+        }),
+        0xa4 => b(ops::Ile {
+            jump_to: bytes.try_get_i16()?,
+        }),
         //  0xa5 => Opcode::IF_ACMPEQ(bytes.try_get_i16()?),
         //  0xa6 => Opcode::IF_ACMPNE(bytes.try_get_i16()?),
 
         //  // Control
-        0xa7 => b(ops::Goto{ jump_to: bytes.try_get_i16()? }),
+        0xa7 => b(ops::Goto {
+            jump_to: bytes.try_get_i16()?,
+        }),
         //  0xa8 => Opcode::JSR,
         //  0xa9 => Opcode::RET,
         //  0xaa => {
@@ -316,7 +399,9 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         //  0xb3 => Opcode::PUTSTATIC(bytes.try_get_u16()?),
         //  0xb4 => Opcode::GETFIELD(bytes.try_get_u16()?),
         //  0xb5 => Opcode::PUTFIELD(bytes.try_get_u16()?),
-        //  0xb6 => Opcode::INVOKEVIRTUAL(bytes.try_get_u16()?),
+        0xb6 => b(ops::InvokeVirtual {
+            index: bytes.try_get_u16()?,
+        }),
         //  0xb7 => Opcode::INVOKESPECIAL(bytes.try_get_u16()?),
         0xb8 => b(ops::InvokeStatic {
             index: bytes.try_get_u16()?,
