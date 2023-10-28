@@ -420,7 +420,9 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         0xb6 => b(ops::InvokeVirtual {
             index: bytes.try_get_u16()?,
         }),
-        //  0xb7 => Opcode::INVOKESPECIAL(bytes.try_get_u16()?),
+        0xb7 => b(ops::InvokeSpecial {
+            index: bytes.try_get_u16()?,
+        }),
         0xb8 => b(ops::InvokeStatic {
             index: bytes.try_get_u16()?,
         }),

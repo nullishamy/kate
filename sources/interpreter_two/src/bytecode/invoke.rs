@@ -2,14 +2,16 @@ use std::rc::Rc;
 
 use super::{Instruction, Progression};
 use crate::{
+    arg,
     native::NativeFunction,
     object::{
         numeric::{FloatingType, IntegralType},
-        Object, WrappedClassObject, RuntimeValue,
+        Object, RuntimeObject, RuntimeValue, WrappedClassObject,
     },
-    Context, VM, arg, pop
+    pop, Context, VM,
 };
 use anyhow::{anyhow, Context as AnyhowContext, Result};
+use parking_lot::RwLock;
 use parse::{
     attributes::CodeAttribute,
     classfile::{Method, Resolvable},
@@ -176,7 +178,140 @@ impl Instruction for InvokeVirtual {
                     return Err(anyhow!(
                         "attempted to InvokeStatic an instance native method"
                     ))
+#[derive(Debug)]
+pub struct InvokeSpecial {
+    pub(crate) index: u16,
+}
+
+impl Instruction for InvokeSpecial {
+    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+        let cls = ctx.class.read();
+        let pool = cls.constant_pool();
+
+        // The unsigned indexbyte1 and indexbyte2 are used to construct an
+        // index into the run-time constant pool of the current class (§2.6),
+        let pool_entry = pool
+            .address::<ConstantEntry>(self.index)
+            .try_resolve()
+            .context(format!("no method at index {}", self.index))?;
+
+        drop(cls);
+
+        // The run-time constant pool entry at the index must be a symbolic
+        // reference to a method or an interface method (§5.1), which gives
+        // the name and descriptor (§4.3.3) of the method or interface method
+        // as well as a symbolic reference to the class or interface in which
+        // the method or interface method is to be found.
+        let (method_name, method_descriptor, class_name) = match pool_entry {
+            ConstantEntry::Method(data) => {
+                let name_and_type = data.name_and_type.resolve();
+                let method_name = name_and_type.name.resolve().try_string()?;
+
+                let method_descriptor = name_and_type.descriptor.resolve().try_string()?;
+                let method_descriptor = MethodType::parse(method_descriptor)?;
+
+                let class = data.class.resolve();
+                let class = class.name.resolve().try_string()?;
+
+                (method_name, method_descriptor, class)
+            }
+            ConstantEntry::InterfaceMethod(data) => {
+                let name_and_type = data.name_and_type.resolve();
+                let method_name = name_and_type.name.resolve().try_string()?;
+
+                let method_descriptor = name_and_type.descriptor.resolve().try_string()?;
+                let method_descriptor = MethodType::parse(method_descriptor)?;
+
+                let class = data.class.resolve();
+                let class = class.name.resolve().try_string()?;
+
+                (method_name, method_descriptor, class)
+            }
+            e => return Err(anyhow!("expected interface method / method, got {:#?}", e)),
+        };
+
+        // The named method is resolved (§5.4.3.3, §5.4.3.4).
+        let loaded_class = vm.class_loader.load_class(class_name.clone())?;
+        // TODO: Implement the resolution algorithm
+        let loaded_method = loaded_class
+            .read()
+            .get_method((method_name.clone(), method_descriptor.to_string()))
+            .context(format!("no method {} in {}", method_name, class_name))?;
+
+        // NOTE: We must get the args before resolution.
+        // This is because the `objectref` lives at the "bottom" of the stack,
+        // below all of the args.
+        let mut reversed_descriptor = method_descriptor.clone();
+        reversed_descriptor.parameters.reverse();
+        let mut args_for_call = Vec::new();
+        for _arg in reversed_descriptor.parameters.iter() {
+            // TODO: Validate against FieldType in descriptor
+            let arg = ctx.operands.pop().ok_or(anyhow!("not enough args"))?;
+            if let Some(int) = arg.as_integral() {
+                if int.ty == IntegralType::Long {
+                    args_for_call.push(arg.clone());
                 }
+            }
+
+            if let Some(float) = arg.as_floating() {
+                if float.ty == FloatingType::Double {
+                    args_for_call.push(arg.clone());
+                }
+            }
+            args_for_call.push(arg.clone());
+        }
+
+        let objectref = arg!(ctx, "objectref" => Object);
+
+        // TODO: Proper resolution, use the helper here
+        let (selected_class, selected_method) = (loaded_class, loaded_method);
+
+        args_for_call.push(RuntimeValue::Object(objectref));
+        args_for_call.reverse();
+
+        // If the method to be invoked is native and the platform-dependent
+        // code that implements it has not yet been bound (§5.6) into
+        // the Java Virtual Machine, that is done. The nargs argument
+        // values and objectref are popped from the operand stack and are
+        // passed as parameters to the code that implements the method.
+        // The parameters are passed and the code is invoked in an
+        // implementation-dependent manner.
+        let exec_result = if !selected_method.flags.has(MethodAccessFlag::NATIVE) {
+            // Must load the context if and only if the method is not native.
+            // Native methods do not have a code attribute.
+            let code = selected_method
+                .attributes
+                .known_attribute::<CodeAttribute>(selected_class.read().constant_pool())?;
+
+            let new_context = Context {
+                code,
+                class: Rc::clone(&selected_class),
+                pc: 0,
+                operands: vec![],
+                locals: args_for_call,
+            };
+
+            // The new frame is then made current, and the Java Virtual Machine pc is set
+            // to the opcode of the first instruction of the method to be invoked.
+            // Execution continues with the first instruction of the method.
+            vm.run(new_context)
+        } else {
+            let lookup = selected_class
+                .read()
+                .fetch_native((method_name.clone(), method_descriptor.to_string()))
+                .ok_or(anyhow!(
+                    "no native method {} {:?} {} / {}",
+                    class_name,
+                    selected_method.flags.flags,
+                    method_name,
+                    method_descriptor.to_string()
+                ))?;
+
+            match lookup {
+                NativeFunction::Static(func) => func(Rc::clone(&selected_class), args_for_call, vm),
+                NativeFunction::Instance(_) => {
+                    todo!("native instance methods")
+                },
             }
         };
 
