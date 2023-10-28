@@ -54,10 +54,6 @@
 <a href="#54" id="54">54</a>
 <a href="#55" id="55">55</a>
 <a href="#56" id="56">56</a>
-<a href="#57" id="57">57</a>
-<a href="#58" id="58">58</a>
-<a href="#59" id="59">59</a>
-<a href="#60" id="60">60</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::collections::HashMap;
 
 <span class="kw">use </span><span class="kw">super</span>::RuntimeValue;
@@ -82,11 +78,7 @@
         }
     }
 
-    <span class="kw">pub fn </span>new(
-        class: String,
-        field_name: String,
-        field_descriptor: String,
-    ) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>new(class: String, field_name: String, field_descriptor: String) -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
             class,
             field_descriptor,

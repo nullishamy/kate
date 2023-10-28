@@ -114,13 +114,56 @@
 <a href="#114" id="114">114</a>
 <a href="#115" id="115">115</a>
 <a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>anyhow::Result;
 <span class="kw">use </span>bytecode::decode_instruction;
 <span class="kw">use </span>bytes::BytesMut;
 
-<span class="kw">use </span>object::{classloader::ClassLoader, RuntimeValue, WrappedClassObject, string::Interner, statics::StaticFields};
+<span class="kw">use </span>object::{
+    classloader::ClassLoader, statics::StaticFields, string::Interner, RuntimeValue,
+    WrappedClassObject,
+};
 <span class="kw">use </span>parse::attributes::CodeAttribute;
 <span class="kw">use </span>tracing::info;
+
+<span class="kw">use crate</span>::{native::NativeModule, object::statics::StaticFieldRef};
 
 <span class="kw">pub mod </span>bytecode;
 <span class="kw">pub mod </span>native;
@@ -138,7 +181,7 @@
 <span class="kw">pub struct </span>VM {
     <span class="kw">pub </span>class_loader: ClassLoader,
     <span class="kw">pub </span>interner: Interner,
-    <span class="kw">pub </span>statics: StaticFields
+    <span class="kw">pub </span>statics: StaticFields,
 }
 
 <span class="kw">impl </span>VM {
@@ -156,26 +199,41 @@
             <span class="kw">let </span>instruction = decode_instruction(<span class="self">self</span>, <span class="kw-2">&amp;mut </span>instruction_bytes)<span class="question-mark">?</span>;
             <span class="kw">let </span>consumed_bytes_post = instruction_bytes.len();
             <span class="kw">let </span>bytes_consumed_by_opcode = (consumed_bytes_prev - consumed_bytes_post) <span class="kw">as </span>i32;
-            <span class="macro">info!</span>(<span class="string">&quot;opcode: {:?} consumed {} bytes&quot;</span>, instruction, bytes_consumed_by_opcode);
+            <span class="macro">info!</span>(
+                <span class="string">&quot;opcode: {:?} consumed {} bytes&quot;</span>,
+                instruction, bytes_consumed_by_opcode
+            );
 
             <span class="comment">// If the instruction doesn&#39;t want us to jump anywhere, proceed to the next instruction
-            </span><span class="kw">match  </span>instruction.handle(<span class="self">self</span>, <span class="kw-2">&amp;mut </span>ctx)<span class="question-mark">? </span>{
+            </span><span class="kw">match </span>instruction.handle(<span class="self">self</span>, <span class="kw-2">&amp;mut </span>ctx)<span class="question-mark">? </span>{
                 bytecode::Progression::JumpAbs(new_pc) =&gt; {
                     <span class="macro">info!</span>(<span class="string">&quot;Jumping from {} to {}&quot;</span>, ctx.pc, new_pc);
                     ctx.pc = new_pc;
-                },
+                }
                 bytecode::Progression::JumpRel(offset) =&gt; {
-                    <span class="macro">info!</span>(<span class="string">&quot;Jumping from {} by {} (new: {})&quot;</span>, ctx.pc, offset, ctx.pc + offset);
+                    <span class="macro">info!</span>(
+                        <span class="string">&quot;Jumping from {} by {} (new: {})&quot;</span>,
+                        ctx.pc,
+                        offset,
+                        ctx.pc + offset
+                    );
                     ctx.pc += offset;
-                },
+                }
                 bytecode::Progression::Next =&gt; {
-                    <span class="macro">info!</span>(<span class="string">&quot;Moving to next (jump by {} bytes)&quot;</span>, bytes_consumed_by_opcode);
+                    <span class="macro">info!</span>(
+                        <span class="string">&quot;Moving to next (jump by {} bytes)&quot;</span>,
+                        bytes_consumed_by_opcode
+                    );
                     ctx.pc += bytes_consumed_by_opcode;
-                },
+                }
                 bytecode::Progression::Return(return_value) =&gt; {
                     <span class="macro">info!</span>(<span class="string">&quot;Returning&quot;</span>);
-                    <span class="kw">return </span><span class="prelude-val">Ok</span>(return_value)
-                },
+                    <span class="kw">return </span><span class="prelude-val">Ok</span>(return_value);
+                }
+                bytecode::Progression::Throw(err) =&gt; {
+                    <span class="macro">info!</span>(<span class="string">&quot;Throwing {:?}&quot;</span>, err);
+                    <span class="kw">return </span><span class="prelude-val">Err</span>(err);
+                }
             };
         }
 
@@ -203,9 +261,11 @@
             <span class="comment">// Need to drop our lock on the class object before running the class initialiser
             // as it could call instructions which access class data
             </span>locked_class.set_initialised(<span class="bool-val">true</span>);
-            <span class="kw">let </span>code = clinit.attributes.known_attribute(locked_class.constant_pool())<span class="question-mark">?</span>;
+            <span class="kw">let </span>code = clinit
+                .attributes
+                .known_attribute(locked_class.constant_pool())<span class="question-mark">?</span>;
             drop(locked_class);
-            
+
             <span class="kw">let </span>ctx = Context {
                 code,
                 class,
@@ -213,7 +273,6 @@
                 operands: <span class="macro">vec!</span>[],
                 locals: <span class="macro">vec!</span>[],
             };
-            
 
             <span class="self">self</span>.run(ctx)<span class="question-mark">?</span>;
         } <span class="kw">else </span>{
@@ -225,9 +284,26 @@
 
         <span class="prelude-val">Ok</span>(())
     }
+
+    <span class="kw">pub fn </span>bootstrap(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+        <span class="comment">// Load native modules
+        </span><span class="kw">use </span>native::lang;
+        lang::Class::register(<span class="self">self</span>)<span class="question-mark">?</span>;
+        lang::Throwable::register(<span class="self">self</span>)<span class="question-mark">?</span>;
+        lang::StringUTF16::register(<span class="self">self</span>)<span class="question-mark">?</span>;
+        lang::Float::register(<span class="self">self</span>)<span class="question-mark">?</span>;
+        lang::Double::register(<span class="self">self</span>)<span class="question-mark">?</span>;
+        lang::System::register(<span class="self">self</span>)<span class="question-mark">?</span>;
+
+        <span class="self">self</span>.statics.set_field(
+            StaticFieldRef::new_str(<span class="string">&quot;java/lang/String&quot;</span>, <span class="string">&quot;COMPACT_STRINGS&quot;</span>, <span class="string">&quot;Z&quot;</span>),
+            RuntimeValue::Integral(<span class="number">0_i32</span>.into()),
+        );
+
+        <span class="prelude-val">Ok</span>(())
+    }
 }
 
 <span class="attr">#[cfg(test)]
-</span><span class="kw">mod </span>tests {
-}
+</span><span class="kw">mod </span>tests {}
 </code></pre></div></section></main></body></html>

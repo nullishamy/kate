@@ -310,6 +310,19 @@
 <a href="#310" id="310">310</a>
 <a href="#311" id="311">311</a>
 <a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
+<a href="#321" id="321">321</a>
+<a href="#322" id="322">322</a>
+<a href="#323" id="323">323</a>
+<a href="#324" id="324">324</a>
+<a href="#325" id="325">325</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>anyhow::{Context, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>std::{collections::HashMap, fmt, rc::Rc};
 
@@ -442,8 +455,8 @@
         pool: ConstantPool,
         flags: ClassFileAccessFlags,
         name: String,
-    ) -&gt; <span class="self">Self </span>{
-        <span class="self">Self </span>{
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+        <span class="kw">let </span><span class="kw-2">mut </span>s = <span class="self">Self </span>{
             meta_class_object: meta,
             super_class,
             native_methods: HashMap::new(),
@@ -453,7 +466,20 @@
             pool,
             is_initialised: <span class="bool-val">false</span>,
             class_name: name,
-        }
+        };
+
+        <span class="comment">// NOTE: Class docs say this value is set by the JVM (so we do this here)
+        // But there also exists a constructor to set this regularly. Not sure what we should do.
+        // Setting to null because it is supported and requires the least effort to make things work.
+        </span>s.set_instance_field(
+            (
+                <span class="string">&quot;classLoader&quot;</span>.to_string(),
+                <span class="string">&quot;Ljava/lang/ClassLoader;&quot;</span>.to_string(),
+            ),
+            RuntimeValue::Null,
+        )<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>(s)
     }
 
     <span class="kw">pub fn </span>get_class_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>String {
@@ -574,11 +600,11 @@
             RuntimeValue::Object(data) =&gt; {
                 <span class="kw">let </span>pt = Rc::as_ptr(data);
                 pt <span class="kw">as </span><span class="kw-2">*const </span>() <span class="kw">as </span>i32
-            },
+            }
             RuntimeValue::Array(data) =&gt; {
                 <span class="kw">let </span>pt = Rc::as_ptr(data);
                 pt <span class="kw">as </span><span class="kw-2">*const </span>() <span class="kw">as </span>i32
-            },
+            }
             RuntimeValue::Integral(data) =&gt; data.value <span class="kw">as </span>i32,
             RuntimeValue::Floating(data) =&gt; data.value <span class="kw">as </span>i32,
             RuntimeValue::Null =&gt; <span class="number">0</span>,

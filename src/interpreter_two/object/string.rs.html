@@ -20,29 +20,26 @@
 <a href="#20" id="20">20</a>
 <a href="#21" id="21">21</a>
 <a href="#22" id="22">22</a>
-<a href="#23" id="23">23</a>
-<a href="#24" id="24">24</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::rc::Rc;
 
-<span class="kw">use </span>parking_lot::RwLock;
 <span class="kw">use </span>anyhow::Result;
+<span class="kw">use </span>parking_lot::RwLock;
 
-<span class="kw">use super</span>::{WrappedClassObject, StringObject};
+<span class="kw">use super</span>::{StringObject, WrappedClassObject};
 
 <span class="comment">// TODO: Actually intern
 </span><span class="kw">pub struct </span>Interner {
-  string_class: WrappedClassObject
+    string_class: WrappedClassObject,
 }
 
 <span class="kw">impl </span>Interner {
-  <span class="kw">pub fn </span>new (string_class: WrappedClassObject) -&gt; <span class="self">Self </span>{
-    <span class="self">Self </span>{
-      string_class
+    <span class="kw">pub fn </span>new(string_class: WrappedClassObject) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{ string_class }
     }
-  }
 
-  <span class="kw">pub fn </span>intern(<span class="kw-2">&amp;mut </span><span class="self">self</span>, s: String) -&gt; <span class="prelude-ty">Result</span>&lt;Rc&lt;RwLock&lt;StringObject&gt;&gt;&gt; {
-    <span class="kw">let </span>obj = StringObject::new(Rc::clone(<span class="kw-2">&amp;</span><span class="self">self</span>.string_class), s)<span class="question-mark">?</span>;
-    <span class="prelude-val">Ok</span>(Rc::new(RwLock::new(obj)))
-  }
-}</code></pre></div></section></main></body></html>
+    <span class="kw">pub fn </span>intern(<span class="kw-2">&amp;mut </span><span class="self">self</span>, s: String) -&gt; <span class="prelude-ty">Result</span>&lt;Rc&lt;RwLock&lt;StringObject&gt;&gt;&gt; {
+        <span class="kw">let </span>obj = StringObject::new(Rc::clone(<span class="kw-2">&amp;</span><span class="self">self</span>.string_class), s)<span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(Rc::new(RwLock::new(obj)))
+    }
+}
+</code></pre></div></section></main></body></html>

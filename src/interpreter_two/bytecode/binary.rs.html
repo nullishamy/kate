@@ -208,48 +208,34 @@
 <a href="#208" id="208">208</a>
 <a href="#209" id="209">209</a>
 <a href="#210" id="210">210</a>
+<a href="#211" id="211">211</a>
+<a href="#212" id="212">212</a>
+<a href="#213" id="213">213</a>
 </pre></div><pre class="rust"><code><span class="attr">#![allow(clippy::redundant_closure_call)]
 
 </span><span class="kw">use super</span>::{Instruction, Progression};
 <span class="kw">use crate</span>::{
+    arg,
     object::{
-        numeric::{FloatingType, IntegralType, Integral, Floating},
+        numeric::{Floating, FloatingType, Integral, IntegralType},
         RuntimeValue,
     },
-    Context, VM, arg, pop
+    pop, Context, VM,
 };
 <span class="kw">use </span>anyhow::{anyhow, Context <span class="kw">as </span>AnyhowContext, <span class="prelude-ty">Result</span>};
 
 <span class="macro">macro_rules! </span>binop {
-    <span class="comment">// Generic value transformation 
-    </span>(<span class="macro-nonterminal">$ins</span>: ident, <span class="macro-nonterminal">$res_ty</span>: ident, <span class="macro-nonterminal">$res_trans</span>: expr =&gt; <span class="macro-nonterminal">$op</span>: expr) =&gt; {
+    <span class="comment">// Generic value transformation
+    </span>(<span class="macro-nonterminal">$ins</span>: ident, <span class="macro-nonterminal">$lhs</span>: ident, <span class="macro-nonterminal">$rhs</span>: ident, <span class="macro-nonterminal">$res</span>: ty, <span class="macro-nonterminal">$res_trans</span>: expr =&gt; <span class="macro-nonterminal">$op</span>: expr) =&gt; {
         <span class="attr">#[derive(Debug)]
         </span><span class="kw">pub struct </span><span class="macro-nonterminal">$ins</span>;
 
         <span class="kw">impl </span>Instruction <span class="kw">for </span><span class="macro-nonterminal">$ins </span>{
             <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
-                <span class="kw">let </span>rhs = <span class="macro">arg!</span>(ctx, <span class="string">&quot;rhs&quot; </span>=&gt; <span class="macro-nonterminal">$res_ty</span>);
-                <span class="kw">let </span>lhs = <span class="macro">arg!</span>(ctx, <span class="string">&quot;lhs&quot; </span>=&gt; <span class="macro-nonterminal">$res_ty</span>);
+                <span class="kw">let </span>rhs = <span class="macro">arg!</span>(ctx, <span class="string">&quot;rhs&quot; </span>=&gt; <span class="macro-nonterminal">$rhs</span>);
+                <span class="kw">let </span>lhs = <span class="macro">arg!</span>(ctx, <span class="string">&quot;lhs&quot; </span>=&gt; <span class="macro-nonterminal">$lhs</span>);
 
-                <span class="kw">let </span>result: <span class="macro-nonterminal">$res_ty </span>= <span class="macro-nonterminal">$op</span>(lhs, rhs);
-                ctx.operands.push(<span class="macro-nonterminal">$res_trans</span>(result));
-
-                <span class="prelude-val">Ok</span>(Progression::Next)
-            }
-        }
-    };
-    <span class="comment">// Generic duplicated value transformation 
-    </span>(x2 <span class="macro-nonterminal">$ins</span>: ident, <span class="macro-nonterminal">$res_ty</span>: ident, <span class="macro-nonterminal">$res_trans</span>: expr =&gt; <span class="macro-nonterminal">$op</span>: expr) =&gt; {
-        <span class="attr">#[derive(Debug)]
-        </span><span class="kw">pub struct </span><span class="macro-nonterminal">$ins</span>;
-
-        <span class="kw">impl </span>Instruction <span class="kw">for </span><span class="macro-nonterminal">$ins </span>{
-            <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
-                <span class="kw">let </span>rhs = <span class="macro">arg!</span>(ctx, <span class="string">&quot;rhs&quot; </span>=&gt; <span class="macro-nonterminal">$res_ty</span>);
-                <span class="kw">let </span>lhs = <span class="macro">arg!</span>(ctx, <span class="string">&quot;lhs&quot; </span>=&gt; <span class="macro-nonterminal">$res_ty</span>);
-
-                <span class="kw">let </span>result: <span class="macro-nonterminal">$res_ty </span>= <span class="macro-nonterminal">$op</span>(lhs, rhs);
-                ctx.operands.push(<span class="macro-nonterminal">$res_trans</span>(result));
+                <span class="kw">let </span>result: <span class="macro-nonterminal">$res </span>= <span class="macro-nonterminal">$op</span>(lhs, rhs);
                 ctx.operands.push(<span class="macro-nonterminal">$res_trans</span>(result));
 
                 <span class="prelude-val">Ok</span>(Progression::Next)
@@ -278,16 +264,19 @@
         }
     };
     (<span class="macro-nonterminal">$ins</span>: ident (int) =&gt; <span class="macro-nonterminal">$op</span>: expr) =&gt; {
-      <span class="macro">binop!</span>(<span class="macro-nonterminal">$ins</span>, i32, |result: i32| RuntimeValue::Integral(result.into()) =&gt; <span class="macro-nonterminal">$op</span>);
+      <span class="macro">binop!</span>(<span class="macro-nonterminal">$ins</span>, i32, i32, i32, |result: i32| RuntimeValue::Integral(result.into()) =&gt; <span class="macro-nonterminal">$op</span>);
     };
     (<span class="macro-nonterminal">$ins</span>: ident (long) =&gt; <span class="macro-nonterminal">$op</span>: expr) =&gt; {
-      <span class="macro">binop!</span>(x2 <span class="macro-nonterminal">$ins</span>, i64, |result: i64| RuntimeValue::Integral(result.into()) =&gt; <span class="macro-nonterminal">$op</span>);
+      <span class="macro">binop!</span>(<span class="macro-nonterminal">$ins</span>, i64, i64, i64, |result: i64| RuntimeValue::Integral(result.into()) =&gt; <span class="macro-nonterminal">$op</span>);
+    };
+    (<span class="macro-nonterminal">$ins</span>: ident (long bitwise) =&gt; <span class="macro-nonterminal">$op</span>: expr) =&gt; {
+      <span class="macro">binop!</span>(<span class="macro-nonterminal">$ins</span>, i64, i32, i64, |result: i64| RuntimeValue::Integral(result.into()) =&gt; <span class="macro-nonterminal">$op</span>);
     };
     (<span class="macro-nonterminal">$ins</span>: ident (float) =&gt; <span class="macro-nonterminal">$op</span>: expr) =&gt; {
-      <span class="macro">binop!</span>(<span class="macro-nonterminal">$ins</span>, f32, |result: f32| RuntimeValue::Floating(result.into()) =&gt; <span class="macro-nonterminal">$op</span>);
+      <span class="macro">binop!</span>(<span class="macro-nonterminal">$ins</span>, f32, f32, f32, |result: f32| RuntimeValue::Floating(result.into()) =&gt; <span class="macro-nonterminal">$op</span>);
     };
     (<span class="macro-nonterminal">$ins</span>: ident (double) =&gt; <span class="macro-nonterminal">$op</span>: expr) =&gt; {
-      <span class="macro">binop!</span>(<span class="macro-nonterminal">$ins</span>, f64, |result: f64| RuntimeValue::Floating(result.into()) =&gt; <span class="macro-nonterminal">$op</span>);
+      <span class="macro">binop!</span>(<span class="macro-nonterminal">$ins</span>, f64, f64, f64, |result: f64| RuntimeValue::Floating(result.into()) =&gt; <span class="macro-nonterminal">$op</span>);
     };
     (<span class="macro-nonterminal">$ins</span>: ident (int cond) =&gt; <span class="macro-nonterminal">$op</span>: expr) =&gt; {
       <span class="macro">binop!</span>(<span class="macro-nonterminal">$ins</span>, i32 =&gt; <span class="macro-nonterminal">$op</span>);
@@ -315,14 +304,6 @@
     (lhs.value <span class="kw">as </span>i32) % (rhs.value <span class="kw">as </span>i32)
 });
 
-<span class="macro">binop!</span>(Ishl (int) =&gt; |lhs: Integral, rhs: Integral| {
-    (lhs.value <span class="kw">as </span>i32).wrapping_shl(rhs.value <span class="kw">as </span>u32)
-});
-
-<span class="macro">binop!</span>(Ishr (int) =&gt; |lhs: Integral, rhs: Integral| {
-    (lhs.value <span class="kw">as </span>i32).wrapping_shr(rhs.value <span class="kw">as </span>u32)
-});
-
 <span class="comment">// Binary (long)
 </span><span class="macro">binop!</span>(Lsub (long) =&gt; |lhs: Integral, rhs: Integral| {
     lhs.value.wrapping_sub(rhs.value)
@@ -342,14 +323,6 @@
 
 <span class="macro">binop!</span>(Lrem (long) =&gt; |lhs: Integral, rhs: Integral| {
     lhs.value % rhs.value
-});
-
-<span class="macro">binop!</span>(Lshl (long) =&gt; |lhs: Integral, rhs: Integral| {
-    lhs.value.wrapping_shl(rhs.value <span class="kw">as </span>u32)
-});
-
-<span class="macro">binop!</span>(Lshr (long) =&gt; |lhs: Integral, rhs: Integral| {
-    lhs.value.wrapping_shr(rhs.value <span class="kw">as </span>u32)
 });
 
 <span class="comment">// Binary (float)
@@ -418,4 +391,36 @@
 <span class="macro">binop!</span>(Ilt (int cond) =&gt; |lhs: Integral, rhs: Integral| {
     lhs.value &lt; rhs.value
 });
-</code></pre></div></section></main></body></html>
+
+<span class="comment">// Bitwise
+</span><span class="macro">binop!</span>(Lshl (long bitwise) =&gt; |lhs: Integral, rhs: Integral| {
+    lhs.value.wrapping_shl(rhs.value <span class="kw">as </span>u32)
+});
+
+<span class="macro">binop!</span>(Lshr (long bitwise) =&gt; |lhs: Integral, rhs: Integral| {
+    lhs.value.wrapping_shr(rhs.value <span class="kw">as </span>u32)
+});
+
+<span class="macro">binop!</span>(Land (long) =&gt; |lhs: Integral, rhs: Integral| {
+    lhs.value &amp; rhs.value
+});
+
+<span class="macro">binop!</span>(Lushr (long bitwise) =&gt; |lhs: Integral, rhs: Integral| {
+    ((lhs.value <span class="kw">as </span>u64) &gt;&gt; (rhs.value <span class="kw">as </span>u64)) <span class="kw">as </span>i64
+});
+
+<span class="macro">binop!</span>(Ishl (int) =&gt; |lhs: Integral, rhs: Integral| {
+    (lhs.value <span class="kw">as </span>i32).wrapping_shl(rhs.value <span class="kw">as </span>u32)
+});
+
+<span class="macro">binop!</span>(Ishr (int) =&gt; |lhs: Integral, rhs: Integral| {
+    (lhs.value <span class="kw">as </span>i32).wrapping_shr(rhs.value <span class="kw">as </span>u32)
+});
+
+<span class="macro">binop!</span>(Iushr (int) =&gt; |lhs: Integral, rhs: Integral| {
+    ((lhs.value <span class="kw">as </span>u32) &gt;&gt; (rhs.value <span class="kw">as </span>u32)) <span class="kw">as </span>i32
+});
+
+<span class="macro">binop!</span>(Iand (int) =&gt; |lhs: Integral, rhs: Integral| {
+    (lhs.value <span class="kw">as </span>i32) &amp; (rhs.value <span class="kw">as </span>i32)
+});</code></pre></div></section></main></body></html>

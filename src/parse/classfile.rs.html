@@ -138,6 +138,7 @@
 <a href="#138" id="138">138</a>
 <a href="#139" id="139">139</a>
 <a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
 </pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
     attributes::Attributes,
     flags::{ClassFileAccessFlags, FieldAccessFlags, MethodAccessFlags},
@@ -147,7 +148,8 @@
     },
 };
 <span class="kw">use </span>anyhow::Result;
-<span class="kw">use </span>std::{fmt, marker::PhantomData, rc::Rc, sync::RwLock};
+<span class="kw">use </span>parking_lot::RwLock;
+<span class="kw">use </span>std::{fmt, marker::PhantomData, rc::Rc};
 
 <span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>ClassFile {
@@ -185,7 +187,7 @@
 }
 <span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>Methods {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) values: Vec&lt;Method&gt;,
+    <span class="kw">pub </span>values: Vec&lt;Method&gt;,
 }
 
 <span class="kw">impl </span>Methods {
@@ -244,7 +246,7 @@
     (<span class="macro-nonterminal">$</span><span class="kw">type</span>: <span class="macro-nonterminal">ty</span>, <span class="macro-nonterminal">$</span><span class="kw">enum</span>: <span class="macro-nonterminal">ident</span>) =&gt; {
         <span class="kw">impl </span>Resolvable&lt;<span class="macro-nonterminal">$</span><span class="kw">type</span>&gt; <span class="kw">for </span><span class="macro-nonterminal">Addressed</span>&lt;<span class="macro-nonterminal">$</span><span class="kw">type</span>&gt; {
             <span class="kw">fn </span><span class="macro-nonterminal">try_resolve</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; anyhow::Result&lt;<span class="macro-nonterminal">$</span><span class="kw">type</span>&gt; {
-                <span class="kw">let </span><span class="macro-nonterminal">entries </span>= <span class="self">self</span>.entries.read().expect(<span class="string">&quot;could not lock pool&quot;</span>);
+                <span class="kw">let </span><span class="macro-nonterminal">entries </span>= <span class="self">self</span>.entries.read();
                 <span class="kw">let </span>value = entries
                     .get((<span class="self">self</span>.index - <span class="number">1</span>) <span class="kw">as </span>usize)
                     .ok_or(<span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no value found&quot;</span>))<span class="question-mark">?</span>;
@@ -265,7 +267,7 @@
 
 <span class="kw">impl </span>Resolvable&lt;ConstantEntry&gt; <span class="kw">for </span>Addressed&lt;ConstantEntry&gt; {
     <span class="kw">fn </span>try_resolve(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;ConstantEntry&gt; {
-        <span class="kw">let </span>pool = <span class="self">self</span>.entries.read().expect(<span class="string">&quot;could not lock pool&quot;</span>);
+        <span class="kw">let </span>pool = <span class="self">self</span>.entries.read();
         <span class="kw">let </span>value = pool
             .get((<span class="self">self</span>.index - <span class="number">1</span>) <span class="kw">as </span>usize)
             .ok_or(<span class="macro">anyhow::anyhow!</span>(<span class="string">&quot;no value found&quot;</span>))<span class="question-mark">?</span>;

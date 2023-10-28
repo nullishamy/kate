@@ -53,35 +53,35 @@
 <a href="#53" id="53">53</a>
 </pre></div><pre class="rust"><code><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 </span><span class="kw">pub enum </span>IntegralType {
-  Byte,
-  Short,
-  Char,
-  Int,
-  Long
+    Byte,
+    Short,
+    Char,
+    Int,
+    Long,
 }
 
 <span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 </span><span class="kw">pub enum </span>FloatingType {
-  Double,
-  Float
+    Double,
+    Float,
 }
 
 <span class="attr">#[derive(Debug, Clone, Copy)]
 </span><span class="kw">pub struct </span>Integral {
-  <span class="kw">pub </span>value: i64,
-  <span class="kw">pub </span>ty: IntegralType
+    <span class="kw">pub </span>value: i64,
+    <span class="kw">pub </span>ty: IntegralType,
 }
 
 <span class="attr">#[derive(Debug, Clone, Copy)]
 </span><span class="kw">pub struct </span>Floating {
-  <span class="kw">pub </span>value: f64,
-  <span class="kw">pub </span>ty: FloatingType
+    <span class="kw">pub </span>value: f64,
+    <span class="kw">pub </span>ty: FloatingType,
 }
 
 <span class="macro">macro_rules! </span>from_num {
     (<span class="macro-nonterminal">$b</span>: ty &gt; <span class="macro-nonterminal">$a</span>: ty, $( <span class="macro-nonterminal">$x</span>:ty =&gt; <span class="macro-nonterminal">$y</span>: expr ),* ) =&gt; {
         $(
-            <span class="kw">impl </span>From&lt;<span class="macro-nonterminal">$x</span>&gt; <span class="kw">for </span><span class="macro-nonterminal">$b </span>{ 
+            <span class="kw">impl </span>From&lt;<span class="macro-nonterminal">$x</span>&gt; <span class="kw">for </span><span class="macro-nonterminal">$b </span>{
               <span class="kw">fn </span>from(value: <span class="macro-nonterminal">$x</span>) -&gt; <span class="self">Self </span>{
                 <span class="self">Self </span>{
                   value: value <span class="kw">as </span><span class="macro-nonterminal">$a</span>,

@@ -466,10 +466,20 @@
 <a href="#466" id="466">466</a>
 <a href="#467" id="467">467</a>
 <a href="#468" id="468">468</a>
+<a href="#469" id="469">469</a>
+<a href="#470" id="470">470</a>
+<a href="#471" id="471">471</a>
+<a href="#472" id="472">472</a>
+<a href="#473" id="473">473</a>
+<a href="#474" id="474">474</a>
+<a href="#475" id="475">475</a>
+<a href="#476" id="476">476</a>
+<a href="#477" id="477">477</a>
+<a href="#478" id="478">478</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::fmt;
 
 <span class="kw">use crate</span>::{object::RuntimeValue, Context, VM};
-<span class="kw">use </span>anyhow::{anyhow, <span class="prelude-ty">Result</span>};
+<span class="kw">use </span>anyhow::{anyhow, Error, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>bytes::BytesMut;
 <span class="kw">use </span>support::bytes_ext::SafeBuf;
 
@@ -484,6 +494,7 @@
     JumpRel(i32),
     Next,
     Return(<span class="prelude-ty">Option</span>&lt;RuntimeValue&gt;),
+    Throw(Error),
 }
 
 <span class="kw">pub trait </span>Instruction: fmt::Debug {
@@ -561,7 +572,7 @@
             index: bytes.try_get_u8()<span class="question-mark">? </span><span class="kw">as </span>u16,
         }),
         <span class="number">0x13 </span>=&gt; b(ops::Ldc {
-            index: bytes.try_get_u8()<span class="question-mark">? </span><span class="kw">as </span>u16,
+            index: bytes.try_get_u16()<span class="question-mark">?</span>,
         }),
         <span class="number">0x14 </span>=&gt; b(ops::Ldc2W {
             index: bytes.try_get_u16()<span class="question-mark">?</span>,
@@ -731,9 +742,9 @@
         <span class="number">0x56 </span>=&gt; b(ops::ArrayStore),
 
         <span class="comment">// Stack Math Conversions
-        //  0x57 =&gt; Opcode::POP,
-        //  0x58 =&gt; Opcode::POP2,
-        </span><span class="number">0x59 </span>=&gt; b(ops::Dup),
+        </span><span class="number">0x57 </span>=&gt; b(ops::Pop { amount: <span class="number">1 </span>}),
+        <span class="number">0x58 </span>=&gt; b(ops::Pop { amount: <span class="number">2 </span>}),
+        <span class="number">0x59 </span>=&gt; b(ops::Dup),
         <span class="comment">//  0x5a =&gt; Opcode::DUP_X1,
         //  0x5b =&gt; Opcode::DUP_X2,
         //  0x5c =&gt; Opcode::DUP2,
@@ -768,16 +779,19 @@
         <span class="number">0x79 </span>=&gt; b(ops::Lshl),
         <span class="number">0x7a </span>=&gt; b(ops::Ishr),
         <span class="number">0x7b </span>=&gt; b(ops::Lshr),
-        <span class="comment">//  0x7c =&gt; Opcode::IUSHR,
-        //  0x7d =&gt; Opcode::LUSHR,
-        //  0x7e =&gt; Opcode::IAND,
-        //  0x7f =&gt; Opcode::LAND,
-        //  0x80 =&gt; Opcode::IOR,
+        <span class="number">0x7c </span>=&gt; b(ops::Iushr),
+        <span class="number">0x7d </span>=&gt; b(ops::Lushr),
+        <span class="number">0x7e </span>=&gt; b(ops::Iand),
+        <span class="number">0x7f </span>=&gt; b(ops::Land),
+        <span class="comment">//  0x80 =&gt; Opcode::IOR,
         //  0x81 =&gt; Opcode::LOR,
         //  0x82 =&gt; Opcode::IXOR,
         //  0x83 =&gt; Opcode::LXOR,
-        //  0x84 =&gt; Opcode::IINC(bytes.try_get_u8()?, bytes.try_get_i8()?),
-        </span><span class="number">0x85 </span>=&gt; b(ops::I2l),
+        </span><span class="number">0x84 </span>=&gt; b(ops::Iinc {
+            index: bytes.try_get_u8()<span class="question-mark">?</span>,
+            constant: bytes.try_get_i8()<span class="question-mark">?</span>,
+        }),
+        <span class="number">0x85 </span>=&gt; b(ops::I2l),
         <span class="comment">//  0x86 =&gt; Opcode::I2F,
         //  0x87 =&gt; Opcode::I2D,
         //  0x88 =&gt; Opcode::L2I,
@@ -887,8 +901,10 @@
         <span class="number">0xb4 </span>=&gt; b(ops::GetField {
             index: bytes.try_get_u16()<span class="question-mark">?</span>,
         }),
-        <span class="comment">//  0xb5 =&gt; Opcode::PUTFIELD(bytes.try_get_u16()?),
-        </span><span class="number">0xb6 </span>=&gt; b(ops::InvokeVirtual {
+        <span class="number">0xb5 </span>=&gt; b(ops::PutField {
+            index: bytes.try_get_u16()<span class="question-mark">?</span>,
+        }),
+        <span class="number">0xb6 </span>=&gt; b(ops::InvokeVirtual {
             index: bytes.try_get_u16()<span class="question-mark">?</span>,
         }),
         <span class="number">0xb7 </span>=&gt; b(ops::InvokeSpecial {
@@ -913,8 +929,8 @@
             type_index: bytes.try_get_u16()<span class="question-mark">?</span>,
         }),
         <span class="number">0xbe </span>=&gt; b(ops::ArrayLength),
-        <span class="comment">//  0xbf =&gt; Opcode::ATHROW,
-        //  0xc0 =&gt; Opcode::CHECKCAST(bytes.try_get_u16()?),
+        <span class="number">0xbf </span>=&gt; b(ops::Athrow),
+        <span class="comment">//  0xc0 =&gt; Opcode::CHECKCAST(bytes.try_get_u16()?),
         //  0xc1 =&gt; Opcode::INSTANCEOF(bytes.try_get_u16()?),
         //  0xc2 =&gt; Opcode::MONITORENTER,
         //  0xc3 =&gt; Opcode::MONITOREXIT,
@@ -922,9 +938,13 @@
         // Extended
         //  0xc4 =&gt; Opcode::WIDE,
         //  0xc5 =&gt; Opcode::MULTIANEWARRAY,
-        //  0xc6 =&gt; Opcode::IFNULL(bytes.try_get_i16()?),
-        //  0xc7 =&gt; Opcode::IFNONNULL(bytes.try_get_i16()?),
-        //  0xc8 =&gt; Opcode::GOTO_W,
+        </span><span class="number">0xc6 </span>=&gt; b(ops::IfNull {
+            jump_to: bytes.try_get_i16()<span class="question-mark">?</span>,
+        }),
+        <span class="number">0xc7 </span>=&gt; b(ops::IfNotNull {
+            jump_to: bytes.try_get_i16()<span class="question-mark">?</span>,
+        }),
+        <span class="comment">//  0xc8 =&gt; Opcode::GOTO_W,
         //  0xc9 =&gt; Opcode::JSR_W,
 
         // Reserved

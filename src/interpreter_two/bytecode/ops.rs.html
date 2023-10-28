@@ -252,10 +252,11 @@
 <a href="#252" id="252">252</a>
 <a href="#253" id="253">253</a>
 <a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::rc::Rc;
 
 <span class="kw">use super</span>::{Instruction, Progression};
-<span class="kw">use </span><span class="kw">crate</span>::object::array::{ArrayType, Array, ArrayPrimitive};
+<span class="kw">use </span><span class="kw">crate</span>::object::array::{Array, ArrayPrimitive, ArrayType};
 <span class="kw">use </span><span class="kw">crate</span>::object::numeric::IntegralType;
 <span class="kw">use </span><span class="kw">crate</span>::object::RuntimeValue;
 <span class="kw">use crate</span>::{Context, VM};
@@ -287,7 +288,7 @@
             .as_integral()
             .context(<span class="macro">format!</span>(<span class="string">&quot;{} was not an integral&quot;</span>, <span class="macro-nonterminal">$side</span>))<span class="question-mark">?</span>;
         <span class="kw">if </span>val.ty != IntegralType::Int {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="macro">format!</span>(<span class="string">&quot;{} was not an int&quot;</span>, <span class="macro-nonterminal">$side</span>)));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="macro">format!</span>(<span class="string">&quot;{} was not an int, got {:#?}&quot;</span>, <span class="macro-nonterminal">$side</span>, val)));
         }
 
         val.clone()
@@ -298,8 +299,8 @@
         <span class="kw">let </span>val = val
             .as_integral()
             .context(<span class="macro">format!</span>(<span class="string">&quot;{} was not an integral&quot;</span>, <span class="macro-nonterminal">$side</span>))<span class="question-mark">?</span>;
-        <span class="kw">if </span>val.ty != IntegralType::Int {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="macro">format!</span>(<span class="string">&quot;{} was not an int&quot;</span>, <span class="macro-nonterminal">$side</span>)));
+        <span class="kw">if </span>val.ty != IntegralType::Long {
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="macro">format!</span>(<span class="string">&quot;{} was not a long, got {:#?}&quot;</span>, <span class="macro-nonterminal">$side</span>, val)));
         }
 
         val.clone()
@@ -418,13 +419,13 @@
                 <span class="kw">let </span>class_name = data.name.resolve().string();
                 <span class="kw">let </span>cls = vm.class_loader.load_class(class_name)<span class="question-mark">?</span>;
                 ArrayType::Object(cls)
-            },
-            e =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;{:#?} cannot be used as an array type&quot;</span>, e))
+            }
+            e =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;{:#?} cannot be used as an array type&quot;</span>, e)),
         };
 
         <span class="comment">// All components of the new array are initialized to null, the default value for reference types (§2.4).
-        </span><span class="kw">let </span><span class="kw-2">mut </span>values = Vec::with_capacity(count.value <span class="kw">as </span>usize + <span class="number">1</span>);
-        values.resize_with(count.value <span class="kw">as </span>usize + <span class="number">1</span>, || RuntimeValue::Null);
+        </span><span class="kw">let </span><span class="kw-2">mut </span>values = Vec::with_capacity(count.value <span class="kw">as </span>usize);
+        values.resize_with(count.value <span class="kw">as </span>usize, || RuntimeValue::Null);
 
         <span class="comment">// A new array with components of that type, of length count, is allocated
         // from the garbage-collected heap.
@@ -455,9 +456,11 @@
         </span><span class="kw">let </span>atype = ArrayPrimitive::from_tag(<span class="self">self</span>.type_tag)<span class="question-mark">?</span>;
         <span class="kw">let </span>array_ty = ArrayType::Primitive(atype);
 
-        <span class="kw">let </span><span class="kw-2">mut </span>values = Vec::with_capacity(count.value <span class="kw">as </span>usize + <span class="number">1</span>);
+        <span class="kw">let </span><span class="kw-2">mut </span>values = Vec::with_capacity(count.value <span class="kw">as </span>usize);
         <span class="comment">// TODO: Proper default values
-        </span>values.resize_with(count.value <span class="kw">as </span>usize + <span class="number">1</span>, || RuntimeValue::Integral((<span class="number">0_i32</span>).into()));
+        </span>values.resize_with(count.value <span class="kw">as </span>usize, || {
+            RuntimeValue::Integral((<span class="number">0_i32</span>).into())
+        });
 
         <span class="comment">// A new array whose components are of type atype and of length
         // count is allocated from the garbage-collected heap.
@@ -490,7 +493,6 @@
     }
 }
 
-
 <span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>ArrayLoad;
 
@@ -505,4 +507,5 @@
 
         <span class="prelude-val">Ok</span>(Progression::Next)
     }
-}</code></pre></div></section></main></body></html>
+}
+</code></pre></div></section></main></body></html>

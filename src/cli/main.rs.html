@@ -162,18 +162,23 @@
 <a href="#162" id="162">162</a>
 <a href="#163" id="163">163</a>
 <a href="#164" id="164">164</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span>std::process::exit;
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+</pre></div><pre class="rust"><code><span class="kw">use </span>std::{process::exit, rc::Rc};
 
+<span class="kw">use </span>anyhow::Context <span class="kw">as </span>AnyhowContext;
 <span class="kw">use </span>args::Cli;
 <span class="kw">use </span>clap::Parser;
 <span class="kw">use </span>interpreter_two::{
     native::NativeFunction,
-    object::{
-        classloader::ClassLoader,
-        statics::StaticFields,
-        string::Interner,
-        RuntimeValue,
-    },
+    object::{classloader::ClassLoader, statics::StaticFields, string::Interner, RuntimeValue},
     static_method, Context, VM,
 };
 <span class="kw">use </span>parse::attributes::CodeAttribute;
@@ -226,13 +231,18 @@
     <span class="kw">let </span><span class="kw-2">mut </span>vm = VM {
         class_loader,
         statics: StaticFields::new(),
-        interner: Interner::new(jls),
+        interner: Interner::new(Rc::clone(<span class="kw-2">&amp;</span>jls)),
     };
 
-    vm.class_loader.bootstrap().unwrap();
+    <span class="comment">// Init these classes so that their static fields can get set
+    // this is mainly so that we can go in afterward (in vm.bootstrap)
+    // and set COMPACT_STRINGS
+    </span>vm.initialise_class(Rc::clone(<span class="kw-2">&amp;</span>jls)).unwrap();
 
-    <span class="kw">for </span>class <span class="kw">in </span>args.classes {
-        <span class="kw">let </span>_cls = vm.class_loader.load_class(class).unwrap();
+    vm.bootstrap().unwrap();
+
+    <span class="kw">for </span>class_name <span class="kw">in </span>args.classes {
+        <span class="kw">let </span>_cls = vm.class_loader.load_class(class_name.clone()).unwrap();
         <span class="kw">let </span><span class="kw-2">mut </span>cls = _cls.write();
         <span class="kw">if </span>args.test {
             <span class="macro">macro_rules! </span>printer {
@@ -291,7 +301,7 @@
 
                     <span class="kw">let </span>str = decode_string((CompactEncoding::Utf16, bytes))
                         .expect(<span class="string">&quot;could not decode string&quot;</span>);
-                    <span class="macro">println!</span>(<span class="string">&quot;{}&quot;</span>, str);
+                    <span class="macro">println!</span>(<span class="string">&quot;{:#?}&quot;</span>, str);
                 }),
             ] {
                 cls.register_native(printer.<span class="number">0</span>, printer.<span class="number">1</span>);
@@ -316,10 +326,18 @@
             pc: <span class="number">0</span>,
         };
 
-        <span class="kw">let </span>res = vm.run(ctx);
+        <span class="kw">let </span>res = vm.run(ctx).context(<span class="macro">format!</span>(<span class="string">&quot;at {}.main&quot;</span>, class_name));
 
         <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = res {
-            <span class="macro">error!</span>(<span class="string">&quot;Execution error: {:?}&quot;</span>, e);
+            <span class="kw">let </span><span class="kw-2">mut </span>chain = e.chain().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
+            <span class="kw">let </span>source = chain.pop().unwrap();
+            chain.reverse();
+
+            <span class="macro">println!</span>(<span class="string">&quot;{}&quot;</span>, source);
+            <span class="kw">for </span>err <span class="kw">in </span>chain {
+                <span class="macro">println!</span>(<span class="string">&quot;    {}&quot;</span>, err);
+            }
+
             exit(<span class="number">1</span>);
         } <span class="kw">else </span>{
             <span class="macro">info!</span>(<span class="string">&quot;Execution concluded without error&quot;</span>)

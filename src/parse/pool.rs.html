@@ -279,20 +279,18 @@
 <a href="#279" id="279">279</a>
 <a href="#280" id="280">280</a>
 <a href="#281" id="281">281</a>
-<a href="#282" id="282">282</a>
-</pre></div><pre class="rust"><code>
-<span class="kw">use </span>std::rc::Rc;
-<span class="kw">use </span>std::sync::RwLock;
+</pre></div><pre class="rust"><code><span class="kw">use </span>std::rc::Rc;
 
 <span class="kw">use </span>anyhow::Result;
 <span class="kw">use </span>enum_as_inner::EnumAsInner;
+<span class="kw">use </span>parking_lot::RwLock;
 
 <span class="kw">use </span><span class="kw">crate</span>::classfile::Addressed;
 <span class="kw">use </span><span class="kw">crate</span>::classfile::Resolvable;
 
 <span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>ConstantPool {
-    entries: Rc&lt;RwLock&lt;Vec&lt;ConstantEntry&gt;&gt;&gt;,
+    <span class="kw">pub </span>entries: Rc&lt;RwLock&lt;Vec&lt;ConstantEntry&gt;&gt;&gt;,
 }
 
 <span class="kw">impl </span>Default <span class="kw">for </span>ConstantPool {
@@ -309,12 +307,12 @@
     }
 
     <span class="kw">pub fn </span>insert(<span class="kw-2">&amp;mut </span><span class="self">self</span>, entry: ConstantEntry) {
-        <span class="kw">let </span><span class="kw-2">mut </span>pool = <span class="self">self</span>.entries.write().unwrap();
+        <span class="kw">let </span><span class="kw-2">mut </span>pool = <span class="self">self</span>.entries.write();
         pool.push(entry)
     }
 
     <span class="kw">pub fn </span>get(<span class="kw-2">&amp;</span><span class="self">self</span>, index: u16) -&gt; <span class="prelude-ty">Option</span>&lt;ConstantEntry&gt; {
-        <span class="kw">let </span>pool = <span class="self">self</span>.entries.read().unwrap();
+        <span class="kw">let </span>pool = <span class="self">self</span>.entries.read();
         pool.get(index <span class="kw">as </span>usize).cloned()
     }
 
@@ -323,7 +321,7 @@
     }
 
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>perform_format_checking(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-        <span class="kw">let </span>entries = <span class="self">self</span>.entries.read().unwrap();
+        <span class="kw">let </span>entries = <span class="self">self</span>.entries.read();
         <span class="kw">for </span>item <span class="kw">in </span>entries.iter() {
             <span class="kw">match </span>item {
                 ConstantEntry::Class(data) =&gt; {
