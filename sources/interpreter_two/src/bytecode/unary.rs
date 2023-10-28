@@ -52,10 +52,9 @@ macro_rules! unop {
 
         impl Instruction for $ins {
             fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
-                let rhs = arg!(ctx, "rhs" => $res_ty);
-                let lhs = arg!(ctx, "lhs" => $res_ty);
+                let val = arg!(ctx, "unary value" => $res_ty);
 
-                let result: bool = $op(lhs, rhs);
+                let result: bool = $op(val);
                 if (result) {
                     Ok(Progression::JumpRel(self.jump_to as i32))
                 } else {
@@ -66,6 +65,9 @@ macro_rules! unop {
     };
     ($ins: ident (int) => $op: expr) => {
       unop!($ins, i32, |result: i32| RuntimeValue::Integral(result.into()) => $op);
+    };
+    ($ins: ident (int cond) => $op: expr) => {
+      unop!($ins, i32 => $op);
     };
     ($ins: ident (int => long) => $op: expr) => {
       unop!($ins, i32, |result: i64| RuntimeValue::Integral(result.into()) => $op);
@@ -101,4 +103,29 @@ unop!(Dneg (double) => |val: Floating| {
 // Conversions
 unop!(I2l (int => long) => |val: Integral| {
     val.value as i32 as i64
+});
+
+// Zero comparisons
+unop!(IfEq (int cond) => |val: Integral| {
+    val.value == 0
+});
+
+unop!(IfNe (int cond) => |val: Integral| {
+    val.value != 0
+});
+
+unop!(IfLt (int cond) => |val: Integral| {
+    val.value < 0
+});
+
+unop!(IfLe (int cond) => |val: Integral| {
+    val.value <= 0
+});
+
+unop!(IfGt (int cond) => |val: Integral| {
+    val.value > 0
+});
+
+unop!(IfGe (int cond) => |val: Integral| {
+    val.value >= 0
 });

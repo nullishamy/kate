@@ -328,12 +328,24 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         //  0x96 => Opcode::FCMPG,
         //  0x97 => Opcode::DCMPL,
         //  0x98 => Opcode::DCMPG,
-        //  0x99 => Opcode::IFEQ(bytes.try_get_i16()?),
-        //  0x9a => Opcode::IFNE(bytes.try_get_i16()?),
-        //  0x9b => Opcode::IFLT(bytes.try_get_i16()?),
-        //  0x9c => Opcode::IFGE(bytes.try_get_i16()?),
-        //  0x9d => Opcode::IFGT(bytes.try_get_i16()?),
-        //  0x9e => Opcode::IFLE(bytes.try_get_i16()?),
+        0x99 => b(ops::IfEq {
+            jump_to: bytes.try_get_i16()?,
+        }),
+        0x9a => b(ops::IfNe {
+            jump_to: bytes.try_get_i16()?,
+        }),
+        0x9b => b(ops::IfLt {
+            jump_to: bytes.try_get_i16()?,
+        }),
+        0x9c => b(ops::IfGe {
+            jump_to: bytes.try_get_i16()?,
+        }),
+        0x9d => b(ops::IfGt {
+            jump_to: bytes.try_get_i16()?,
+        }),
+        0x9e => b(ops::IfLe {
+            jump_to: bytes.try_get_i16()?,
+        }),
         0x9f => b(ops::Ieq {
             jump_to: bytes.try_get_i16()?,
         }),
