@@ -220,25 +220,59 @@
 <a href="#220" id="220">220</a>
 <a href="#221" id="221">221</a>
 <a href="#222" id="222">222</a>
-</pre></div><pre class="rust"><code><span class="kw">use super</span>::{Instruction, Progression};
-<span class="kw">use crate</span>::{
-    object::RuntimeValue,
-    Context, VM,
-};
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
+<a href="#238" id="238">238</a>
+<a href="#239" id="239">239</a>
+<a href="#240" id="240">240</a>
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+<a href="#245" id="245">245</a>
+<a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+</pre></div><pre class="rust"><code><span class="kw">use </span>std::rc::Rc;
+
+<span class="kw">use super</span>::{Instruction, Progression};
+<span class="kw">use </span><span class="kw">crate</span>::object::array::{ArrayType, Array, ArrayPrimitive};
+<span class="kw">use </span><span class="kw">crate</span>::object::numeric::IntegralType;
+<span class="kw">use </span><span class="kw">crate</span>::object::RuntimeValue;
+<span class="kw">use crate</span>::{Context, VM};
 <span class="kw">use </span>anyhow::{anyhow, Context <span class="kw">as </span>AnyhowContext, <span class="prelude-ty">Result</span>};
-<span class="kw">use </span>parse::{
-    classfile::Resolvable, pool::ConstantEntry,
-};
+<span class="kw">use </span>parking_lot::RwLock;
+<span class="kw">use </span>parse::classfile::Resolvable;
+<span class="kw">use </span>parse::pool::ConstantEntry;
 
 <span class="kw">pub use </span><span class="kw">super</span>::binary::<span class="kw-2">*</span>;
 <span class="kw">pub use </span><span class="kw">super</span>::invoke::<span class="kw-2">*</span>;
+<span class="kw">pub use </span><span class="kw">super</span>::load_store::<span class="kw-2">*</span>;
 <span class="kw">pub use </span><span class="kw">super</span>::unary::<span class="kw-2">*</span>;
 
 <span class="attr">#[macro_export]
 </span><span class="macro">macro_rules! </span>pop {
     (<span class="macro-nonterminal">$ctx</span>: expr) =&gt; {
-        <span class="macro-nonterminal">$ctx
-            </span>.operands
+        <span class="macro-nonterminal">$ctx</span>.operands
             .pop()
             .context(<span class="string">&quot;no value to pop from the operand stack&quot;</span>)<span class="question-mark">?
     </span>};
@@ -249,7 +283,9 @@
     (<span class="macro-nonterminal">$ctx</span>: expr, <span class="macro-nonterminal">$side</span>: expr =&gt; i32) =&gt; {{
         <span class="kw">let </span>val = <span class="macro">pop!</span>(<span class="macro-nonterminal">$ctx</span>);
 
-        <span class="kw">let </span>val = val.as_integral().context(<span class="macro">format!</span>(<span class="string">&quot;{} was not an integral&quot;</span>, <span class="macro-nonterminal">$side</span>))<span class="question-mark">?</span>;
+        <span class="kw">let </span>val = val
+            .as_integral()
+            .context(<span class="macro">format!</span>(<span class="string">&quot;{} was not an integral&quot;</span>, <span class="macro-nonterminal">$side</span>))<span class="question-mark">?</span>;
         <span class="kw">if </span>val.ty != IntegralType::Int {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="macro">format!</span>(<span class="string">&quot;{} was not an int&quot;</span>, <span class="macro-nonterminal">$side</span>)));
         }
@@ -259,7 +295,9 @@
     (<span class="macro-nonterminal">$ctx</span>: expr, <span class="macro-nonterminal">$side</span>: expr =&gt; i64) =&gt; {{
         <span class="kw">let </span>val = <span class="macro">pop!</span>(<span class="macro-nonterminal">$ctx</span>);
 
-        <span class="kw">let </span>val = val.as_integral().context(<span class="macro">format!</span>(<span class="string">&quot;{} was not an integral&quot;</span>, <span class="macro-nonterminal">$side</span>))<span class="question-mark">?</span>;
+        <span class="kw">let </span>val = val
+            .as_integral()
+            .context(<span class="macro">format!</span>(<span class="string">&quot;{} was not an integral&quot;</span>, <span class="macro-nonterminal">$side</span>))<span class="question-mark">?</span>;
         <span class="kw">if </span>val.ty != IntegralType::Int {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="macro">format!</span>(<span class="string">&quot;{} was not an int&quot;</span>, <span class="macro-nonterminal">$side</span>)));
         }
@@ -269,7 +307,9 @@
     (<span class="macro-nonterminal">$ctx</span>: expr, <span class="macro-nonterminal">$side</span>: expr =&gt; f32) =&gt; {{
         <span class="kw">let </span>val = <span class="macro">pop!</span>(<span class="macro-nonterminal">$ctx</span>);
 
-        <span class="kw">let </span>val = val.as_floating().context(<span class="macro">format!</span>(<span class="string">&quot;{} was not a float&quot;</span>, <span class="macro-nonterminal">$side</span>))<span class="question-mark">?</span>;
+        <span class="kw">let </span>val = val
+            .as_floating()
+            .context(<span class="macro">format!</span>(<span class="string">&quot;{} was not a float&quot;</span>, <span class="macro-nonterminal">$side</span>))<span class="question-mark">?</span>;
         <span class="kw">if </span>val.ty != FloatingType::Float {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="macro">format!</span>(<span class="string">&quot;{} was not a float&quot;</span>, <span class="macro-nonterminal">$side</span>)));
         }
@@ -279,23 +319,40 @@
     (<span class="macro-nonterminal">$ctx</span>: expr, <span class="macro-nonterminal">$side</span>: expr =&gt; f64) =&gt; {{
         <span class="kw">let </span>val = <span class="macro">pop!</span>(<span class="macro-nonterminal">$ctx</span>);
 
-        <span class="kw">let </span>val = val.as_floating().context(<span class="macro">format!</span>(<span class="string">&quot;{} was not a float&quot;</span>, <span class="macro-nonterminal">$side</span>))<span class="question-mark">?</span>;
+        <span class="kw">let </span>val = val
+            .as_floating()
+            .context(<span class="macro">format!</span>(<span class="string">&quot;{} was not a float&quot;</span>, <span class="macro-nonterminal">$side</span>))<span class="question-mark">?</span>;
         <span class="kw">if </span>val.ty != FloatingType::Float {
             <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="macro">format!</span>(<span class="string">&quot;{} was not a float&quot;</span>, <span class="macro-nonterminal">$side</span>)));
         }
 
         val.clone()
     }};
-}
+    (<span class="macro-nonterminal">$ctx</span>: expr, <span class="macro-nonterminal">$side</span>: expr =&gt; Object) =&gt; {{
+        <span class="kw">let </span>val = <span class="macro">pop!</span>(<span class="macro-nonterminal">$ctx</span>);
 
+        <span class="kw">let </span>val = val
+            .as_object()
+            .context(<span class="macro">format!</span>(<span class="string">&quot;{} was not an object&quot;</span>, <span class="macro-nonterminal">$side</span>))<span class="question-mark">?</span>;
+        val.clone()
+    }};
+    (<span class="macro-nonterminal">$ctx</span>: expr, <span class="macro-nonterminal">$side</span>: expr =&gt; Array) =&gt; {{
+        <span class="kw">let </span>val = <span class="macro">pop!</span>(<span class="macro-nonterminal">$ctx</span>);
+
+        <span class="kw">let </span>val = val
+            .as_array()
+            .context(<span class="macro">format!</span>(<span class="string">&quot;{} was not an array&quot;</span>, <span class="macro-nonterminal">$side</span>))<span class="question-mark">?</span>;
+        val.clone()
+    }};
+}
 
 <span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>Nop;
-<span class="kw">impl </span>Instruction <span class="kw">for </span>Nop { }
+<span class="kw">impl </span>Instruction <span class="kw">for </span>Nop {}
 
 <span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>VoidReturn;
-<span class="kw">impl </span>Instruction <span class="kw">for </span>VoidReturn { }
+<span class="kw">impl </span>Instruction <span class="kw">for </span>VoidReturn {}
 
 <span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>ValueReturn;
@@ -310,7 +367,7 @@
 
 <span class="attr">#[derive(Debug)]
 </span><span class="kw">pub struct </span>Goto {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) jump_to: i16
+    <span class="kw">pub</span>(<span class="kw">crate</span>) jump_to: i16,
 }
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>Goto {
@@ -320,126 +377,132 @@
 }
 
 <span class="attr">#[derive(Debug)]
-</span><span class="kw">pub struct </span>PushConst {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) value: RuntimeValue,
-}
+</span><span class="kw">pub struct </span>ArrayLength;
 
-<span class="kw">impl </span>Instruction <span class="kw">for </span>PushConst {
+<span class="kw">impl </span>Instruction <span class="kw">for </span>ArrayLength {
     <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
-        ctx.operands.push(<span class="self">self</span>.value.clone());
+        <span class="comment">// The arrayref must be of type reference and must refer to an array. It is popped from the operand stack.
+        </span><span class="kw">let </span>array = <span class="macro">arg!</span>(ctx, <span class="string">&quot;array&quot; </span>=&gt; Array);
+
+        <span class="comment">// The length of the array it references is determined.
+        </span><span class="kw">let </span>len = array.read().len() <span class="kw">as </span>i32;
+
+        <span class="comment">// That length is pushed onto the operand stack as an int.
+        </span>ctx.operands.push(RuntimeValue::Integral(len.into()));
         <span class="prelude-val">Ok</span>(Progression::Next)
     }
 }
 
 <span class="attr">#[derive(Debug)]
-</span><span class="kw">pub struct </span>Ldc2W {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) index: u16,
+</span><span class="kw">pub struct </span>ANewArray {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) type_index: u16,
 }
 
-<span class="kw">impl </span>Instruction <span class="kw">for </span>Ldc2W {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
-        <span class="kw">let </span>value = ctx
-            .class
-            .read()
-            .constant_pool()
-            .address(<span class="self">self</span>.index)
-            .try_resolve()
-            .context(<span class="macro">format!</span>(<span class="string">&quot;no value @ index {}&quot;</span>, <span class="self">self</span>.index))<span class="question-mark">?</span>;
-
-        <span class="kw">match </span>value {
-            ConstantEntry::Long(data) =&gt; {
-                ctx.operands
-                    .push(RuntimeValue::Integral((data.bytes <span class="kw">as </span>i64).into()));
-            }
-            ConstantEntry::Double(data) =&gt; {
-                ctx.operands.push(RuntimeValue::Floating(data.bytes.into()));
-            }
-            v =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;cannot load {:#?} with ldc2w&quot;</span>, v)),
-        };
-
-        <span class="prelude-val">Ok</span>(Progression::Next)
-    }
-}
-
-<span class="attr">#[derive(Debug)]
-</span><span class="kw">pub struct </span>Ldc {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) index: u16,
-}
-
-<span class="kw">impl </span>Instruction <span class="kw">for </span>Ldc {
+<span class="kw">impl </span>Instruction <span class="kw">for </span>ANewArray {
     <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
-        <span class="kw">let </span>value = ctx
+        <span class="comment">// The count must be of type int. It is popped off the operand stack.
+        </span><span class="kw">let </span>count = <span class="macro">arg!</span>(ctx, <span class="string">&quot;count&quot; </span>=&gt; i32);
+
+        <span class="comment">// The run-time constant pool entry at the index must
+        // be a symbolic reference to a class, array, or interface type. The
+        // named class, array, or interface type is resolved (§5.4.3.1).
+        </span><span class="kw">let </span>ty: ConstantEntry = ctx
             .class
             .read()
             .constant_pool()
-            .address(<span class="self">self</span>.index)
-            .try_resolve()
-            .context(<span class="macro">format!</span>(<span class="string">&quot;no value @ index {}&quot;</span>, <span class="self">self</span>.index))<span class="question-mark">?</span>;
+            .address(<span class="self">self</span>.type_index)
+            .resolve();
 
-        <span class="kw">match </span>value {
-            ConstantEntry::Integer(data) =&gt; {
-                ctx.operands
-                    .push(RuntimeValue::Integral((data.bytes <span class="kw">as </span>i32).into()));
-            }
-            ConstantEntry::Float(data) =&gt; {
-                ctx.operands.push(RuntimeValue::Floating(data.bytes.into()));
-            }
-            ConstantEntry::String(data) =&gt; {
-                <span class="kw">let </span>str = data.string();
-                <span class="kw">let </span>obj = vm.interner.intern(str)<span class="question-mark">?</span>;
-
-                ctx.operands.push(RuntimeValue::Object(obj))
-            }
-            v =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;cannot load {:#?} with ldc&quot;</span>, v)),
+        <span class="kw">let </span>array_ty = <span class="kw">match </span>ty {
+            ConstantEntry::Class(data) =&gt; {
+                <span class="kw">let </span>class_name = data.name.resolve().string();
+                <span class="kw">let </span>cls = vm.class_loader.load_class(class_name)<span class="question-mark">?</span>;
+                ArrayType::Object(cls)
+            },
+            e =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;{:#?} cannot be used as an array type&quot;</span>, e))
         };
 
+        <span class="comment">// All components of the new array are initialized to null, the default value for reference types (§2.4).
+        </span><span class="kw">let </span><span class="kw-2">mut </span>values = Vec::with_capacity(count.value <span class="kw">as </span>usize + <span class="number">1</span>);
+        values.resize_with(count.value <span class="kw">as </span>usize + <span class="number">1</span>, || RuntimeValue::Null);
+
+        <span class="comment">// A new array with components of that type, of length count, is allocated
+        // from the garbage-collected heap.
+        </span><span class="kw">let </span>array = Array {
+            ty: array_ty,
+            values,
+        };
+
+        <span class="comment">//  and a arrayref to this new array object is pushed onto the operand stack.
+        </span><span class="kw">let </span>array_ref = Rc::new(RwLock::new(array));
+        ctx.operands.push(RuntimeValue::Array(array_ref));
+
         <span class="prelude-val">Ok</span>(Progression::Next)
     }
 }
 
 <span class="attr">#[derive(Debug)]
-</span><span class="kw">pub struct </span>LoadLocal {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) index: usize,
+</span><span class="kw">pub struct </span>NewArray {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) type_tag: u8,
 }
 
-<span class="kw">impl </span>Instruction <span class="kw">for </span>LoadLocal {
+<span class="kw">impl </span>Instruction <span class="kw">for </span>NewArray {
     <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
-        <span class="kw">let </span>local = ctx
-            .locals
-            .get(<span class="self">self</span>.index)
-            .context(<span class="macro">format!</span>(<span class="string">&quot;no local @ {}&quot;</span>, <span class="self">self</span>.index))<span class="question-mark">?</span>;
+        <span class="comment">// The count must be of type int. It is popped off the operand stack.
+        </span><span class="kw">let </span>count = <span class="macro">arg!</span>(ctx, <span class="string">&quot;count&quot; </span>=&gt; i32);
 
-        ctx.operands.push(local.clone());
+        <span class="comment">// The atype is a code that indicates the type of array to create.
+        </span><span class="kw">let </span>atype = ArrayPrimitive::from_tag(<span class="self">self</span>.type_tag)<span class="question-mark">?</span>;
+        <span class="kw">let </span>array_ty = ArrayType::Primitive(atype);
+
+        <span class="kw">let </span><span class="kw-2">mut </span>values = Vec::with_capacity(count.value <span class="kw">as </span>usize + <span class="number">1</span>);
+        <span class="comment">// TODO: Proper default values
+        </span>values.resize_with(count.value <span class="kw">as </span>usize + <span class="number">1</span>, || RuntimeValue::Integral((<span class="number">0_i32</span>).into()));
+
+        <span class="comment">// A new array whose components are of type atype and of length
+        // count is allocated from the garbage-collected heap.
+        </span><span class="kw">let </span>array = Array {
+            ty: array_ty,
+            values,
+        };
+
+        <span class="comment">// and an arrayref to this new array object is pushed onto the operand stack.
+        </span><span class="kw">let </span>array_ref = Rc::new(RwLock::new(array));
+        ctx.operands.push(RuntimeValue::Array(array_ref));
+
         <span class="prelude-val">Ok</span>(Progression::Next)
     }
 }
 
 <span class="attr">#[derive(Debug)]
-</span><span class="kw">pub struct </span>StoreLocal {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) index: usize,
-    <span class="kw">pub</span>(<span class="kw">crate</span>) store_next: bool
-}
+</span><span class="kw">pub struct </span>ArrayStore;
 
-<span class="kw">impl </span>Instruction <span class="kw">for </span>StoreLocal {
+<span class="kw">impl </span>Instruction <span class="kw">for </span>ArrayStore {
     <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
-        <span class="kw">let </span>locals = <span class="kw-2">&amp;mut </span>ctx.locals;
-        <span class="kw">let </span>target_index = <span class="kw">if </span><span class="self">self</span>.store_next { <span class="self">self</span>.index + <span class="number">1 </span>} <span class="kw">else </span>{ <span class="self">self</span>.index };
-        <span class="kw">let </span>value = ctx.operands.pop().context(<span class="string">&quot;no operand to pop&quot;</span>)<span class="question-mark">?</span>.clone();
+        <span class="kw">let </span>value = <span class="macro">pop!</span>(ctx);
+        <span class="kw">let </span>index = <span class="macro">arg!</span>(ctx, <span class="string">&quot;index&quot; </span>=&gt; i32);
+        <span class="kw">let </span>array = <span class="macro">arg!</span>(ctx, <span class="string">&quot;array&quot; </span>=&gt; Array);
 
-        <span class="comment">// Fill enough slots to be able to store at an arbitrary index
-        // FIXME: We should probably keep a track of which locals are filled with &quot;real&quot;
-        // values and which are just sentinels so we can provide more accurate diagnostics
-        // for invalid store / get ops
-        </span><span class="kw">while </span>locals.len() &lt;= target_index {
-            locals.push(RuntimeValue::Null);
-        }
+        <span class="kw">let </span><span class="kw-2">mut </span>array = array.write();
+        array.values[index.value <span class="kw">as </span>usize] = value;
 
-        locals[<span class="self">self</span>.index] = value.clone();
-        <span class="kw">if </span><span class="self">self</span>.store_next {
-            locals[<span class="self">self</span>.index + <span class="number">1</span>] = value;
-        }
         <span class="prelude-val">Ok</span>(Progression::Next)
     }
 }
 
-</code></pre></div></section></main></body></html>
+
+<span class="attr">#[derive(Debug)]
+</span><span class="kw">pub struct </span>ArrayLoad;
+
+<span class="kw">impl </span>Instruction <span class="kw">for </span>ArrayLoad {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+        <span class="kw">let </span>index = <span class="macro">arg!</span>(ctx, <span class="string">&quot;index&quot; </span>=&gt; i32);
+        <span class="kw">let </span>array = <span class="macro">arg!</span>(ctx, <span class="string">&quot;array&quot; </span>=&gt; Array);
+
+        <span class="kw">let </span>array = array.read();
+        <span class="kw">let </span>value = array.values[index.value <span class="kw">as </span>usize].clone();
+        ctx.operands.push(value);
+
+        <span class="prelude-val">Ok</span>(Progression::Next)
+    }
+}</code></pre></div></section></main></body></html>

@@ -352,6 +352,120 @@
 <a href="#352" id="352">352</a>
 <a href="#353" id="353">353</a>
 <a href="#354" id="354">354</a>
+<a href="#355" id="355">355</a>
+<a href="#356" id="356">356</a>
+<a href="#357" id="357">357</a>
+<a href="#358" id="358">358</a>
+<a href="#359" id="359">359</a>
+<a href="#360" id="360">360</a>
+<a href="#361" id="361">361</a>
+<a href="#362" id="362">362</a>
+<a href="#363" id="363">363</a>
+<a href="#364" id="364">364</a>
+<a href="#365" id="365">365</a>
+<a href="#366" id="366">366</a>
+<a href="#367" id="367">367</a>
+<a href="#368" id="368">368</a>
+<a href="#369" id="369">369</a>
+<a href="#370" id="370">370</a>
+<a href="#371" id="371">371</a>
+<a href="#372" id="372">372</a>
+<a href="#373" id="373">373</a>
+<a href="#374" id="374">374</a>
+<a href="#375" id="375">375</a>
+<a href="#376" id="376">376</a>
+<a href="#377" id="377">377</a>
+<a href="#378" id="378">378</a>
+<a href="#379" id="379">379</a>
+<a href="#380" id="380">380</a>
+<a href="#381" id="381">381</a>
+<a href="#382" id="382">382</a>
+<a href="#383" id="383">383</a>
+<a href="#384" id="384">384</a>
+<a href="#385" id="385">385</a>
+<a href="#386" id="386">386</a>
+<a href="#387" id="387">387</a>
+<a href="#388" id="388">388</a>
+<a href="#389" id="389">389</a>
+<a href="#390" id="390">390</a>
+<a href="#391" id="391">391</a>
+<a href="#392" id="392">392</a>
+<a href="#393" id="393">393</a>
+<a href="#394" id="394">394</a>
+<a href="#395" id="395">395</a>
+<a href="#396" id="396">396</a>
+<a href="#397" id="397">397</a>
+<a href="#398" id="398">398</a>
+<a href="#399" id="399">399</a>
+<a href="#400" id="400">400</a>
+<a href="#401" id="401">401</a>
+<a href="#402" id="402">402</a>
+<a href="#403" id="403">403</a>
+<a href="#404" id="404">404</a>
+<a href="#405" id="405">405</a>
+<a href="#406" id="406">406</a>
+<a href="#407" id="407">407</a>
+<a href="#408" id="408">408</a>
+<a href="#409" id="409">409</a>
+<a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
+<a href="#420" id="420">420</a>
+<a href="#421" id="421">421</a>
+<a href="#422" id="422">422</a>
+<a href="#423" id="423">423</a>
+<a href="#424" id="424">424</a>
+<a href="#425" id="425">425</a>
+<a href="#426" id="426">426</a>
+<a href="#427" id="427">427</a>
+<a href="#428" id="428">428</a>
+<a href="#429" id="429">429</a>
+<a href="#430" id="430">430</a>
+<a href="#431" id="431">431</a>
+<a href="#432" id="432">432</a>
+<a href="#433" id="433">433</a>
+<a href="#434" id="434">434</a>
+<a href="#435" id="435">435</a>
+<a href="#436" id="436">436</a>
+<a href="#437" id="437">437</a>
+<a href="#438" id="438">438</a>
+<a href="#439" id="439">439</a>
+<a href="#440" id="440">440</a>
+<a href="#441" id="441">441</a>
+<a href="#442" id="442">442</a>
+<a href="#443" id="443">443</a>
+<a href="#444" id="444">444</a>
+<a href="#445" id="445">445</a>
+<a href="#446" id="446">446</a>
+<a href="#447" id="447">447</a>
+<a href="#448" id="448">448</a>
+<a href="#449" id="449">449</a>
+<a href="#450" id="450">450</a>
+<a href="#451" id="451">451</a>
+<a href="#452" id="452">452</a>
+<a href="#453" id="453">453</a>
+<a href="#454" id="454">454</a>
+<a href="#455" id="455">455</a>
+<a href="#456" id="456">456</a>
+<a href="#457" id="457">457</a>
+<a href="#458" id="458">458</a>
+<a href="#459" id="459">459</a>
+<a href="#460" id="460">460</a>
+<a href="#461" id="461">461</a>
+<a href="#462" id="462">462</a>
+<a href="#463" id="463">463</a>
+<a href="#464" id="464">464</a>
+<a href="#465" id="465">465</a>
+<a href="#466" id="466">466</a>
+<a href="#467" id="467">467</a>
+<a href="#468" id="468">468</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::fmt;
 
 <span class="kw">use crate</span>::{object::RuntimeValue, Context, VM};
@@ -360,15 +474,16 @@
 <span class="kw">use </span>support::bytes_ext::SafeBuf;
 
 <span class="kw">mod </span>binary;
-<span class="kw">mod </span>unary;
 <span class="kw">mod </span>invoke;
+<span class="kw">mod </span>load_store;
 <span class="kw">mod </span>ops;
+<span class="kw">mod </span>unary;
 
 <span class="kw">pub enum </span>Progression {
     JumpAbs(i32),
     JumpRel(i32),
     Next,
-    Return(<span class="prelude-ty">Option</span>&lt;RuntimeValue&gt;)
+    Return(<span class="prelude-ty">Option</span>&lt;RuntimeValue&gt;),
 }
 
 <span class="kw">pub trait </span>Instruction: fmt::Debug {
@@ -387,9 +502,9 @@
     <span class="prelude-val">Ok</span>(<span class="kw">match </span>instruction {
         <span class="number">0x00 </span>=&gt; b(ops::Nop),
 
-        <span class="comment">// Constants Loads Stores
+        <span class="comment">// Constants / Loads / Stores
         </span><span class="number">0x01 </span>=&gt; b(ops::PushConst {
-            value: RuntimeValue::Null
+            value: RuntimeValue::Null,
         }),
         <span class="number">0x02 </span>=&gt; b(ops::PushConst {
             value: RuntimeValue::Integral((-<span class="number">1_i32</span>).into()),
@@ -420,7 +535,6 @@
             value: RuntimeValue::Integral((<span class="number">1_i64</span>).into()),
         }),
         <span class="number">0x0b </span>=&gt; b(ops::PushConst {
-
             value: RuntimeValue::Floating((<span class="number">0.0_f32</span>).into()),
         }),
         <span class="number">0x0c </span>=&gt; b(ops::PushConst {
@@ -437,26 +551,36 @@
             value: RuntimeValue::Floating((<span class="number">1.0_f64</span>).into()),
         }),
         <span class="number">0x10 </span>=&gt; b(ops::PushConst {
-            value: RuntimeValue::Integral((bytes.try_get_i8()<span class="question-mark">? </span><span class="kw">as </span>i32).into())
+            value: RuntimeValue::Integral((bytes.try_get_i8()<span class="question-mark">? </span><span class="kw">as </span>i32).into()),
         }),
         <span class="number">0x11 </span>=&gt; b(ops::PushConst {
             <span class="comment">// The intermediate value is then sign-extended to an int value.
-            </span>value: RuntimeValue::Integral((bytes.try_get_i16()<span class="question-mark">? </span><span class="kw">as </span>i32).into())
+            </span>value: RuntimeValue::Integral((bytes.try_get_i16()<span class="question-mark">? </span><span class="kw">as </span>i32).into()),
         }),
         <span class="number">0x12 </span>=&gt; b(ops::Ldc {
-            index: bytes.try_get_u8()<span class="question-mark">? </span><span class="kw">as </span>u16
+            index: bytes.try_get_u8()<span class="question-mark">? </span><span class="kw">as </span>u16,
         }),
         <span class="number">0x13 </span>=&gt; b(ops::Ldc {
-            index: bytes.try_get_u8()<span class="question-mark">? </span><span class="kw">as </span>u16
+            index: bytes.try_get_u8()<span class="question-mark">? </span><span class="kw">as </span>u16,
         }),
         <span class="number">0x14 </span>=&gt; b(ops::Ldc2W {
-            index: bytes.try_get_u16()<span class="question-mark">?
-        </span>}),
-        <span class="number">0x15 </span>=&gt; b(ops::LoadLocal { index: bytes.try_get_u8()<span class="question-mark">? </span><span class="kw">as </span>usize }),
-        <span class="number">0x16 </span>=&gt; b(ops::LoadLocal { index: bytes.try_get_u8()<span class="question-mark">? </span><span class="kw">as </span>usize }),
-        <span class="number">0x17 </span>=&gt; b(ops::LoadLocal { index: bytes.try_get_u8()<span class="question-mark">? </span><span class="kw">as </span>usize }),
-        <span class="number">0x18 </span>=&gt; b(ops::LoadLocal { index: bytes.try_get_u8()<span class="question-mark">? </span><span class="kw">as </span>usize }),
-        <span class="number">0x19 </span>=&gt; b(ops::LoadLocal { index: bytes.try_get_u8()<span class="question-mark">? </span><span class="kw">as </span>usize }),
+            index: bytes.try_get_u16()<span class="question-mark">?</span>,
+        }),
+        <span class="number">0x15 </span>=&gt; b(ops::LoadLocal {
+            index: bytes.try_get_u8()<span class="question-mark">? </span><span class="kw">as </span>usize,
+        }),
+        <span class="number">0x16 </span>=&gt; b(ops::LoadLocal {
+            index: bytes.try_get_u8()<span class="question-mark">? </span><span class="kw">as </span>usize,
+        }),
+        <span class="number">0x17 </span>=&gt; b(ops::LoadLocal {
+            index: bytes.try_get_u8()<span class="question-mark">? </span><span class="kw">as </span>usize,
+        }),
+        <span class="number">0x18 </span>=&gt; b(ops::LoadLocal {
+            index: bytes.try_get_u8()<span class="question-mark">? </span><span class="kw">as </span>usize,
+        }),
+        <span class="number">0x19 </span>=&gt; b(ops::LoadLocal {
+            index: bytes.try_get_u8()<span class="question-mark">? </span><span class="kw">as </span>usize,
+        }),
 
         <span class="number">0x1a </span>=&gt; b(ops::LoadLocal { index: <span class="number">0 </span>}),
         <span class="number">0x1b </span>=&gt; b(ops::LoadLocal { index: <span class="number">1 </span>}),
@@ -482,72 +606,135 @@
         <span class="number">0x2b </span>=&gt; b(ops::LoadLocal { index: <span class="number">1 </span>}),
         <span class="number">0x2c </span>=&gt; b(ops::LoadLocal { index: <span class="number">2 </span>}),
         <span class="number">0x2d </span>=&gt; b(ops::LoadLocal { index: <span class="number">3 </span>}),
-        <span class="comment">//  0x2e =&gt; Opcode::IALOAD,
-        //  0x2f =&gt; Opcode::LALOAD,
-        //  0x30 =&gt; Opcode::FALOAD,
-        //  0x31 =&gt; Opcode::DALOAD,
-        //  0x32 =&gt; Opcode::AALOAD,
-        //  0x33 =&gt; Opcode::BALOAD,
-        //  0x34 =&gt; Opcode::CALOAD,
-        //  0x35 =&gt; Opcode::SALOAD,
-        </span><span class="number">0x36 </span>=&gt; b(ops::StoreLocal {
+
+        <span class="number">0x2e </span>=&gt; b(ops::ArrayLoad),
+        <span class="number">0x2f </span>=&gt; b(ops::ArrayLoad),
+        <span class="number">0x30 </span>=&gt; b(ops::ArrayLoad),
+        <span class="number">0x31 </span>=&gt; b(ops::ArrayLoad),
+        <span class="number">0x32 </span>=&gt; b(ops::ArrayLoad),
+        <span class="number">0x33 </span>=&gt; b(ops::ArrayLoad),
+        <span class="number">0x34 </span>=&gt; b(ops::ArrayLoad),
+        <span class="number">0x35 </span>=&gt; b(ops::ArrayLoad),
+
+        <span class="number">0x36 </span>=&gt; b(ops::StoreLocal {
             index: bytes.try_get_u8()<span class="question-mark">? </span><span class="kw">as </span>usize,
-            store_next: <span class="bool-val">false
-        </span>}),
+            store_next: <span class="bool-val">false</span>,
+        }),
         <span class="number">0x37 </span>=&gt; b(ops::StoreLocal {
             index: bytes.try_get_u8()<span class="question-mark">? </span><span class="kw">as </span>usize,
-            store_next: <span class="bool-val">true
-        </span>}),
+            store_next: <span class="bool-val">true</span>,
+        }),
         <span class="number">0x38 </span>=&gt; b(ops::StoreLocal {
             index: bytes.try_get_u8()<span class="question-mark">? </span><span class="kw">as </span>usize,
-            store_next: <span class="bool-val">false
-        </span>}),
+            store_next: <span class="bool-val">false</span>,
+        }),
         <span class="number">0x39 </span>=&gt; b(ops::StoreLocal {
             index: bytes.try_get_u8()<span class="question-mark">? </span><span class="kw">as </span>usize,
-            store_next: <span class="bool-val">true
-        </span>}),
+            store_next: <span class="bool-val">true</span>,
+        }),
         <span class="number">0x3a </span>=&gt; b(ops::StoreLocal {
             index: bytes.try_get_u8()<span class="question-mark">? </span><span class="kw">as </span>usize,
-            store_next: <span class="bool-val">false
-        </span>}),
-        <span class="number">0x3b </span>=&gt; b(ops::StoreLocal { index: <span class="number">0</span>, store_next: <span class="bool-val">false </span>}),
-        <span class="number">0x3c </span>=&gt; b(ops::StoreLocal { index: <span class="number">1</span>, store_next: <span class="bool-val">false </span>}),
-        <span class="number">0x3d </span>=&gt; b(ops::StoreLocal { index: <span class="number">2</span>, store_next: <span class="bool-val">false </span>}),
-        <span class="number">0x3e </span>=&gt; b(ops::StoreLocal { index: <span class="number">3</span>, store_next: <span class="bool-val">false </span>}),
+            store_next: <span class="bool-val">false</span>,
+        }),
+        <span class="number">0x3b </span>=&gt; b(ops::StoreLocal {
+            index: <span class="number">0</span>,
+            store_next: <span class="bool-val">false</span>,
+        }),
+        <span class="number">0x3c </span>=&gt; b(ops::StoreLocal {
+            index: <span class="number">1</span>,
+            store_next: <span class="bool-val">false</span>,
+        }),
+        <span class="number">0x3d </span>=&gt; b(ops::StoreLocal {
+            index: <span class="number">2</span>,
+            store_next: <span class="bool-val">false</span>,
+        }),
+        <span class="number">0x3e </span>=&gt; b(ops::StoreLocal {
+            index: <span class="number">3</span>,
+            store_next: <span class="bool-val">false</span>,
+        }),
 
-        <span class="number">0x3f </span>=&gt; b(ops::StoreLocal { index: <span class="number">0</span>, store_next: <span class="bool-val">true </span>}),
-        <span class="number">0x40 </span>=&gt; b(ops::StoreLocal { index: <span class="number">1</span>, store_next: <span class="bool-val">true </span>}),
-        <span class="number">0x41 </span>=&gt; b(ops::StoreLocal { index: <span class="number">2</span>, store_next: <span class="bool-val">true </span>}),
-        <span class="number">0x42 </span>=&gt; b(ops::StoreLocal { index: <span class="number">3</span>, store_next: <span class="bool-val">true </span>}),
+        <span class="number">0x3f </span>=&gt; b(ops::StoreLocal {
+            index: <span class="number">0</span>,
+            store_next: <span class="bool-val">true</span>,
+        }),
+        <span class="number">0x40 </span>=&gt; b(ops::StoreLocal {
+            index: <span class="number">1</span>,
+            store_next: <span class="bool-val">true</span>,
+        }),
+        <span class="number">0x41 </span>=&gt; b(ops::StoreLocal {
+            index: <span class="number">2</span>,
+            store_next: <span class="bool-val">true</span>,
+        }),
+        <span class="number">0x42 </span>=&gt; b(ops::StoreLocal {
+            index: <span class="number">3</span>,
+            store_next: <span class="bool-val">true</span>,
+        }),
 
-        <span class="number">0x43 </span>=&gt; b(ops::StoreLocal { index: <span class="number">0</span>, store_next: <span class="bool-val">false </span>}),
-        <span class="number">0x44 </span>=&gt; b(ops::StoreLocal { index: <span class="number">1</span>, store_next: <span class="bool-val">false </span>}),
-        <span class="number">0x45 </span>=&gt; b(ops::StoreLocal { index: <span class="number">2</span>, store_next: <span class="bool-val">false </span>}),
-        <span class="number">0x46 </span>=&gt; b(ops::StoreLocal { index: <span class="number">3</span>, store_next: <span class="bool-val">false </span>}),
+        <span class="number">0x43 </span>=&gt; b(ops::StoreLocal {
+            index: <span class="number">0</span>,
+            store_next: <span class="bool-val">false</span>,
+        }),
+        <span class="number">0x44 </span>=&gt; b(ops::StoreLocal {
+            index: <span class="number">1</span>,
+            store_next: <span class="bool-val">false</span>,
+        }),
+        <span class="number">0x45 </span>=&gt; b(ops::StoreLocal {
+            index: <span class="number">2</span>,
+            store_next: <span class="bool-val">false</span>,
+        }),
+        <span class="number">0x46 </span>=&gt; b(ops::StoreLocal {
+            index: <span class="number">3</span>,
+            store_next: <span class="bool-val">false</span>,
+        }),
 
-        <span class="number">0x47 </span>=&gt; b(ops::StoreLocal { index: <span class="number">0</span>, store_next: <span class="bool-val">false </span>}),
-        <span class="number">0x48 </span>=&gt; b(ops::StoreLocal { index: <span class="number">1</span>, store_next: <span class="bool-val">false </span>}),
-        <span class="number">0x49 </span>=&gt; b(ops::StoreLocal { index: <span class="number">2</span>, store_next: <span class="bool-val">false </span>}),
-        <span class="number">0x4a </span>=&gt; b(ops::StoreLocal { index: <span class="number">3</span>, store_next: <span class="bool-val">true </span>}),
+        <span class="number">0x47 </span>=&gt; b(ops::StoreLocal {
+            index: <span class="number">0</span>,
+            store_next: <span class="bool-val">false</span>,
+        }),
+        <span class="number">0x48 </span>=&gt; b(ops::StoreLocal {
+            index: <span class="number">1</span>,
+            store_next: <span class="bool-val">false</span>,
+        }),
+        <span class="number">0x49 </span>=&gt; b(ops::StoreLocal {
+            index: <span class="number">2</span>,
+            store_next: <span class="bool-val">false</span>,
+        }),
+        <span class="number">0x4a </span>=&gt; b(ops::StoreLocal {
+            index: <span class="number">3</span>,
+            store_next: <span class="bool-val">true</span>,
+        }),
 
-        <span class="number">0x4b </span>=&gt; b(ops::StoreLocal { index: <span class="number">0</span>, store_next: <span class="bool-val">false </span>}),
-        <span class="number">0x4c </span>=&gt; b(ops::StoreLocal { index: <span class="number">1</span>, store_next: <span class="bool-val">false </span>}),
-        <span class="number">0x4d </span>=&gt; b(ops::StoreLocal { index: <span class="number">2</span>, store_next: <span class="bool-val">false </span>}),
-        <span class="number">0x4e </span>=&gt; b(ops::StoreLocal { index: <span class="number">3</span>, store_next: <span class="bool-val">false </span>}),
-        <span class="comment">//  0x4f =&gt; Opcode::IASTORE,
-        //  0x50 =&gt; Opcode::LASTORE,
-        //  0x51 =&gt; Opcode::FASTORE,
-        //  0x52 =&gt; Opcode::DASTORE,
-        //  0x53 =&gt; Opcode::AASTORE,
-        //  0x54 =&gt; Opcode::BASTORE,
-        //  0x55 =&gt; Opcode::CASTORE,
-        //  0x56 =&gt; Opcode::SASTORE,
+        <span class="number">0x4b </span>=&gt; b(ops::StoreLocal {
+            index: <span class="number">0</span>,
+            store_next: <span class="bool-val">false</span>,
+        }),
+        <span class="number">0x4c </span>=&gt; b(ops::StoreLocal {
+            index: <span class="number">1</span>,
+            store_next: <span class="bool-val">false</span>,
+        }),
+        <span class="number">0x4d </span>=&gt; b(ops::StoreLocal {
+            index: <span class="number">2</span>,
+            store_next: <span class="bool-val">false</span>,
+        }),
+        <span class="number">0x4e </span>=&gt; b(ops::StoreLocal {
+            index: <span class="number">3</span>,
+            store_next: <span class="bool-val">false</span>,
+        }),
 
-        // Stack Math Conversions
+        <span class="number">0x4f </span>=&gt; b(ops::ArrayStore),
+        <span class="number">0x50 </span>=&gt; b(ops::ArrayStore),
+        <span class="number">0x51 </span>=&gt; b(ops::ArrayStore),
+        <span class="number">0x52 </span>=&gt; b(ops::ArrayStore),
+        <span class="number">0x53 </span>=&gt; b(ops::ArrayStore),
+        <span class="number">0x54 </span>=&gt; b(ops::ArrayStore),
+        <span class="number">0x55 </span>=&gt; b(ops::ArrayStore),
+        <span class="number">0x56 </span>=&gt; b(ops::ArrayStore),
+
+        <span class="comment">// Stack Math Conversions
         //  0x57 =&gt; Opcode::POP,
         //  0x58 =&gt; Opcode::POP2,
-        //  0x59 =&gt; Opcode::DUP,
-        //  0x5a =&gt; Opcode::DUP_X1,
+        </span><span class="number">0x59 </span>=&gt; b(ops::Dup),
+        <span class="comment">//  0x5a =&gt; Opcode::DUP_X1,
         //  0x5b =&gt; Opcode::DUP_X2,
         //  0x5c =&gt; Opcode::DUP2,
         //  0x5d =&gt; Opcode::DUP2_X1,
@@ -577,11 +764,11 @@
         <span class="number">0x75 </span>=&gt; b(ops::Lneg),
         <span class="number">0x76 </span>=&gt; b(ops::Fneg),
         <span class="number">0x77 </span>=&gt; b(ops::Dneg),
-        <span class="comment">//  0x78 =&gt; Opcode::ISHL,
-        //  0x79 =&gt; Opcode::LSHL,
-        //  0x7a =&gt; Opcode::ISHR,
-        //  0x7b =&gt; Opcode::LSHR,
-        //  0x7c =&gt; Opcode::IUSHR,
+        <span class="number">0x78 </span>=&gt; b(ops::Ishl),
+        <span class="number">0x79 </span>=&gt; b(ops::Lshl),
+        <span class="number">0x7a </span>=&gt; b(ops::Ishr),
+        <span class="number">0x7b </span>=&gt; b(ops::Lshr),
+        <span class="comment">//  0x7c =&gt; Opcode::IUSHR,
         //  0x7d =&gt; Opcode::LUSHR,
         //  0x7e =&gt; Opcode::IAND,
         //  0x7f =&gt; Opcode::LAND,
@@ -590,7 +777,6 @@
         //  0x82 =&gt; Opcode::IXOR,
         //  0x83 =&gt; Opcode::LXOR,
         //  0x84 =&gt; Opcode::IINC(bytes.try_get_u8()?, bytes.try_get_i8()?),
-
         </span><span class="number">0x85 </span>=&gt; b(ops::I2l),
         <span class="comment">//  0x86 =&gt; Opcode::I2F,
         //  0x87 =&gt; Opcode::I2D,
@@ -613,23 +799,49 @@
         //  0x96 =&gt; Opcode::FCMPG,
         //  0x97 =&gt; Opcode::DCMPL,
         //  0x98 =&gt; Opcode::DCMPG,
-        //  0x99 =&gt; Opcode::IFEQ(bytes.try_get_i16()?),
-        //  0x9a =&gt; Opcode::IFNE(bytes.try_get_i16()?),
-        //  0x9b =&gt; Opcode::IFLT(bytes.try_get_i16()?),
-        //  0x9c =&gt; Opcode::IFGE(bytes.try_get_i16()?),
-        //  0x9d =&gt; Opcode::IFGT(bytes.try_get_i16()?),
-        //  0x9e =&gt; Opcode::IFLE(bytes.try_get_i16()?),
-        </span><span class="number">0x9f </span>=&gt; b(ops::Ieq { jump_to: bytes.try_get_i16()<span class="question-mark">? </span>}),
-        <span class="number">0xa0 </span>=&gt; b(ops::Ine { jump_to: bytes.try_get_i16()<span class="question-mark">? </span>}),
-        <span class="number">0xa1 </span>=&gt; b(ops::Ilt { jump_to: bytes.try_get_i16()<span class="question-mark">? </span>}),
-        <span class="number">0xa2 </span>=&gt; b(ops::Ige { jump_to: bytes.try_get_i16()<span class="question-mark">? </span>}),
-        <span class="number">0xa3 </span>=&gt; b(ops::Igt { jump_to: bytes.try_get_i16()<span class="question-mark">? </span>}),
-        <span class="number">0xa4 </span>=&gt; b(ops::Ile { jump_to: bytes.try_get_i16()<span class="question-mark">? </span>}),
+        </span><span class="number">0x99 </span>=&gt; b(ops::IfEq {
+            jump_to: bytes.try_get_i16()<span class="question-mark">?</span>,
+        }),
+        <span class="number">0x9a </span>=&gt; b(ops::IfNe {
+            jump_to: bytes.try_get_i16()<span class="question-mark">?</span>,
+        }),
+        <span class="number">0x9b </span>=&gt; b(ops::IfLt {
+            jump_to: bytes.try_get_i16()<span class="question-mark">?</span>,
+        }),
+        <span class="number">0x9c </span>=&gt; b(ops::IfGe {
+            jump_to: bytes.try_get_i16()<span class="question-mark">?</span>,
+        }),
+        <span class="number">0x9d </span>=&gt; b(ops::IfGt {
+            jump_to: bytes.try_get_i16()<span class="question-mark">?</span>,
+        }),
+        <span class="number">0x9e </span>=&gt; b(ops::IfLe {
+            jump_to: bytes.try_get_i16()<span class="question-mark">?</span>,
+        }),
+        <span class="number">0x9f </span>=&gt; b(ops::Ieq {
+            jump_to: bytes.try_get_i16()<span class="question-mark">?</span>,
+        }),
+        <span class="number">0xa0 </span>=&gt; b(ops::Ine {
+            jump_to: bytes.try_get_i16()<span class="question-mark">?</span>,
+        }),
+        <span class="number">0xa1 </span>=&gt; b(ops::Ilt {
+            jump_to: bytes.try_get_i16()<span class="question-mark">?</span>,
+        }),
+        <span class="number">0xa2 </span>=&gt; b(ops::Ige {
+            jump_to: bytes.try_get_i16()<span class="question-mark">?</span>,
+        }),
+        <span class="number">0xa3 </span>=&gt; b(ops::Igt {
+            jump_to: bytes.try_get_i16()<span class="question-mark">?</span>,
+        }),
+        <span class="number">0xa4 </span>=&gt; b(ops::Ile {
+            jump_to: bytes.try_get_i16()<span class="question-mark">?</span>,
+        }),
         <span class="comment">//  0xa5 =&gt; Opcode::IF_ACMPEQ(bytes.try_get_i16()?),
         //  0xa6 =&gt; Opcode::IF_ACMPNE(bytes.try_get_i16()?),
 
-        //  // Control
-        </span><span class="number">0xa7 </span>=&gt; b(ops::Goto{ jump_to: bytes.try_get_i16()<span class="question-mark">? </span>}),
+        // Control
+        </span><span class="number">0xa7 </span>=&gt; b(ops::Goto {
+            jump_to: bytes.try_get_i16()<span class="question-mark">?</span>,
+        }),
         <span class="comment">//  0xa8 =&gt; Opcode::JSR,
         //  0xa9 =&gt; Opcode::RET,
         //  0xaa =&gt; {
@@ -665,14 +877,24 @@
         <span class="number">0xb0 </span>=&gt; b(ops::ValueReturn),
         <span class="number">0xb1 </span>=&gt; b(ops::VoidReturn),
 
-        <span class="comment">//  // References
-        //  0xb2 =&gt; Opcode::GETSTATIC(bytes.try_get_u16()?),
-        //  0xb3 =&gt; Opcode::PUTSTATIC(bytes.try_get_u16()?),
-        //  0xb4 =&gt; Opcode::GETFIELD(bytes.try_get_u16()?),
-        //  0xb5 =&gt; Opcode::PUTFIELD(bytes.try_get_u16()?),
-        //  0xb6 =&gt; Opcode::INVOKEVIRTUAL(bytes.try_get_u16()?),
-        //  0xb7 =&gt; Opcode::INVOKESPECIAL(bytes.try_get_u16()?),
-        </span><span class="number">0xb8 </span>=&gt; b(ops::InvokeStatic {
+        <span class="comment">// References
+        </span><span class="number">0xb2 </span>=&gt; b(ops::GetStatic {
+            index: bytes.try_get_u16()<span class="question-mark">?</span>,
+        }),
+        <span class="number">0xb3 </span>=&gt; b(ops::PutStatic {
+            index: bytes.try_get_u16()<span class="question-mark">?</span>,
+        }),
+        <span class="number">0xb4 </span>=&gt; b(ops::GetField {
+            index: bytes.try_get_u16()<span class="question-mark">?</span>,
+        }),
+        <span class="comment">//  0xb5 =&gt; Opcode::PUTFIELD(bytes.try_get_u16()?),
+        </span><span class="number">0xb6 </span>=&gt; b(ops::InvokeVirtual {
+            index: bytes.try_get_u16()<span class="question-mark">?</span>,
+        }),
+        <span class="number">0xb7 </span>=&gt; b(ops::InvokeSpecial {
+            index: bytes.try_get_u16()<span class="question-mark">?</span>,
+        }),
+        <span class="number">0xb8 </span>=&gt; b(ops::InvokeStatic {
             index: bytes.try_get_u16()<span class="question-mark">?</span>,
         }),
         <span class="comment">//  0xb9 =&gt; Opcode::INVOKEINTERFACE(
@@ -681,11 +903,17 @@
         //      bytes.try_get_u8()?,
         //  ),
         //  0xba =&gt; Opcode::INVOKEDYNAMIC,
-        //  0xbb =&gt; Opcode::NEW(bytes.try_get_u16()?),
-        //  0xbc =&gt; Opcode::NEWARRAY(bytes.try_get_u8()?),
-        //  0xbd =&gt; Opcode::ANEWARRAY(bytes.try_get_u16()?),
-        //  0xbe =&gt; Opcode::ARRAYLENGTH,
-        //  0xbf =&gt; Opcode::ATHROW,
+        </span><span class="number">0xbb </span>=&gt; b(ops::New {
+            index: bytes.try_get_u16()<span class="question-mark">?</span>,
+        }),
+        <span class="number">0xbc </span>=&gt; b(ops::NewArray {
+            type_tag: bytes.try_get_u8()<span class="question-mark">?</span>,
+        }),
+        <span class="number">0xbd </span>=&gt; b(ops::ANewArray {
+            type_index: bytes.try_get_u16()<span class="question-mark">?</span>,
+        }),
+        <span class="number">0xbe </span>=&gt; b(ops::ArrayLength),
+        <span class="comment">//  0xbf =&gt; Opcode::ATHROW,
         //  0xc0 =&gt; Opcode::CHECKCAST(bytes.try_get_u16()?),
         //  0xc1 =&gt; Opcode::INSTANCEOF(bytes.try_get_u16()?),
         //  0xc2 =&gt; Opcode::MONITORENTER,

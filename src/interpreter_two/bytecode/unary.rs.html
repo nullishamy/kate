@@ -102,8 +102,37 @@
 <a href="#102" id="102">102</a>
 <a href="#103" id="103">103</a>
 <a href="#104" id="104">104</a>
-</pre></div><pre class="rust"><code>
-<span class="kw">use super</span>::{Instruction, Progression};
+<a href="#105" id="105">105</a>
+<a href="#106" id="106">106</a>
+<a href="#107" id="107">107</a>
+<a href="#108" id="108">108</a>
+<a href="#109" id="109">109</a>
+<a href="#110" id="110">110</a>
+<a href="#111" id="111">111</a>
+<a href="#112" id="112">112</a>
+<a href="#113" id="113">113</a>
+<a href="#114" id="114">114</a>
+<a href="#115" id="115">115</a>
+<a href="#116" id="116">116</a>
+<a href="#117" id="117">117</a>
+<a href="#118" id="118">118</a>
+<a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+</pre></div><pre class="rust"><code><span class="attr">#![allow(clippy::redundant_closure_call)]
+
+</span><span class="kw">use super</span>::{Instruction, Progression};
 <span class="kw">use crate</span>::{
     object::{
         numeric::{FloatingType, IntegralType, Integral, Floating},
@@ -156,10 +185,9 @@
 
         <span class="kw">impl </span>Instruction <span class="kw">for </span><span class="macro-nonterminal">$ins </span>{
             <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
-                <span class="kw">let </span>rhs = <span class="macro">arg!</span>(ctx, <span class="string">&quot;rhs&quot; </span>=&gt; <span class="macro-nonterminal">$res_ty</span>);
-                <span class="kw">let </span>lhs = <span class="macro">arg!</span>(ctx, <span class="string">&quot;lhs&quot; </span>=&gt; <span class="macro-nonterminal">$res_ty</span>);
+                <span class="kw">let </span>val = <span class="macro">arg!</span>(ctx, <span class="string">&quot;unary value&quot; </span>=&gt; <span class="macro-nonterminal">$res_ty</span>);
 
-                <span class="kw">let </span>result: bool = <span class="macro-nonterminal">$op</span>(lhs, rhs);
+                <span class="kw">let </span>result: bool = <span class="macro-nonterminal">$op</span>(val);
                 <span class="kw">if </span>(result) {
                     <span class="prelude-val">Ok</span>(Progression::JumpRel(<span class="self">self</span>.jump_to <span class="kw">as </span>i32))
                 } <span class="kw">else </span>{
@@ -170,6 +198,9 @@
     };
     (<span class="macro-nonterminal">$ins</span>: ident (int) =&gt; <span class="macro-nonterminal">$op</span>: expr) =&gt; {
       <span class="macro">unop!</span>(<span class="macro-nonterminal">$ins</span>, i32, |result: i32| RuntimeValue::Integral(result.into()) =&gt; <span class="macro-nonterminal">$op</span>);
+    };
+    (<span class="macro-nonterminal">$ins</span>: ident (int cond) =&gt; <span class="macro-nonterminal">$op</span>: expr) =&gt; {
+      <span class="macro">unop!</span>(<span class="macro-nonterminal">$ins</span>, i32 =&gt; <span class="macro-nonterminal">$op</span>);
     };
     (<span class="macro-nonterminal">$ins</span>: ident (int =&gt; long) =&gt; <span class="macro-nonterminal">$op</span>: expr) =&gt; {
       <span class="macro">unop!</span>(<span class="macro-nonterminal">$ins</span>, i32, |result: i64| RuntimeValue::Integral(result.into()) =&gt; <span class="macro-nonterminal">$op</span>);
@@ -204,6 +235,31 @@
 
 <span class="comment">// Conversions
 </span><span class="macro">unop!</span>(I2l (int =&gt; long) =&gt; |val: Integral| {
-    val.value <span class="kw">as </span>i64
+    val.value <span class="kw">as </span>i32 <span class="kw">as </span>i64
 });
+
+<span class="comment">// Zero comparisons
+</span><span class="macro">unop!</span>(IfEq (int cond) =&gt; |val: Integral| {
+    val.value == <span class="number">0
+</span>});
+
+<span class="macro">unop!</span>(IfNe (int cond) =&gt; |val: Integral| {
+    val.value != <span class="number">0
+</span>});
+
+<span class="macro">unop!</span>(IfLt (int cond) =&gt; |val: Integral| {
+    val.value &lt; <span class="number">0
+</span>});
+
+<span class="macro">unop!</span>(IfLe (int cond) =&gt; |val: Integral| {
+    val.value &lt;= <span class="number">0
+</span>});
+
+<span class="macro">unop!</span>(IfGt (int cond) =&gt; |val: Integral| {
+    val.value &gt; <span class="number">0
+</span>});
+
+<span class="macro">unop!</span>(IfGe (int cond) =&gt; |val: Integral| {
+    val.value &gt;= <span class="number">0
+</span>});
 </code></pre></div></section></main></body></html>

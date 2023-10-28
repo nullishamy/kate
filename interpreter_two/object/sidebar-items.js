@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["RuntimeValue"],"mod":["array","classloader","numeric","string"],"struct":["ClassObject","StringObject"],"trait":["Object"],"type":["WrappedClassObject","WrappedObject"]};
+window.SIDEBAR_ITEMS = {"enum":["RuntimeValue"],"mod":["array","classloader","numeric","statics","string"],"struct":["ClassObject","RuntimeObject","StringObject"],"trait":["Object"],"type":["WrappedArray","WrappedClassObject","WrappedObject"]};

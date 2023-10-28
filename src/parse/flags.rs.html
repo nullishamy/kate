@@ -87,7 +87,7 @@
 
 <span class="macro">macro_rules! </span>impl_flags {
     ( <span class="macro-nonterminal">$flag_type</span>:ident, <span class="macro-nonterminal">$impl_type</span>:ident ) =&gt; {
-        <span class="attr">#[derive(Clone, Debug)]
+        <span class="attr">#[derive(Clone, Copy, Debug)]
         </span><span class="kw">pub struct </span><span class="macro-nonterminal">$impl_type </span>{
             <span class="kw">pub </span>flags: <span class="macro-nonterminal">$flag_type</span>,
         }

@@ -153,13 +153,27 @@
 <a href="#153" id="153">153</a>
 <a href="#154" id="154">154</a>
 <a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::process::exit;
 
 <span class="kw">use </span>args::Cli;
 <span class="kw">use </span>clap::Parser;
 <span class="kw">use </span>interpreter_two::{
     native::NativeFunction,
-    object::{classloader::ClassLoader, string::Interner, RuntimeValue},
+    object::{
+        classloader::ClassLoader,
+        statics::StaticFields,
+        string::Interner,
+        RuntimeValue,
+    },
     static_method, Context, VM,
 };
 <span class="kw">use </span>parse::attributes::CodeAttribute;
@@ -211,6 +225,7 @@
 
     <span class="kw">let </span><span class="kw-2">mut </span>vm = VM {
         class_loader,
+        statics: StaticFields::new(),
         interner: Interner::new(jls),
     };
 
@@ -261,18 +276,21 @@
                 <span class="macro">printer!</span>(<span class="string">&quot;(Ljava/lang/String;)V&quot;</span>, |a: RuntimeValue| {
                     <span class="kw">let </span>string = a.as_object().expect(<span class="string">&quot;was not an object (string)&quot;</span>);
                     <span class="kw">let </span>string = string.read();
-                    <span class="kw">let </span>bytes =
-                        string.get_instance_field((<span class="string">&quot;value&quot;</span>.to_string(), <span class="string">&quot;[B&quot;</span>.to_string())).expect(<span class="string">&quot;could not locate value field&quot;</span>);
+                    <span class="kw">let </span>bytes = string
+                        .get_instance_field((<span class="string">&quot;value&quot;</span>.to_string(), <span class="string">&quot;[B&quot;</span>.to_string()))
+                        .expect(<span class="string">&quot;could not locate value field&quot;</span>);
                     <span class="kw">let </span>bytes = bytes.as_array().expect(<span class="string">&quot;bytes was not an array (byte[])&quot;</span>);
 
                     <span class="kw">let </span>bytes = bytes
+                        .read()
                         .values
                         .iter()
                         .map(|v| v.as_integral().expect(<span class="string">&quot;value was not an int (char)&quot;</span>))
                         .map(|v| v.value <span class="kw">as </span>u8)
                         .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
 
-                    <span class="kw">let </span>str = decode_string((CompactEncoding::Utf16, bytes)).expect(<span class="string">&quot;could not decode string&quot;</span>);
+                    <span class="kw">let </span>str = decode_string((CompactEncoding::Utf16, bytes))
+                        .expect(<span class="string">&quot;could not decode string&quot;</span>);
                     <span class="macro">println!</span>(<span class="string">&quot;{}&quot;</span>, str);
                 }),
             ] {

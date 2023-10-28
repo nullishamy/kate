@@ -191,8 +191,26 @@
 <a href="#191" id="191">191</a>
 <a href="#192" id="192">192</a>
 <a href="#193" id="193">193</a>
-</pre></div><pre class="rust"><code>
-<span class="kw">use super</span>::{Instruction, Progression};
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
+<a href="#203" id="203">203</a>
+<a href="#204" id="204">204</a>
+<a href="#205" id="205">205</a>
+<a href="#206" id="206">206</a>
+<a href="#207" id="207">207</a>
+<a href="#208" id="208">208</a>
+<a href="#209" id="209">209</a>
+<a href="#210" id="210">210</a>
+</pre></div><pre class="rust"><code><span class="attr">#![allow(clippy::redundant_closure_call)]
+
+</span><span class="kw">use super</span>::{Instruction, Progression};
 <span class="kw">use crate</span>::{
     object::{
         numeric::{FloatingType, IntegralType, Integral, Floating},
@@ -297,6 +315,14 @@
     (lhs.value <span class="kw">as </span>i32) % (rhs.value <span class="kw">as </span>i32)
 });
 
+<span class="macro">binop!</span>(Ishl (int) =&gt; |lhs: Integral, rhs: Integral| {
+    (lhs.value <span class="kw">as </span>i32).wrapping_shl(rhs.value <span class="kw">as </span>u32)
+});
+
+<span class="macro">binop!</span>(Ishr (int) =&gt; |lhs: Integral, rhs: Integral| {
+    (lhs.value <span class="kw">as </span>i32).wrapping_shr(rhs.value <span class="kw">as </span>u32)
+});
+
 <span class="comment">// Binary (long)
 </span><span class="macro">binop!</span>(Lsub (long) =&gt; |lhs: Integral, rhs: Integral| {
     lhs.value.wrapping_sub(rhs.value)
@@ -316,6 +342,14 @@
 
 <span class="macro">binop!</span>(Lrem (long) =&gt; |lhs: Integral, rhs: Integral| {
     lhs.value % rhs.value
+});
+
+<span class="macro">binop!</span>(Lshl (long) =&gt; |lhs: Integral, rhs: Integral| {
+    lhs.value.wrapping_shl(rhs.value <span class="kw">as </span>u32)
+});
+
+<span class="macro">binop!</span>(Lshr (long) =&gt; |lhs: Integral, rhs: Integral| {
+    lhs.value.wrapping_shr(rhs.value <span class="kw">as </span>u32)
 });
 
 <span class="comment">// Binary (float)
