@@ -84,6 +84,11 @@ impl Instruction for Ldc {
 
                 ctx.operands.push(RuntimeValue::Object(obj))
             }
+            ConstantEntry::Class(data) => {
+                let class_name = data.name.resolve().string();
+                let class = vm.class_loader.load_class(class_name)?;
+                ctx.operands.push(RuntimeValue::Object(class));
+            }
             v => return Err(anyhow!("cannot load {:#?} with ldc", v)),
         };
 
