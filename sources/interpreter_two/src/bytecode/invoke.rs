@@ -7,7 +7,7 @@ use crate::{
         numeric::{FloatingType, IntegralType},
         Object, WrappedClassObject, RuntimeValue,
     },
-    Context, VM,
+    Context, VM, arg, pop
 };
 use anyhow::{anyhow, Context as AnyhowContext, Result};
 use parse::{
@@ -113,18 +113,7 @@ impl Instruction for InvokeVirtual {
             args_for_call.push(arg.clone());
         }
 
-        let objectref = ctx.operands.pop().context("no objectreference")?;
-        let objectref = objectref.as_object();
-        if objectref.is_none() {
-            panic!(
-                "when caling {} ({}) in {}, object was {:#?}",
-                method_name,
-                method_descriptor.to_string(),
-                class_name,
-                objectref
-            )
-        }
-        let objectref = Rc::clone(objectref.unwrap());
+        let objectref = arg!(ctx, "objectref" => Object);
 
         // Let C be the class of objectref. A method is selected with respect
         // to C and the resolved method (§5.4.6). This is the method to be invoked.

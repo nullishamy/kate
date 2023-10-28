@@ -62,6 +62,12 @@ macro_rules! arg {
 
         val.clone()
     }};
+    ($ctx: expr, $side: expr => Object) => {{
+        let val = pop!($ctx);
+
+        let val = val.as_object().context(format!("{} was not an object", $side))?;
+        val.clone()
+    }};
     ($ctx: expr, $side: expr => Array) => {{
         let val = pop!($ctx);
 
