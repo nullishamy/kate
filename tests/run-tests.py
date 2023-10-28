@@ -81,7 +81,7 @@ async def display_failure(exec, context):
 {(await exec.stderr.read()).decode('utf-8')}
   """)
 
-async def run_tests(sources, args):
+async def run_tests(sources):
   passes = []
   fails = []
 
@@ -99,19 +99,22 @@ async def run_tests(sources, args):
 
       procs = []
       exits = []
+      start = time.time()
 
       async for proc in (await run_cmd(run, False) for run in run_cmds):
         exit = await proc.wait()
         procs.append(proc)
         exits.append(exit)
 
-      return source_location, list(zip(procs, exits))
+      end = time.time()
+
+      return source_location, (end - start), list(zip(procs, exits))
   
   results = await asyncio.gather(*[
     run_for_source(source) for source in sources
   ])
 
-  for source, execution_set in results:
+  for source, duration, execution_set in results:
     did_any_fail = False
     for proc, exit in execution_set:
       if exit != 0:
@@ -121,7 +124,7 @@ async def run_tests(sources, args):
     if did_any_fail:
         fails.append(source)
     else:
-        print(f'{Colours.GREEN}ok:{Colours.END}', source)
+        print(f'{Colours.GREEN}ok ({round(duration, 3)}s):{Colours.END}', source)
         passes.append(source)
 
   return passes, fails
@@ -149,7 +152,7 @@ async def main():
   print()
 
   start = time.time()
-  passes, fails = await run_tests(filter_sources(get_sources(['java']), args.filter), args)
+  passes, fails = await run_tests(filter_sources(get_sources(['java']), args.filter))
   end = time.time()
   duration = end - start
 
