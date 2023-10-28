@@ -100,5 +100,5 @@ unop!(Dneg (double) => |val: Floating| {
 
 // Conversions
 unop!(I2l (int => long) => |val: Integral| {
-    val.value as i64
+    val.value as i32 as i64
 });
