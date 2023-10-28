@@ -1,3 +1,4 @@
+#![allow(clippy::redundant_closure_call)]
 
 use super::{Instruction, Progression};
 use crate::{

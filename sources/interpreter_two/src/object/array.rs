@@ -1,4 +1,4 @@
-use super::{RuntimeValue, WrappedObject, WrappedClassObject};
+use super::{RuntimeValue, WrappedClassObject};
 
 
 #[derive(Clone, Debug)]
@@ -44,5 +44,9 @@ pub struct Array {
 impl Array {
     pub fn len(&self) -> usize {
         self.values.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.values.is_empty()
     }
 }

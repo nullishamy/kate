@@ -6,7 +6,7 @@ use interpreter_two::{
     native::NativeFunction,
     object::{
         classloader::ClassLoader,
-        statics::{StaticFieldRef, StaticFields},
+        statics::StaticFields,
         string::Interner,
         RuntimeValue,
     },

@@ -256,7 +256,7 @@ pub enum RuntimeValue {
 }
 
 const UPPER_SCIENCE_BOUND: f64 = 1_000_000.0;
-const LOWER_SCIENCE_BOUND: f64 = 0.0_000_001;
+const LOWER_SCIENCE_BOUND: f64 = 0.000_000_1;
 
 impl fmt::Display for RuntimeValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
