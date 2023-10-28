@@ -3,7 +3,7 @@ use bytecode::decode_instruction;
 use bytes::BytesMut;
 
 use object::{classloader::ClassLoader, RuntimeValue, WrappedClassObject, string::Interner, statics::StaticFields};
-use parse::{attributes::CodeAttribute, classfile::Resolvable};
+use parse::attributes::CodeAttribute;
 use tracing::info;
 
 use crate::native::NativeModule;
