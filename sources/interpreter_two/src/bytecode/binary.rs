@@ -104,6 +104,14 @@ binop!(Irem (int) => |lhs: Integral, rhs: Integral| {
     (lhs.value as i32) % (rhs.value as i32)
 });
 
+binop!(Ishl (int) => |lhs: Integral, rhs: Integral| {
+    (lhs.value as i32).wrapping_shl(rhs.value as u32)
+});
+
+binop!(Ishr (int) => |lhs: Integral, rhs: Integral| {
+    (lhs.value as i32).wrapping_shr(rhs.value as u32)
+});
+
 // Binary (long)
 binop!(Lsub (long) => |lhs: Integral, rhs: Integral| {
     lhs.value.wrapping_sub(rhs.value)
@@ -123,6 +131,14 @@ binop!(Ldiv (long) => |lhs: Integral, rhs: Integral| {
 
 binop!(Lrem (long) => |lhs: Integral, rhs: Integral| {
     lhs.value % rhs.value
+});
+
+binop!(Lshl (long) => |lhs: Integral, rhs: Integral| {
+    lhs.value.wrapping_shl(rhs.value as u32)
+});
+
+binop!(Lshr (long) => |lhs: Integral, rhs: Integral| {
+    lhs.value.wrapping_shr(rhs.value as u32)
 });
 
 // Binary (float)
