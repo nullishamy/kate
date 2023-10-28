@@ -2,7 +2,7 @@ use anyhow::Result;
 use bytecode::decode_instruction;
 use bytes::BytesMut;
 
-use object::{classloader::ClassLoader, RuntimeValue, WrappedClassObject, string::Interner};
+use object::{classloader::ClassLoader, RuntimeValue, WrappedClassObject, string::Interner, statics::StaticFields};
 use parse::attributes::CodeAttribute;
 use tracing::info;
 
@@ -21,7 +21,8 @@ pub struct Context {
 
 pub struct VM {
     pub class_loader: ClassLoader,
-    pub interner: Interner
+    pub interner: Interner,
+    pub statics: StaticFields
 }
 
 impl VM {
