@@ -119,10 +119,7 @@ impl Instruction for InvokeVirtual {
 
         // Let C be the class of objectref. A method is selected with respect
         // to C and the resolved method (§5.4.6). This is the method to be invoked.
-        let objectclass = objectref
-            .read()
-            .class()
-            .context("objecref had no class")?;
+        let objectclass = objectref.read().class().context("objecref had no class")?;
 
         let (selected_class, selected_method) =
             select_method(vm, objectclass, loaded_class, loaded_method)?.ok_or(anyhow!(
@@ -174,10 +171,28 @@ impl Instruction for InvokeVirtual {
 
             match lookup {
                 NativeFunction::Static(func) => func(Rc::clone(&selected_class), args_for_call, vm),
-                _ => {
-                    return Err(anyhow!(
-                        "attempted to InvokeStatic an instance native method"
-                    ))
+                NativeFunction::Instance(_) => {
+                    todo!("native instance methods")
+                },
+            }
+        };
+
+        if let Err(e) = exec_result {
+            return Err(e.context(format!(
+                "when interpreting {} in {}",
+                method_name, class_name
+            )));
+        }
+
+        // Caller gave us a value, push it to our stack (Xreturn does this)
+        if let Some(return_value) = exec_result.unwrap() {
+            ctx.operands.push(return_value);
+        }
+
+        Ok(Progression::Next)
+    }
+}
+
 #[derive(Debug)]
 pub struct InvokeSpecial {
     pub(crate) index: u16,
