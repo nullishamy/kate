@@ -14,12 +14,10 @@ pub struct Cli {
     /// Whether to run in "test mode", which will emit more machine friendly logs
     pub test: bool,
 
-
     #[arg(long("cp"))]
     /// A list of paths to add to the classpath
-    pub classpath: Vec<String>
+    pub classpath: Vec<String>,
 }
 
 #[derive(Subcommand)]
-pub enum Command {
-}
+pub enum Command {}

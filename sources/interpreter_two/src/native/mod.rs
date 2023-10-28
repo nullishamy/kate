@@ -1,6 +1,9 @@
 use anyhow::Result;
 
-use crate::{object::{RuntimeValue, WrappedClassObject, WrappedObject}, VM};
+use crate::{
+    object::{RuntimeValue, WrappedClassObject, WrappedObject},
+    VM,
+};
 
 pub mod lang;
 
@@ -12,11 +15,8 @@ pub type NativeStaticFunction = fn(
     vm: &mut VM,
 ) -> Result<Option<RuntimeValue>>;
 
-pub type NativeInstanceFunction = fn(
-    this: WrappedObject,
-    args: Vec<RuntimeValue>,
-    vm: &mut VM,
-) -> Result<Option<RuntimeValue>>;
+pub type NativeInstanceFunction =
+    fn(this: WrappedObject, args: Vec<RuntimeValue>, vm: &mut VM) -> Result<Option<RuntimeValue>>;
 
 #[derive(Clone, Debug)]
 pub enum NativeFunction {

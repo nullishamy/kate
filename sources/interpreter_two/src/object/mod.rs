@@ -146,7 +146,13 @@ impl ClassObject {
         // NOTE: Class docs say this value is set by the JVM (so we do this here)
         // But there also exists a constructor to set this regularly. Not sure what we should do.
         // Setting to null because it is supported and requires the least effort to make things work.
-        s.set_instance_field(("classLoader".to_string(), "Ljava/lang/ClassLoader;".to_string()), RuntimeValue::Null)?;
+        s.set_instance_field(
+            (
+                "classLoader".to_string(),
+                "Ljava/lang/ClassLoader;".to_string(),
+            ),
+            RuntimeValue::Null,
+        )?;
 
         Ok(s)
     }
@@ -269,11 +275,11 @@ impl RuntimeValue {
             RuntimeValue::Object(data) => {
                 let pt = Rc::as_ptr(data);
                 pt as *const () as i32
-            },
+            }
             RuntimeValue::Array(data) => {
                 let pt = Rc::as_ptr(data);
                 pt as *const () as i32
-            },
+            }
             RuntimeValue::Integral(data) => data.value as i32,
             RuntimeValue::Floating(data) => data.value as i32,
             RuntimeValue::Null => 0,

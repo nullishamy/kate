@@ -1,7 +1,7 @@
 use std::fmt;
 
 use crate::{object::RuntimeValue, Context, VM};
-use anyhow::{anyhow, Result, Error};
+use anyhow::{anyhow, Error, Result};
 use bytes::BytesMut;
 use support::bytes_ext::SafeBuf;
 
@@ -16,7 +16,7 @@ pub enum Progression {
     JumpRel(i32),
     Next,
     Return(Option<RuntimeValue>),
-    Throw(Error)
+    Throw(Error),
 }
 
 pub trait Instruction: fmt::Debug {
@@ -94,7 +94,7 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
             index: bytes.try_get_u8()? as u16,
         }),
         0x13 => b(ops::Ldc {
-            index: bytes.try_get_u8()? as u16,
+            index: bytes.try_get_u16()?,
         }),
         0x14 => b(ops::Ldc2W {
             index: bytes.try_get_u16()?,
@@ -303,13 +303,16 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         0x7b => b(ops::Lshr),
         0x7c => b(ops::Iushr),
         0x7d => b(ops::Lushr),
-        //  0x7e => Opcode::IAND,
-        //  0x7f => Opcode::LAND,
+        0x7e => b(ops::Iand),
+        0x7f => b(ops::Land),
         //  0x80 => Opcode::IOR,
         //  0x81 => Opcode::LOR,
         //  0x82 => Opcode::IXOR,
         //  0x83 => Opcode::LXOR,
-        //  0x84 => Opcode::IINC(bytes.try_get_u8()?, bytes.try_get_i8()?),
+        0x84 => b(ops::Iinc {
+            index: bytes.try_get_u8()?,
+            constant: bytes.try_get_i8()?,
+        }),
         0x85 => b(ops::I2l),
         //  0x86 => Opcode::I2F,
         //  0x87 => Opcode::I2D,
@@ -457,8 +460,12 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         // Extended
         //  0xc4 => Opcode::WIDE,
         //  0xc5 => Opcode::MULTIANEWARRAY,
-        0xc6 => b(ops::IfNull { jump_to: bytes.try_get_i16()? }),
-        0xc7 => b(ops::IfNotNull { jump_to: bytes.try_get_i16()? }),
+        0xc6 => b(ops::IfNull {
+            jump_to: bytes.try_get_i16()?,
+        }),
+        0xc7 => b(ops::IfNotNull {
+            jump_to: bytes.try_get_i16()?,
+        }),
         //  0xc8 => Opcode::GOTO_W,
         //  0xc9 => Opcode::JSR_W,
 

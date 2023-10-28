@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use super::{Instruction, Progression};
-use crate::object::array::{ArrayType, Array, ArrayPrimitive};
+use crate::object::array::{Array, ArrayPrimitive, ArrayType};
 use crate::object::numeric::IntegralType;
 use crate::object::RuntimeValue;
 use crate::{Context, VM};
@@ -33,7 +33,7 @@ macro_rules! arg {
             .as_integral()
             .context(format!("{} was not an integral", $side))?;
         if val.ty != IntegralType::Int {
-            return Err(anyhow!(format!("{} was not an int", $side)));
+            return Err(anyhow!(format!("{} was not an int, got {:#?}", $side, val)));
         }
 
         val.clone()
@@ -44,8 +44,8 @@ macro_rules! arg {
         let val = val
             .as_integral()
             .context(format!("{} was not an integral", $side))?;
-        if val.ty != IntegralType::Int {
-            return Err(anyhow!(format!("{} was not an int", $side)));
+        if val.ty != IntegralType::Long {
+            return Err(anyhow!(format!("{} was not a long, got {:#?}", $side, val)));
         }
 
         val.clone()
@@ -164,13 +164,13 @@ impl Instruction for ANewArray {
                 let class_name = data.name.resolve().string();
                 let cls = vm.class_loader.load_class(class_name)?;
                 ArrayType::Object(cls)
-            },
-            e => return Err(anyhow!("{:#?} cannot be used as an array type", e))
+            }
+            e => return Err(anyhow!("{:#?} cannot be used as an array type", e)),
         };
 
         // All components of the new array are initialized to null, the default value for reference types (§2.4).
-        let mut values = Vec::with_capacity(count.value as usize + 1);
-        values.resize_with(count.value as usize + 1, || RuntimeValue::Null);
+        let mut values = Vec::with_capacity(count.value as usize);
+        values.resize_with(count.value as usize, || RuntimeValue::Null);
 
         // A new array with components of that type, of length count, is allocated
         // from the garbage-collected heap.
@@ -201,9 +201,11 @@ impl Instruction for NewArray {
         let atype = ArrayPrimitive::from_tag(self.type_tag)?;
         let array_ty = ArrayType::Primitive(atype);
 
-        let mut values = Vec::with_capacity(count.value as usize + 1);
+        let mut values = Vec::with_capacity(count.value as usize);
         // TODO: Proper default values
-        values.resize_with(count.value as usize + 1, || RuntimeValue::Integral((0_i32).into()));
+        values.resize_with(count.value as usize, || {
+            RuntimeValue::Integral((0_i32).into())
+        });
 
         // A new array whose components are of type atype and of length
         // count is allocated from the garbage-collected heap.
@@ -235,7 +237,6 @@ impl Instruction for ArrayStore {
         Ok(Progression::Next)
     }
 }
-
 
 #[derive(Debug)]
 pub struct ArrayLoad;

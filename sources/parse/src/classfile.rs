@@ -7,7 +7,8 @@ use crate::{
     },
 };
 use anyhow::Result;
-use std::{fmt, marker::PhantomData, rc::Rc, sync::RwLock};
+use parking_lot::RwLock;
+use std::{fmt, marker::PhantomData, rc::Rc};
 
 #[derive(Debug, Clone)]
 pub struct ClassFile {
@@ -45,7 +46,7 @@ pub struct Method {
 }
 #[derive(Debug, Clone)]
 pub struct Methods {
-    pub(crate) values: Vec<Method>,
+    pub values: Vec<Method>,
 }
 
 impl Methods {
@@ -104,7 +105,7 @@ macro_rules! address {
     ($type: ty, $enum: ident) => {
         impl Resolvable<$type> for Addressed<$type> {
             fn try_resolve(&self) -> anyhow::Result<$type> {
-                let entries = self.entries.read().expect("could not lock pool");
+                let entries = self.entries.read();
                 let value = entries
                     .get((self.index - 1) as usize)
                     .ok_or(anyhow::anyhow!("no value found"))?;
@@ -125,7 +126,7 @@ macro_rules! address {
 
 impl Resolvable<ConstantEntry> for Addressed<ConstantEntry> {
     fn try_resolve(&self) -> Result<ConstantEntry> {
-        let pool = self.entries.read().expect("could not lock pool");
+        let pool = self.entries.read();
         let value = pool
             .get((self.index - 1) as usize)
             .ok_or(anyhow::anyhow!("no value found"))?;

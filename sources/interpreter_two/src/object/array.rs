@@ -2,7 +2,6 @@ use anyhow::{anyhow, Result};
 
 use super::{RuntimeValue, WrappedClassObject};
 
-
 #[derive(Clone, Debug)]
 pub enum ArrayPrimitive {
     Bool,
@@ -26,7 +25,7 @@ impl ArrayPrimitive {
             9 => Self::Short,
             10 => Self::Int,
             11 => Self::Long,
-            _ => return Err(anyhow!("unknown array type {}", tag))
+            _ => return Err(anyhow!("unknown array type {}", tag)),
         })
     }
 }
@@ -40,7 +39,7 @@ pub enum ArrayType {
 #[derive(Debug, Clone)]
 pub struct Array {
     pub ty: ArrayType,
-    pub values: Vec<RuntimeValue>
+    pub values: Vec<RuntimeValue>,
 }
 
 impl Array {

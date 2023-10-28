@@ -13,34 +13,16 @@ use anyhow::{anyhow, Context as AnyhowContext, Result};
 
 macro_rules! binop {
     // Generic value transformation
-    ($ins: ident, $res_ty: ident, $res_trans: expr => $op: expr) => {
+    ($ins: ident, $lhs: ident, $rhs: ident, $res: ty, $res_trans: expr => $op: expr) => {
         #[derive(Debug)]
         pub struct $ins;
 
         impl Instruction for $ins {
             fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
-                let rhs = arg!(ctx, "rhs" => $res_ty);
-                let lhs = arg!(ctx, "lhs" => $res_ty);
+                let rhs = arg!(ctx, "rhs" => $rhs);
+                let lhs = arg!(ctx, "lhs" => $lhs);
 
-                let result: $res_ty = $op(lhs, rhs);
-                ctx.operands.push($res_trans(result));
-
-                Ok(Progression::Next)
-            }
-        }
-    };
-    // Generic duplicated value transformation
-    (x2 $ins: ident, $res_ty: ident, $res_trans: expr => $op: expr) => {
-        #[derive(Debug)]
-        pub struct $ins;
-
-        impl Instruction for $ins {
-            fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
-                let rhs = arg!(ctx, "rhs" => $res_ty);
-                let lhs = arg!(ctx, "lhs" => $res_ty);
-
-                let result: $res_ty = $op(lhs, rhs);
-                ctx.operands.push($res_trans(result));
+                let result: $res = $op(lhs, rhs);
                 ctx.operands.push($res_trans(result));
 
                 Ok(Progression::Next)
@@ -69,16 +51,19 @@ macro_rules! binop {
         }
     };
     ($ins: ident (int) => $op: expr) => {
-      binop!($ins, i32, |result: i32| RuntimeValue::Integral(result.into()) => $op);
+      binop!($ins, i32, i32, i32, |result: i32| RuntimeValue::Integral(result.into()) => $op);
     };
     ($ins: ident (long) => $op: expr) => {
-      binop!(x2 $ins, i64, |result: i64| RuntimeValue::Integral(result.into()) => $op);
+      binop!($ins, i64, i64, i64, |result: i64| RuntimeValue::Integral(result.into()) => $op);
+    };
+    ($ins: ident (long bitwise) => $op: expr) => {
+      binop!($ins, i64, i32, i64, |result: i64| RuntimeValue::Integral(result.into()) => $op);
     };
     ($ins: ident (float) => $op: expr) => {
-      binop!($ins, f32, |result: f32| RuntimeValue::Floating(result.into()) => $op);
+      binop!($ins, f32, f32, f32, |result: f32| RuntimeValue::Floating(result.into()) => $op);
     };
     ($ins: ident (double) => $op: expr) => {
-      binop!($ins, f64, |result: f64| RuntimeValue::Floating(result.into()) => $op);
+      binop!($ins, f64, f64, f64, |result: f64| RuntimeValue::Floating(result.into()) => $op);
     };
     ($ins: ident (int cond) => $op: expr) => {
       binop!($ins, i32 => $op);
@@ -106,18 +91,6 @@ binop!(Irem (int) => |lhs: Integral, rhs: Integral| {
     (lhs.value as i32) % (rhs.value as i32)
 });
 
-binop!(Ishl (int) => |lhs: Integral, rhs: Integral| {
-    (lhs.value as i32).wrapping_shl(rhs.value as u32)
-});
-
-binop!(Ishr (int) => |lhs: Integral, rhs: Integral| {
-    (lhs.value as i32).wrapping_shr(rhs.value as u32)
-});
-
-binop!(Iushr (int) => |lhs: Integral, rhs: Integral| {
-    ((lhs.value as u32) >> (rhs.value as u32)) as i32
-});
-
 // Binary (long)
 binop!(Lsub (long) => |lhs: Integral, rhs: Integral| {
     lhs.value.wrapping_sub(rhs.value)
@@ -137,18 +110,6 @@ binop!(Ldiv (long) => |lhs: Integral, rhs: Integral| {
 
 binop!(Lrem (long) => |lhs: Integral, rhs: Integral| {
     lhs.value % rhs.value
-});
-
-binop!(Lshl (long) => |lhs: Integral, rhs: Integral| {
-    lhs.value.wrapping_shl(rhs.value as u32)
-});
-
-binop!(Lshr (long) => |lhs: Integral, rhs: Integral| {
-    lhs.value.wrapping_shr(rhs.value as u32)
-});
-
-binop!(Lushr (long) => |lhs: Integral, rhs: Integral| {
-    ((lhs.value as u64) >> (rhs.value as u64)) as i64
 });
 
 // Binary (float)
@@ -216,4 +177,37 @@ binop!(Igt (int cond) => |lhs: Integral, rhs: Integral| {
 
 binop!(Ilt (int cond) => |lhs: Integral, rhs: Integral| {
     lhs.value < rhs.value
+});
+
+// Bitwise
+binop!(Lshl (long bitwise) => |lhs: Integral, rhs: Integral| {
+    lhs.value.wrapping_shl(rhs.value as u32)
+});
+
+binop!(Lshr (long bitwise) => |lhs: Integral, rhs: Integral| {
+    lhs.value.wrapping_shr(rhs.value as u32)
+});
+
+binop!(Land (long) => |lhs: Integral, rhs: Integral| {
+    lhs.value & rhs.value
+});
+
+binop!(Lushr (long bitwise) => |lhs: Integral, rhs: Integral| {
+    ((lhs.value as u64) >> (rhs.value as u64)) as i64
+});
+
+binop!(Ishl (int) => |lhs: Integral, rhs: Integral| {
+    (lhs.value as i32).wrapping_shl(rhs.value as u32)
+});
+
+binop!(Ishr (int) => |lhs: Integral, rhs: Integral| {
+    (lhs.value as i32).wrapping_shr(rhs.value as u32)
+});
+
+binop!(Iushr (int) => |lhs: Integral, rhs: Integral| {
+    ((lhs.value as u32) >> (rhs.value as u32)) as i32
+});
+
+binop!(Iand (int) => |lhs: Integral, rhs: Integral| {
+    (lhs.value as i32) & (rhs.value as i32)
 });

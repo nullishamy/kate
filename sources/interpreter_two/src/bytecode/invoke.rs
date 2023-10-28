@@ -18,7 +18,10 @@ use parse::{
     flags::MethodAccessFlag,
     pool::ConstantEntry,
 };
-use support::{descriptor::MethodType, encoding::{decode_string, CompactEncoding}};
+use support::{
+    descriptor::MethodType,
+    encoding::{decode_string, CompactEncoding},
+};
 use tracing::info;
 
 #[derive(Debug)]
@@ -90,10 +93,7 @@ impl Instruction for InvokeVirtual {
         let exec_result = do_call(vm, selected_method, selected_class, args_for_call);
 
         if let Err(e) = exec_result {
-            return Err(e.context(format!(
-                "at {}.{}",
-                class_name, method_name
-            )));
+            return Err(e.context(format!("at {}.{}", class_name, method_name)));
         }
 
         // Caller gave us a value, push it to our stack (Xreturn does this)
@@ -164,10 +164,7 @@ impl Instruction for InvokeSpecial {
         let exec_result = do_call(vm, selected_method, selected_class, args_for_call);
 
         if let Err(e) = exec_result {
-            return Err(e.context(format!(
-                "at {}.{}",
-                class_name, method_name
-            )));
+            return Err(e.context(format!("at {}.{}", class_name, method_name)));
         }
 
         // Caller gave us a value, push it to our stack (Xreturn does this)
@@ -241,10 +238,7 @@ impl Instruction for InvokeStatic {
         let exec_result = do_call(vm, loaded_method, loaded_class, args_for_call);
 
         if let Err(e) = exec_result {
-            return Err(e.context(format!(
-                "at {}.{}",
-                class_name, method_name
-            )));
+            return Err(e.context(format!("at {}.{}", class_name, method_name)));
         }
 
         // Caller gave us a value, push it to our stack (Xreturn does this)
@@ -622,7 +616,9 @@ impl Instruction for Athrow {
             .get_instance_field(("value".to_string(), "[B".to_string()))
             .context("could not locate value field")?;
 
-        let bytes = bytes.as_array().context("bytes was not an array (byte[])")?;
+        let bytes = bytes
+            .as_array()
+            .context("bytes was not an array (byte[])")?;
         let bytes = bytes
             .read()
             .values

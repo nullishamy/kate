@@ -1,16 +1,15 @@
-
 use std::rc::Rc;
-use std::sync::RwLock;
 
 use anyhow::Result;
 use enum_as_inner::EnumAsInner;
+use parking_lot::RwLock;
 
 use crate::classfile::Addressed;
 use crate::classfile::Resolvable;
 
 #[derive(Debug, Clone)]
 pub struct ConstantPool {
-    entries: Rc<RwLock<Vec<ConstantEntry>>>,
+    pub entries: Rc<RwLock<Vec<ConstantEntry>>>,
 }
 
 impl Default for ConstantPool {
@@ -27,12 +26,12 @@ impl ConstantPool {
     }
 
     pub fn insert(&mut self, entry: ConstantEntry) {
-        let mut pool = self.entries.write().unwrap();
+        let mut pool = self.entries.write();
         pool.push(entry)
     }
 
     pub fn get(&self, index: u16) -> Option<ConstantEntry> {
-        let pool = self.entries.read().unwrap();
+        let pool = self.entries.read();
         pool.get(index as usize).cloned()
     }
 
@@ -41,7 +40,7 @@ impl ConstantPool {
     }
 
     pub(crate) fn perform_format_checking(&self) -> Result<()> {
-        let entries = self.entries.read().unwrap();
+        let entries = self.entries.read();
         for item in entries.iter() {
             match item {
                 ConstantEntry::Class(data) => {

@@ -9,9 +9,8 @@ pub mod result;
 extern crate anyhow;
 extern crate bytes;
 extern crate enum_as_inner;
+extern crate parking_lot;
 extern crate support;
 
 #[cfg(test)]
-mod tests {
-   
-}
+mod tests {}

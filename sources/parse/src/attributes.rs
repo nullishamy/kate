@@ -1,5 +1,3 @@
-
-
 use crate::{
     classfile::{Addressed, Resolvable},
     pool::{ConstantPool, ConstantUtf8},

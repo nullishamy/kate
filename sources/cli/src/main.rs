@@ -1,16 +1,11 @@
-use std::process::exit;
+use std::{process::exit, rc::Rc};
 
 use anyhow::Context as AnyhowContext;
 use args::Cli;
 use clap::Parser;
 use interpreter_two::{
     native::NativeFunction,
-    object::{
-        classloader::ClassLoader,
-        statics::StaticFields,
-        string::Interner,
-        RuntimeValue,
-    },
+    object::{classloader::ClassLoader, statics::StaticFields, string::Interner, RuntimeValue},
     static_method, Context, VM,
 };
 use parse::attributes::CodeAttribute;
@@ -63,8 +58,13 @@ fn main() {
     let mut vm = VM {
         class_loader,
         statics: StaticFields::new(),
-        interner: Interner::new(jls),
+        interner: Interner::new(Rc::clone(&jls)),
     };
+
+    // Init these classes so that their static fields can get set
+    // this is mainly so that we can go in afterward (in vm.bootstrap)
+    // and set COMPACT_STRINGS
+    vm.initialise_class(Rc::clone(&jls)).unwrap();
 
     vm.bootstrap().unwrap();
 
@@ -128,7 +128,7 @@ fn main() {
 
                     let str = decode_string((CompactEncoding::Utf16, bytes))
                         .expect("could not decode string");
-                    println!("{}", str);
+                    println!("{:#?}", str);
                 }),
             ] {
                 cls.register_native(printer.0, printer.1);
@@ -164,6 +164,7 @@ fn main() {
             for err in chain {
                 println!("    {}", err);
             }
+
             exit(1);
         } else {
             info!("Execution concluded without error")

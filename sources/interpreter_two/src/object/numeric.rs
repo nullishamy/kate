@@ -1,34 +1,34 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum IntegralType {
-  Byte,
-  Short,
-  Char,
-  Int,
-  Long
+    Byte,
+    Short,
+    Char,
+    Int,
+    Long,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FloatingType {
-  Double,
-  Float
+    Double,
+    Float,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct Integral {
-  pub value: i64,
-  pub ty: IntegralType
+    pub value: i64,
+    pub ty: IntegralType,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct Floating {
-  pub value: f64,
-  pub ty: FloatingType
+    pub value: f64,
+    pub ty: FloatingType,
 }
 
 macro_rules! from_num {
     ($b: ty > $a: ty, $( $x:ty => $y: expr ),* ) => {
         $(
-            impl From<$x> for $b { 
+            impl From<$x> for $b {
               fn from(value: $x) -> Self {
                 Self {
                   value: value as $a,

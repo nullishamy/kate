@@ -2,7 +2,7 @@ use std::{collections::HashMap, fs, path::PathBuf, rc::Rc};
 
 use anyhow::{anyhow, Result};
 use parking_lot::RwLock;
-use parse::{parser::Parser, classfile::Resolvable};
+use parse::{classfile::Resolvable, parser::Parser};
 use tracing::debug;
 
 use super::{ClassObject, WrappedClassObject};
@@ -10,7 +10,7 @@ use super::{ClassObject, WrappedClassObject};
 pub struct ClassLoader {
     classes: HashMap<String, WrappedClassObject>,
     class_path: Vec<PathBuf>,
-    meta_class_object: Option<WrappedClassObject>
+    meta_class_object: Option<WrappedClassObject>,
 }
 
 impl ClassLoader {
@@ -28,26 +28,26 @@ impl ClassLoader {
     }
 
     pub fn load_from_bytes(&mut self, name: String, bytes: &[u8]) -> Result<WrappedClassObject> {
-            let mut parser = Parser::new(bytes);
-            let classfile = parser.parse()?;
+        let mut parser = Parser::new(bytes);
+        let classfile = parser.parse()?;
 
-            let mut super_class: Option<WrappedClassObject> = None;
-            if let Some(cls) = classfile.super_class {
-                super_class = Some(self.load_class(cls.resolve().name.resolve().string())?);
-            }
+        let mut super_class: Option<WrappedClassObject> = None;
+        if let Some(cls) = classfile.super_class {
+            super_class = Some(self.load_class(cls.resolve().name.resolve().string())?);
+        }
 
-            let object = Rc::new(RwLock::new(ClassObject::new(
-                self.meta_class_object.as_ref().cloned(),
-                super_class,
-                classfile.methods,
-                classfile.constant_pool,
-                classfile.access_flags,
-                classfile.this_class.resolve().name.resolve().try_string()?
-            )?));
+        let object = Rc::new(RwLock::new(ClassObject::new(
+            self.meta_class_object.as_ref().cloned(),
+            super_class,
+            classfile.methods,
+            classfile.constant_pool,
+            classfile.access_flags,
+            classfile.this_class.resolve().name.resolve().try_string()?,
+        )?));
 
-            self.classes.insert(name.clone(), Rc::clone(&object));
+        self.classes.insert(name.clone(), Rc::clone(&object));
 
-            Ok(object)
+        Ok(object)
     }
 
     pub fn load_class(&mut self, name: String) -> Result<WrappedClassObject> {

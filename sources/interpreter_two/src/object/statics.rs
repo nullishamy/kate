@@ -22,11 +22,7 @@ impl StaticFieldRef {
         }
     }
 
-    pub fn new(
-        class: String,
-        field_name: String,
-        field_descriptor: String,
-    ) -> Self {
+    pub fn new(class: String, field_name: String, field_descriptor: String) -> Self {
         Self {
             class,
             field_descriptor,

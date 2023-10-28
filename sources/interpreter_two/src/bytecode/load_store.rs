@@ -218,7 +218,9 @@ impl Instruction for PutField {
         let objectref = arg!(ctx, "objectref" => Object);
 
         // Otherwise, the referenced field in objectref is set to value
-        objectref.write().set_instance_field((name, descriptor), value)?;
+        objectref
+            .write()
+            .set_instance_field((name, descriptor), value)?;
 
         Ok(Progression::Next)
     }

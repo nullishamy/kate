@@ -181,3 +181,23 @@ impl Instruction for Pop {
         Ok(Progression::Next)
     }
 }
+
+#[derive(Debug)]
+pub struct Iinc {
+    pub(crate) index: u8,
+    pub(crate) constant: i8,
+}
+
+impl Instruction for Iinc {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+        let local = ctx
+            .locals
+            .get_mut(self.index as usize)
+            .context(format!("no local @ {}", self.index))?;
+
+        let int = local.as_integral_mut().context("not an int")?;
+        int.value += self.constant as i64;
+
+        Ok(Progression::Next)
+    }
+}
