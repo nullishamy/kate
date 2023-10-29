@@ -560,17 +560,46 @@ fn do_call(
             .known_attribute::<CodeAttribute>(class.read().constant_pool())?;
 
         let new_context = Context {
-            code,
+            code: code.clone(),
             class: Rc::clone(&class),
             pc: 0,
             operands: vec![],
-            locals: args,
+            locals: args.clone(),
         };
 
         // The new frame is then made current, and the Java Virtual Machine pc is set
         // to the opcode of the first instruction of the method to be invoked.
         // Execution continues with the first instruction of the method.
-        vm.run(new_context)
+        let res = vm.run(new_context);
+        if let Err((err, state)) = &res {
+            if let Throwable::Runtime(err) = err {
+                let ty = err.ty.read();
+                for entry in &code.exception_table {
+                    let entry_ty_name = entry.catch_type.resolve().name.resolve().string();
+                    let has_type_match = ty.get_class_name().clone() == entry_ty_name;
+                    let has_range_match = (entry.start_pc..entry.end_pc).contains(&(state.pc as u16));
+
+                    if has_type_match && has_range_match {
+                        // We matched, jump to the handler
+                        let re_enter_context = Context {
+                            code: code.clone(),
+                            class: Rc::clone(&class),
+                            pc: entry.handler_pc as i32,
+                            // Push the exception object as the first operand
+                            operands: vec![err.obj.clone()],
+                            locals: args.clone(),
+                        };
+
+                        info!("Re-entering at {}", re_enter_context.pc);
+
+                        return vm.run(re_enter_context).map_err(|e| e.0);
+                    }
+                }
+            }
+        }
+
+        // We couldn't handle the exception, throw it up
+        res.map_err(|e| e.0)
     } else {
         let method_name = method.name.resolve().string();
         let method_descriptor = method.descriptor.resolve().string();
@@ -601,8 +630,8 @@ pub struct Athrow;
 
 impl Instruction for Athrow {
     fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
-        let throwable = pop!(ctx);
-        let throwable = throwable
+        let _throwable = pop!(ctx);
+        let throwable = _throwable
             .as_object()
             .context("throwable was not an object")?
             .clone();
@@ -646,7 +675,8 @@ impl Instruction for Athrow {
         Ok(Progression::Throw(Throwable::Runtime(RuntimeException {
             message: format!("{}: {}", class_name, message_string),
             ty: class,
-            sources: vm.frames.clone()
+            obj: _throwable,
+            sources: vm.frames.clone(),
         })))
     }
 }

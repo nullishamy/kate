@@ -156,7 +156,7 @@ fn main() {
 
         let res = vm.run(ctx);
 
-        if let Err(e) = res {
+        if let Err((e, _)) = res {
             println!("Uncaught exception in main: {}", e);
 
             if let Throwable::Runtime(err) = e {

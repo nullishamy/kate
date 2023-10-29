@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::object::WrappedClassObject;
+use crate::object::{WrappedClassObject, RuntimeValue};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -37,6 +37,7 @@ pub struct Frame {
 pub struct RuntimeException {
     pub message: String,
     pub ty: WrappedClassObject,
+    pub obj: RuntimeValue,
     pub sources: Vec<Frame>,
 }
 

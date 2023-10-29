@@ -110,7 +110,7 @@ impl KnownAttribute for CodeAttribute {
 }
 
 pub struct ConstantValueAttribute {}
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CodeAttribute {
     pub max_stack: u16,
     pub max_locals: u16,
@@ -119,7 +119,7 @@ pub struct CodeAttribute {
     pub attributes: Attributes,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ExceptionEntry {
     pub start_pc: u16,
     pub end_pc: u16,

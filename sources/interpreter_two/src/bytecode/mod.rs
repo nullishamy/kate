@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::{object::RuntimeValue, Context, VM, error::Throwable};
+use crate::{object::RuntimeValue, Context, VM, error::Throwable, internal};
 use anyhow::{anyhow, Result};
 use bytes::BytesMut;
 use support::bytes_ext::SafeBuf;
@@ -30,7 +30,7 @@ fn b<T>(v: T) -> Box<T> {
     Box::new(v)
 }
 
-pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Instruction>> {
+pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Instruction>, Throwable> {
     let instruction = bytes.try_get_u8()?;
     Ok(match instruction {
         0x00 => b(ops::Nop),
@@ -473,6 +473,6 @@ pub fn decode_instruction(_vm: &VM, bytes: &mut BytesMut) -> Result<Box<dyn Inst
         0xca => b(ops::Nop),
         0xfe => b(ops::Nop),
         0xff => b(ops::Nop),
-        e => return Err(anyhow!("unknown opcode {:#01x}", e)),
+        e => return Err(internal!("unknown opcode {:#01x}", e)),
     })
 }

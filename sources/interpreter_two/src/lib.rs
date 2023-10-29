@@ -2,7 +2,7 @@ use anyhow::Result;
 use bytecode::decode_instruction;
 use bytes::BytesMut;
 
-use error::{Throwable, Frame};
+use error::{Frame, Throwable};
 use object::{
     classloader::ClassLoader, statics::StaticFields, string::Interner, RuntimeValue,
     WrappedClassObject,
@@ -30,11 +30,19 @@ pub struct VM {
     pub class_loader: ClassLoader,
     pub interner: Interner,
     pub statics: StaticFields,
-    pub frames: Vec<Frame>
+    pub frames: Vec<Frame>,
+}
+
+#[derive(Debug)]
+pub struct ThrownState {
+    pub pc: i32,
 }
 
 impl VM {
-    pub fn run(&mut self, mut ctx: Context) -> Result<Option<RuntimeValue>, Throwable> {
+    pub fn run(
+        &mut self,
+        mut ctx: Context,
+    ) -> Result<Option<RuntimeValue>, (Throwable, ThrownState)> {
         while ctx.pc < ctx.code.code.len() as i32 {
             let slice = &ctx.code.code[ctx.pc as usize..];
             let consumed_bytes_prev = slice.len();
@@ -45,7 +53,9 @@ impl VM {
             let mut instruction_bytes = BytesMut::new();
             instruction_bytes.extend_from_slice(slice);
 
-            let instruction = decode_instruction(self, &mut instruction_bytes)?;
+            let instruction = decode_instruction(self, &mut instruction_bytes)
+                .map_err(|e| (e, ThrownState { pc: ctx.pc }))?;
+
             let consumed_bytes_post = instruction_bytes.len();
             let bytes_consumed_by_opcode = (consumed_bytes_prev - consumed_bytes_post) as i32;
             info!(
@@ -53,7 +63,11 @@ impl VM {
                 instruction, bytes_consumed_by_opcode
             );
 
-            match instruction.handle(self, &mut ctx)? {
+            let progression = instruction
+                .handle(self, &mut ctx)
+                .map_err(|e| (e, ThrownState { pc: ctx.pc }))?;
+
+            match progression {
                 bytecode::Progression::JumpAbs(new_pc) => {
                     info!("Jumping from {} to {}", ctx.pc, new_pc);
                     ctx.pc = new_pc;
@@ -80,7 +94,7 @@ impl VM {
                 }
                 bytecode::Progression::Throw(err) => {
                     info!("Throwing {}", err);
-                    return Err(err);
+                    return Err((err, ThrownState { pc: ctx.pc }));
                 }
             };
         }
@@ -122,7 +136,8 @@ impl VM {
                 locals: vec![],
             };
 
-            self.run(ctx)?;
+            // TODO: Handle this properly, as clinit errors should be caught
+            self.run(ctx).map_err(|e| e.0)?;
         } else {
             info!("No clinit in {}", class_name);
             // Might as well mark this as initialised to avoid future
