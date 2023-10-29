@@ -2,6 +2,7 @@
 
 use super::{Instruction, Progression};
 use crate::{
+    Throwable,
     arg,
     object::{
         numeric::{Floating, FloatingType, Integral, IntegralType},
@@ -9,7 +10,7 @@ use crate::{
     },
     pop, Context, VM,
 };
-use anyhow::{anyhow, Context as AnyhowContext, Result};
+use anyhow::{Context as AnyhowContext, Result};
 
 macro_rules! binop {
     // Generic value transformation
@@ -18,7 +19,7 @@ macro_rules! binop {
         pub struct $ins;
 
         impl Instruction for $ins {
-            fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+            fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
                 let rhs = arg!(ctx, "rhs" => $rhs);
                 let lhs = arg!(ctx, "lhs" => $lhs);
 
@@ -37,7 +38,7 @@ macro_rules! binop {
         }
 
         impl Instruction for $ins {
-            fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+            fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
                 let rhs = arg!(ctx, "rhs" => $res_ty);
                 let lhs = arg!(ctx, "lhs" => $res_ty);
 

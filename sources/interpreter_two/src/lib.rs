@@ -2,6 +2,7 @@ use anyhow::Result;
 use bytecode::decode_instruction;
 use bytes::BytesMut;
 
+use error::{Throwable, Frame};
 use object::{
     classloader::ClassLoader, statics::StaticFields, string::Interner, RuntimeValue,
     WrappedClassObject,
@@ -29,10 +30,11 @@ pub struct VM {
     pub class_loader: ClassLoader,
     pub interner: Interner,
     pub statics: StaticFields,
+    pub frames: Vec<Frame>
 }
 
 impl VM {
-    pub fn run(&mut self, mut ctx: Context) -> Result<Option<RuntimeValue>> {
+    pub fn run(&mut self, mut ctx: Context) -> Result<Option<RuntimeValue>, Throwable> {
         while ctx.pc < ctx.code.code.len() as i32 {
             let slice = &ctx.code.code[ctx.pc as usize..];
             let consumed_bytes_prev = slice.len();
@@ -77,7 +79,7 @@ impl VM {
                     return Ok(return_value);
                 }
                 bytecode::Progression::Throw(err) => {
-                    info!("Throwing {:?}", err);
+                    info!("Throwing {}", err);
                     return Err(err);
                 }
             };
@@ -86,7 +88,7 @@ impl VM {
         Ok(None)
     }
 
-    pub fn initialise_class(&mut self, class: WrappedClassObject) -> Result<()> {
+    pub fn initialise_class(&mut self, class: WrappedClassObject) -> Result<(), Throwable> {
         let mut locked_class = class.write();
         let class_name = locked_class.get_class_name();
 

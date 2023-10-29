@@ -1,11 +1,12 @@
 use std::rc::Rc;
 
 use super::{Instruction, Progression};
+use crate::error::Throwable;
 use crate::object::array::{Array, ArrayPrimitive, ArrayType};
 use crate::object::numeric::IntegralType;
 use crate::object::RuntimeValue;
-use crate::{Context, VM};
-use anyhow::{anyhow, Context as AnyhowContext, Result};
+use crate::{Context, VM, internal};
+use anyhow::{Context as AnyhowContext, Result};
 use parking_lot::RwLock;
 use parse::classfile::Resolvable;
 use parse::pool::ConstantEntry;
@@ -33,7 +34,7 @@ macro_rules! arg {
             .as_integral()
             .context(format!("{} was not an integral", $side))?;
         if val.ty != IntegralType::Int {
-            return Err(anyhow!(format!("{} was not an int, got {:#?}", $side, val)));
+            return Err($crate::internal!(format!("{} was not an int, got {:#?}", $side, val)));
         }
 
         val.clone()
@@ -45,7 +46,7 @@ macro_rules! arg {
             .as_integral()
             .context(format!("{} was not an integral", $side))?;
         if val.ty != IntegralType::Long {
-            return Err(anyhow!(format!("{} was not a long, got {:#?}", $side, val)));
+            return Err($crate::internal!(format!("{} was not a long, got {:#?}", $side, val)));
         }
 
         val.clone()
@@ -57,7 +58,7 @@ macro_rules! arg {
             .as_floating()
             .context(format!("{} was not a float", $side))?;
         if val.ty != FloatingType::Float {
-            return Err(anyhow!(format!("{} was not a float", $side)));
+            return Err($crate::internal!(format!("{} was not a float", $side)));
         }
 
         val.clone()
@@ -69,7 +70,7 @@ macro_rules! arg {
             .as_floating()
             .context(format!("{} was not a float", $side))?;
         if val.ty != FloatingType::Float {
-            return Err(anyhow!(format!("{} was not a float", $side)));
+            return Err($crate::internal!(format!("{} was not a float", $side)));
         }
 
         val.clone()
@@ -104,7 +105,7 @@ impl Instruction for VoidReturn {}
 pub struct ValueReturn;
 
 impl Instruction for ValueReturn {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         let return_value = ctx.operands.pop().context("no return value popped")?;
 
         Ok(Progression::Return(Some(return_value)))
@@ -117,7 +118,7 @@ pub struct Goto {
 }
 
 impl Instruction for Goto {
-    fn handle(&self, _vm: &mut VM, _ctx: &mut Context) -> Result<Progression> {
+    fn handle(&self, _vm: &mut VM, _ctx: &mut Context) -> Result<Progression, Throwable> {
         Ok(Progression::JumpRel(self.jump_to as i32))
     }
 }
@@ -126,7 +127,7 @@ impl Instruction for Goto {
 pub struct ArrayLength;
 
 impl Instruction for ArrayLength {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         // The arrayref must be of type reference and must refer to an array. It is popped from the operand stack.
         let array = arg!(ctx, "array" => Array);
 
@@ -145,7 +146,7 @@ pub struct ANewArray {
 }
 
 impl Instruction for ANewArray {
-    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         // The count must be of type int. It is popped off the operand stack.
         let count = arg!(ctx, "count" => i32);
 
@@ -165,7 +166,7 @@ impl Instruction for ANewArray {
                 let cls = vm.class_loader.load_class(class_name)?;
                 ArrayType::Object(cls)
             }
-            e => return Err(anyhow!("{:#?} cannot be used as an array type", e)),
+            e => return Err(internal!("{:#?} cannot be used as an array type", e)),
         };
 
         // All components of the new array are initialized to null, the default value for reference types (§2.4).
@@ -193,7 +194,7 @@ pub struct NewArray {
 }
 
 impl Instruction for NewArray {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         // The count must be of type int. It is popped off the operand stack.
         let count = arg!(ctx, "count" => i32);
 
@@ -226,7 +227,7 @@ impl Instruction for NewArray {
 pub struct ArrayStore;
 
 impl Instruction for ArrayStore {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         let value = pop!(ctx);
         let index = arg!(ctx, "index" => i32);
         let array = arg!(ctx, "array" => Array);
@@ -242,7 +243,7 @@ impl Instruction for ArrayStore {
 pub struct ArrayLoad;
 
 impl Instruction for ArrayLoad {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         let index = arg!(ctx, "index" => i32);
         let array = arg!(ctx, "array" => Array);
 

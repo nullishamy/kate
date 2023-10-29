@@ -1,9 +1,9 @@
 use std::{process::exit, rc::Rc};
 
-use anyhow::Context as AnyhowContext;
 use args::Cli;
 use clap::Parser;
 use interpreter_two::{
+    error::{Frame, Throwable},
     native::NativeFunction,
     object::{classloader::ClassLoader, statics::StaticFields, string::Interner, RuntimeValue},
     static_method, Context, VM,
@@ -59,6 +59,7 @@ fn main() {
         class_loader,
         statics: StaticFields::new(),
         interner: Interner::new(Rc::clone(&jls)),
+        frames: Vec::new(),
     };
 
     // Init these classes so that their static fields can get set
@@ -153,18 +154,24 @@ fn main() {
             pc: 0,
         };
 
-        let res = vm.run(ctx).context(format!("at {}.main", class_name));
+        let res = vm.run(ctx);
 
         if let Err(e) = res {
-            let mut chain = e.chain().collect::<Vec<_>>();
-            let source = chain.pop().unwrap();
-            chain.reverse();
+            println!("Uncaught exception in main: {}", e);
 
-            println!("{}", source);
-            for err in chain {
-                println!("    {}", err);
+            if let Throwable::Runtime(err) = e {
+                for source in err.sources.iter().rev() {
+                    println!("  {}", source);
+                }
             }
 
+            println!(
+                "  {}",
+                Frame {
+                    class_name,
+                    method_name: "main".to_string()
+                }
+            );
             exit(1);
         } else {
             info!("Execution concluded without error")

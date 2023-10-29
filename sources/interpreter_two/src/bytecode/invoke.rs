@@ -3,6 +3,8 @@ use std::rc::Rc;
 use super::{Instruction, Progression};
 use crate::{
     arg,
+    error::{Frame, RuntimeException, Throwable},
+    internal,
     native::NativeFunction,
     object::{
         numeric::{FloatingType, IntegralType},
@@ -30,7 +32,7 @@ pub struct InvokeVirtual {
 }
 
 impl Instruction for InvokeVirtual {
-    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         let cls = ctx.class.read();
         let pool = cls.constant_pool();
 
@@ -90,14 +92,17 @@ impl Instruction for InvokeVirtual {
         // passed as parameters to the code that implements the method.
         // The parameters are passed and the code is invoked in an
         // implementation-dependent manner.
-        let exec_result = do_call(vm, selected_method, selected_class, args_for_call);
+        vm.frames.push(Frame {
+            method_name,
+            class_name,
+        });
 
-        if let Err(e) = exec_result {
-            return Err(e.context(format!("at {}.{}", class_name, method_name)));
-        }
+        let exec_result = do_call(vm, selected_method, selected_class, args_for_call)?;
 
-        // Caller gave us a value, push it to our stack (Xreturn does this)
-        if let Some(return_value) = exec_result.unwrap() {
+        vm.frames.pop();
+
+        // Callee gave us a value, push it to our stack (Xreturn does this)
+        if let Some(return_value) = exec_result {
             ctx.operands.push(return_value);
         }
 
@@ -111,7 +116,7 @@ pub struct InvokeSpecial {
 }
 
 impl Instruction for InvokeSpecial {
-    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         let cls = ctx.class.read();
         let pool = cls.constant_pool();
 
@@ -161,14 +166,17 @@ impl Instruction for InvokeSpecial {
         // passed as parameters to the code that implements the method.
         // The parameters are passed and the code is invoked in an
         // implementation-dependent manner.
-        let exec_result = do_call(vm, selected_method, selected_class, args_for_call);
+        vm.frames.push(Frame {
+            method_name,
+            class_name,
+        });
 
-        if let Err(e) = exec_result {
-            return Err(e.context(format!("at {}.{}", class_name, method_name)));
-        }
+        let exec_result = do_call(vm, selected_method, selected_class, args_for_call)?;
 
-        // Caller gave us a value, push it to our stack (Xreturn does this)
-        if let Some(return_value) = exec_result.unwrap() {
+        vm.frames.pop();
+
+        // Callee gave us a value, push it to our stack (Xreturn does this)
+        if let Some(return_value) = exec_result {
             ctx.operands.push(return_value);
         }
 
@@ -182,7 +190,7 @@ pub struct InvokeStatic {
 }
 
 impl Instruction for InvokeStatic {
-    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         let cls = ctx.class.read();
         let pool = cls.constant_pool();
 
@@ -214,7 +222,7 @@ impl Instruction for InvokeStatic {
         // The resolved method must not be an instance initialization method,
         // or the class or interface initialization method (§2.9.1, §2.9.2).
         if method_name == "<clinit>" || method_name == "<init>" {
-            return Err(anyhow!(
+            return Err(internal!(
                 "cannot call static method {}, it is a class initialisation method",
                 method_name
             ));
@@ -235,14 +243,17 @@ impl Instruction for InvokeStatic {
         let mut args_for_call = clone_args_from_operands(method_descriptor, ctx)?;
         args_for_call.reverse();
 
-        let exec_result = do_call(vm, loaded_method, loaded_class, args_for_call);
+        vm.frames.push(Frame {
+            method_name,
+            class_name,
+        });
 
-        if let Err(e) = exec_result {
-            return Err(e.context(format!("at {}.{}", class_name, method_name)));
-        }
+        let exec_result = do_call(vm, loaded_method, loaded_class, args_for_call)?;
 
-        // Caller gave us a value, push it to our stack (Xreturn does this)
-        if let Some(return_value) = exec_result.unwrap() {
+        vm.frames.pop();
+
+        // Callee gave us a value, push it to our stack (Xreturn does this)
+        if let Some(return_value) = exec_result {
             ctx.operands.push(return_value);
         }
 
@@ -446,7 +457,7 @@ pub struct New {
 }
 
 impl Instruction for New {
-    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         // The run-time constant pool entry at the index must be a symbolic
         // reference to a class or interface type. The named class or interface
         // type is resolved (§5.4.3.1) and should result in a class type.
@@ -461,7 +472,7 @@ impl Instruction for New {
                 let class_name = data.name.resolve().string();
                 vm.class_loader.load_class(class_name)?
             }
-            e => return Err(anyhow!("{:#?} cannot be used to create a new object", e)),
+            e => return Err(internal!("{:#?} cannot be used to create a new object", e)),
         };
 
         // Memory for a new instance of that class is allocated from the
@@ -540,7 +551,7 @@ fn do_call(
     method: Method,
     class: WrappedClassObject,
     args: Vec<RuntimeValue>,
-) -> Result<Option<RuntimeValue>> {
+) -> Result<Option<RuntimeValue>, Throwable> {
     if !method.flags.has(MethodAccessFlag::NATIVE) {
         // Must load the context if and only if the method is not native.
         // Native methods do not have a code attribute.
@@ -589,7 +600,7 @@ fn do_call(
 pub struct Athrow;
 
 impl Instruction for Athrow {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         let throwable = pop!(ctx);
         let throwable = throwable
             .as_object()
@@ -597,29 +608,31 @@ impl Instruction for Athrow {
             .clone();
         let throwable = throwable.read();
 
-        let class_name = throwable
+        let class = throwable
             .class()
-            .context("expected throwable to have a class")?
-            .read()
-            .get_class_name()
-            .clone();
+            .context("expected throwable to have a class")?;
 
-        let message = throwable.get_instance_field((
+        let class_name = class.read().get_class_name().clone();
+
+        let message_field = throwable.get_instance_field((
             "detailMessage".to_string(),
             "Ljava/lang/String;".to_string(),
         ))?;
 
-        let message = message.as_object().context("message was not an object")?;
+        let message = message_field
+            .as_object()
+            .context("message was not an object")?;
         let message = message.read();
 
-        let bytes = message
+        let bytes_field = message
             .get_instance_field(("value".to_string(), "[B".to_string()))
             .context("could not locate value field")?;
 
-        let bytes = bytes
+        let bytes_array = bytes_field
             .as_array()
             .context("bytes was not an array (byte[])")?;
-        let bytes = bytes
+
+        let message_bytes = bytes_array
             .read()
             .values
             .iter()
@@ -627,8 +640,13 @@ impl Instruction for Athrow {
             .map(|v| v.value as u8)
             .collect::<Vec<_>>();
 
-        let str = decode_string((CompactEncoding::Utf16, bytes)).expect("could not decode string");
+        let message_string = decode_string((CompactEncoding::Utf16, message_bytes))
+            .expect("could not decode string");
 
-        Ok(Progression::Throw(anyhow!("{}: {}", class_name, str)))
+        Ok(Progression::Throw(Throwable::Runtime(RuntimeException {
+            message: format!("{}: {}", class_name, message_string),
+            ty: class,
+            sources: vm.frames.clone()
+        })))
     }
 }

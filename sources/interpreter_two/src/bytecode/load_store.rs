@@ -3,9 +3,9 @@ use std::rc::Rc;
 use crate::{
     arg,
     object::{statics::StaticFieldRef, RuntimeValue},
-    pop, Context, VM,
+    pop, Context, VM, error::Throwable, internal,
 };
-use anyhow::{anyhow, Context as AnyhowContext, Result};
+use anyhow::{Context as AnyhowContext, Result};
 use parse::{
     classfile::Resolvable,
     pool::{ConstantEntry, ConstantField},
@@ -19,7 +19,7 @@ pub struct PushConst {
 }
 
 impl Instruction for PushConst {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         ctx.operands.push(self.value.clone());
         Ok(Progression::Next)
     }
@@ -31,7 +31,7 @@ pub struct Ldc2W {
 }
 
 impl Instruction for Ldc2W {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         let value = ctx
             .class
             .read()
@@ -48,7 +48,7 @@ impl Instruction for Ldc2W {
             ConstantEntry::Double(data) => {
                 ctx.operands.push(RuntimeValue::Floating(data.bytes.into()));
             }
-            v => return Err(anyhow!("cannot load {:#?} with ldc2w", v)),
+            v => return Err(internal!("cannot load {:#?} with ldc2w", v)),
         };
 
         Ok(Progression::Next)
@@ -61,7 +61,7 @@ pub struct Ldc {
 }
 
 impl Instruction for Ldc {
-    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         let value = ctx
             .class
             .read()
@@ -89,7 +89,7 @@ impl Instruction for Ldc {
                 let class = vm.class_loader.load_class(class_name)?;
                 ctx.operands.push(RuntimeValue::Object(class));
             }
-            v => return Err(anyhow!("cannot load {:#?} with ldc", v)),
+            v => return Err(internal!("cannot load {:#?} with ldc", v)),
         };
 
         Ok(Progression::Next)
@@ -102,7 +102,7 @@ pub struct LoadLocal {
 }
 
 impl Instruction for LoadLocal {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         let local = ctx
             .locals
             .get(self.index)
@@ -120,7 +120,7 @@ pub struct StoreLocal {
 }
 
 impl Instruction for StoreLocal {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         let locals = &mut ctx.locals;
         let target_index = if self.store_next {
             self.index + 1
@@ -151,7 +151,7 @@ pub struct GetField {
 }
 
 impl Instruction for GetField {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         // The run-time constant pool entry at the index must be a symbolic
         // reference to a field (§5.1), which gives the name and descriptor of
         // the field as well as a symbolic reference to the class in which the
@@ -190,7 +190,7 @@ pub struct PutField {
 }
 
 impl Instruction for PutField {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         // The run-time constant pool entry at the index must be a symbolic
         // reference to a field (§5.1), which gives the name and descriptor of
         // the field as well as a symbolic reference to the class in which the
@@ -232,7 +232,7 @@ pub struct GetStatic {
 }
 
 impl Instruction for GetStatic {
-    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         // The run-time constant pool entry at the index must be a symbolic
         // reference to a field (§5.1), which gives the name and descriptor of
         // the field as well as a symbolic reference to the class in which the
@@ -287,7 +287,7 @@ pub struct PutStatic {
 }
 
 impl Instruction for PutStatic {
-    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         // The run-time constant pool entry at the index must be a symbolic
         // reference to a field (§5.1), which gives the name and descriptor of
         // the field as well as a symbolic reference to the class in which the
@@ -330,7 +330,7 @@ impl Instruction for PutStatic {
 pub struct Dup;
 
 impl Instruction for Dup {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         let value = pop!(ctx);
         ctx.operands.push(value.clone());
         ctx.operands.push(value);

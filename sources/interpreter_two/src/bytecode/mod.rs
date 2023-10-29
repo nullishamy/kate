@@ -1,7 +1,7 @@
 use std::fmt;
 
-use crate::{object::RuntimeValue, Context, VM};
-use anyhow::{anyhow, Error, Result};
+use crate::{object::RuntimeValue, Context, VM, error::Throwable};
+use anyhow::{anyhow, Result};
 use bytes::BytesMut;
 use support::bytes_ext::SafeBuf;
 
@@ -16,11 +16,11 @@ pub enum Progression {
     JumpRel(i32),
     Next,
     Return(Option<RuntimeValue>),
-    Throw(Error),
+    Throw(Throwable),
 }
 
 pub trait Instruction: fmt::Debug {
-    fn handle(&self, _vm: &mut VM, _ctx: &mut Context) -> Result<Progression> {
+    fn handle(&self, _vm: &mut VM, _ctx: &mut Context) -> Result<Progression, Throwable> {
         Ok(Progression::Next)
     }
 }

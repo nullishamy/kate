@@ -7,9 +7,9 @@ use crate::{
         numeric::{Floating, FloatingType, Integral, IntegralType},
         RuntimeValue,
     },
-    pop, Context, VM,
+    pop, Context, VM, error::Throwable,
 };
-use anyhow::{anyhow, Context as AnyhowContext, Result};
+use anyhow::{Context as AnyhowContext, Result};
 
 macro_rules! unop {
     // Generic value transformation
@@ -18,7 +18,7 @@ macro_rules! unop {
         pub struct $ins;
 
         impl Instruction for $ins {
-            fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+            fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
                 let val = arg!(ctx, "unary value" => $res_ty);
 
                 let result = $op(val);
@@ -34,7 +34,7 @@ macro_rules! unop {
         pub struct $ins;
 
         impl Instruction for $ins {
-            fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+            fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
                 let val = arg!(ctx, "unary value" => $res_ty);
 
                 let result: $res_ty = $op(val);
@@ -53,7 +53,7 @@ macro_rules! unop {
         }
 
         impl Instruction for $ins {
-            fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+            fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
                 let val = arg!(ctx, "unary value" => $res_ty);
 
                 let result: bool = $op(val);
@@ -139,7 +139,7 @@ pub struct IfNull {
 }
 
 impl Instruction for IfNull {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         let val = pop!(ctx);
 
         if val.is_null() {
@@ -156,7 +156,7 @@ pub struct IfNotNull {
 }
 
 impl Instruction for IfNotNull {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         let val = pop!(ctx);
 
         if val.is_null() {
@@ -173,7 +173,7 @@ pub struct Pop {
 }
 
 impl Instruction for Pop {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         for _ in 0..self.amount {
             pop!(ctx);
         }
@@ -189,7 +189,7 @@ pub struct Iinc {
 }
 
 impl Instruction for Iinc {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression> {
+    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         let local = ctx
             .locals
             .get_mut(self.index as usize)

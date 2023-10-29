@@ -3,8 +3,6 @@
 
 class AThrow {
 
-    public static native void print(int i);
-
     private static void athrow() {
         throw new IllegalStateException("die");
     }
@@ -14,7 +12,10 @@ class AThrow {
     }
 
     public static void main(String[] args) {
-        // CHECK: java/lang/IllegalStateException: die
+        // CHECK: Uncaught exception in main: java/lang/IllegalStateException: die
+        // CHECK: at AThrow.athrow
+        // CHECK: at AThrow.nested
+        // CHECK: at AThrow.main
         nested();
     }
 }
