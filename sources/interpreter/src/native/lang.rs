@@ -185,7 +185,7 @@ impl NativeModule for Object {
                         encode_string(class_name)?,
                     ))))),
                 );
-                
+
                 Ok(Some(RuntimeValue::Object(JavaObject::Runtime(Rc::new(Mutex::new(object))))))
             }),
         ]

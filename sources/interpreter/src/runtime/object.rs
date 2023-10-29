@@ -9,7 +9,7 @@ use parse::{
     flags::ClassFileAccessFlag,
     pool::ConstantClass,
 };
-use support::encoding::{EncodedString, decode_string};
+use support::encoding::{decode_string, EncodedString};
 
 use crate::runtime::{
     native::NativeFunction,
@@ -30,7 +30,10 @@ impl fmt::Debug for JavaObject {
             Self::Runtime(_) => f.debug_tuple("-RuntimeObject-").finish(),
             // HACK: We should ***not*** be locking here, but fuck it i dont care
             // HACK2: We should also not be in a state where we can panic here, but i do not care again
-            Self::String(arg0) => f.debug_tuple("String").field(&decode_string(arg0.lock().value.clone()).unwrap()).finish(),
+            Self::String(arg0) => f
+                .debug_tuple("String")
+                .field(&decode_string(arg0.lock().value.clone()).unwrap())
+                .finish(),
         }
     }
 }
@@ -106,7 +109,8 @@ impl StringObject {
             ("value".to_string(), "[B".to_string()),
             RuntimeValue::Array(Rc::new(Mutex::new(Array {
                 ty: ArrayType::Primitive(ArrayPrimitive::Byte),
-                values: value.1
+                values: value
+                    .1
                     .iter()
                     .map(|b| RuntimeValue::Integral((*b as i64).into()))
                     .collect::<Vec<RuntimeValue>>(),

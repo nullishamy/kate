@@ -1,6 +1,6 @@
 use crate::{
     classfile::{Addressed, Resolvable},
-    pool::{ConstantPool, ConstantUtf8},
+    pool::{ConstantClass, ConstantPool, ConstantUtf8},
 };
 use anyhow::{anyhow, Result};
 use bytes::Bytes;
@@ -90,7 +90,7 @@ impl KnownAttribute for CodeAttribute {
                 start_pc: bytes.try_get_u16()?,
                 end_pc: bytes.try_get_u16()?,
                 handler_pc: bytes.try_get_u16()?,
-                catch_type: bytes.try_get_u16()?,
+                catch_type: constant_pool.address(bytes.try_get_u16()?),
             })
         }
         let attributes = Attributes::parse(&mut bytes, constant_pool)?;
@@ -124,7 +124,7 @@ pub struct ExceptionEntry {
     pub start_pc: u16,
     pub end_pc: u16,
     pub handler_pc: u16,
-    pub catch_type: u16,
+    pub catch_type: Addressed<ConstantClass>,
 }
 
 pub struct StackMapTableAttribute {}

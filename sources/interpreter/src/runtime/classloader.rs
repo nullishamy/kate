@@ -4,7 +4,6 @@ use anyhow::Result;
 
 use parking_lot::Mutex;
 
-
 use crate::runtime::object::ClassObject;
 
 pub trait ClassLoader {

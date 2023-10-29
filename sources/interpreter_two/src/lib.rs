@@ -12,6 +12,7 @@ use tracing::info;
 use crate::{native::NativeModule, object::statics::StaticFieldRef};
 
 pub mod bytecode;
+pub mod error;
 pub mod native;
 pub mod object;
 
@@ -50,7 +51,6 @@ impl VM {
                 instruction, bytes_consumed_by_opcode
             );
 
-            // If the instruction doesn't want us to jump anywhere, proceed to the next instruction
             match instruction.handle(self, &mut ctx)? {
                 bytecode::Progression::JumpAbs(new_pc) => {
                     info!("Jumping from {} to {}", ctx.pc, new_pc);

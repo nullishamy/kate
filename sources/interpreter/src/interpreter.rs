@@ -24,7 +24,7 @@ use support::{
     descriptor::{self, FieldType, MethodType},
     encoding::encode_string,
 };
-use tracing::{info, debug};
+use tracing::{debug, info};
 
 pub struct Interpreter {
     classloaders: Vec<Box<dyn ClassLoader>>,

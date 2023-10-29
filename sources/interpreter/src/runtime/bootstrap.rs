@@ -1,13 +1,9 @@
 use std::{collections::HashMap, fs, path::PathBuf, rc::Rc, sync::RwLock};
 
-use crate::{
-    runtime::{classloader::ClassLoader, object::ClassObject},
-};
+use crate::runtime::{classloader::ClassLoader, object::ClassObject};
 use anyhow::{anyhow, Result};
 use parking_lot::Mutex;
 use parse::parser::Parser;
-
-
 
 pub struct BootstrapClassLoader {
     class_paths: Vec<PathBuf>,
