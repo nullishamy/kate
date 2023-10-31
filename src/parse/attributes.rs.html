@@ -134,7 +134,7 @@
 <a href="#134" id="134">134</a>
 </pre></div><pre class="rust"><code><span class="kw">use crate</span>::{
     classfile::{Addressed, Resolvable},
-    pool::{ConstantPool, ConstantUtf8},
+    pool::{ConstantClass, ConstantPool, ConstantUtf8},
 };
 <span class="kw">use </span>anyhow::{anyhow, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>bytes::Bytes;
@@ -224,7 +224,7 @@
                 start_pc: bytes.try_get_u16()<span class="question-mark">?</span>,
                 end_pc: bytes.try_get_u16()<span class="question-mark">?</span>,
                 handler_pc: bytes.try_get_u16()<span class="question-mark">?</span>,
-                catch_type: bytes.try_get_u16()<span class="question-mark">?</span>,
+                catch_type: constant_pool.address(bytes.try_get_u16()<span class="question-mark">?</span>),
             })
         }
         <span class="kw">let </span>attributes = Attributes::parse(<span class="kw-2">&amp;mut </span>bytes, constant_pool)<span class="question-mark">?</span>;
@@ -244,7 +244,7 @@
 }
 
 <span class="kw">pub struct </span>ConstantValueAttribute {}
-<span class="attr">#[derive(Debug)]
+<span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>CodeAttribute {
     <span class="kw">pub </span>max_stack: u16,
     <span class="kw">pub </span>max_locals: u16,
@@ -253,12 +253,12 @@
     <span class="kw">pub </span>attributes: Attributes,
 }
 
-<span class="attr">#[derive(Debug)]
+<span class="attr">#[derive(Debug, Clone)]
 </span><span class="kw">pub struct </span>ExceptionEntry {
     <span class="kw">pub </span>start_pc: u16,
     <span class="kw">pub </span>end_pc: u16,
     <span class="kw">pub </span>handler_pc: u16,
-    <span class="kw">pub </span>catch_type: u16,
+    <span class="kw">pub </span>catch_type: Addressed&lt;ConstantClass&gt;,
 }
 
 <span class="kw">pub struct </span>StackMapTableAttribute {}

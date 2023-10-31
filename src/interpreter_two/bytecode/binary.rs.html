@@ -211,10 +211,12 @@
 <a href="#211" id="211">211</a>
 <a href="#212" id="212">212</a>
 <a href="#213" id="213">213</a>
+<a href="#214" id="214">214</a>
 </pre></div><pre class="rust"><code><span class="attr">#![allow(clippy::redundant_closure_call)]
 
 </span><span class="kw">use super</span>::{Instruction, Progression};
 <span class="kw">use crate</span>::{
+    Throwable,
     arg,
     object::{
         numeric::{Floating, FloatingType, Integral, IntegralType},
@@ -222,7 +224,7 @@
     },
     pop, Context, VM,
 };
-<span class="kw">use </span>anyhow::{anyhow, Context <span class="kw">as </span>AnyhowContext, <span class="prelude-ty">Result</span>};
+<span class="kw">use </span>anyhow::{Context <span class="kw">as </span>AnyhowContext, <span class="prelude-ty">Result</span>};
 
 <span class="macro">macro_rules! </span>binop {
     <span class="comment">// Generic value transformation
@@ -231,7 +233,7 @@
         </span><span class="kw">pub struct </span><span class="macro-nonterminal">$ins</span>;
 
         <span class="kw">impl </span>Instruction <span class="kw">for </span><span class="macro-nonterminal">$ins </span>{
-            <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+            <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression, Throwable&gt; {
                 <span class="kw">let </span>rhs = <span class="macro">arg!</span>(ctx, <span class="string">&quot;rhs&quot; </span>=&gt; <span class="macro-nonterminal">$rhs</span>);
                 <span class="kw">let </span>lhs = <span class="macro">arg!</span>(ctx, <span class="string">&quot;lhs&quot; </span>=&gt; <span class="macro-nonterminal">$lhs</span>);
 
@@ -250,7 +252,7 @@
         }
 
         <span class="kw">impl </span>Instruction <span class="kw">for </span><span class="macro-nonterminal">$ins </span>{
-            <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+            <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression, Throwable&gt; {
                 <span class="kw">let </span>rhs = <span class="macro">arg!</span>(ctx, <span class="string">&quot;rhs&quot; </span>=&gt; <span class="macro-nonterminal">$res_ty</span>);
                 <span class="kw">let </span>lhs = <span class="macro">arg!</span>(ctx, <span class="string">&quot;lhs&quot; </span>=&gt; <span class="macro-nonterminal">$res_ty</span>);
 
@@ -423,4 +425,5 @@
 
 <span class="macro">binop!</span>(Iand (int) =&gt; |lhs: Integral, rhs: Integral| {
     (lhs.value <span class="kw">as </span>i32) &amp; (rhs.value <span class="kw">as </span>i32)
-});</code></pre></div></section></main></body></html>
+});
+</code></pre></div></section></main></body></html>

@@ -152,10 +152,28 @@
 <a href="#152" id="152">152</a>
 <a href="#153" id="153">153</a>
 <a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>anyhow::Result;
 <span class="kw">use </span>bytecode::decode_instruction;
 <span class="kw">use </span>bytes::BytesMut;
 
+<span class="kw">use </span>error::{Frame, Throwable};
 <span class="kw">use </span>object::{
     classloader::ClassLoader, statics::StaticFields, string::Interner, RuntimeValue,
     WrappedClassObject,
@@ -166,6 +184,7 @@
 <span class="kw">use crate</span>::{native::NativeModule, object::statics::StaticFieldRef};
 
 <span class="kw">pub mod </span>bytecode;
+<span class="kw">pub mod </span>error;
 <span class="kw">pub mod </span>native;
 <span class="kw">pub mod </span>object;
 
@@ -182,10 +201,19 @@
     <span class="kw">pub </span>class_loader: ClassLoader,
     <span class="kw">pub </span>interner: Interner,
     <span class="kw">pub </span>statics: StaticFields,
+    <span class="kw">pub </span>frames: Vec&lt;Frame&gt;,
+}
+
+<span class="attr">#[derive(Debug)]
+</span><span class="kw">pub struct </span>ThrownState {
+    <span class="kw">pub </span>pc: i32,
 }
 
 <span class="kw">impl </span>VM {
-    <span class="kw">pub fn </span>run(<span class="kw-2">&amp;mut </span><span class="self">self</span>, <span class="kw-2">mut </span>ctx: Context) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;RuntimeValue&gt;&gt; {
+    <span class="kw">pub fn </span>run(
+        <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+        <span class="kw-2">mut </span>ctx: Context,
+    ) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;RuntimeValue&gt;, (Throwable, ThrownState)&gt; {
         <span class="kw">while </span>ctx.pc &lt; ctx.code.code.len() <span class="kw">as </span>i32 {
             <span class="kw">let </span>slice = <span class="kw-2">&amp;</span>ctx.code.code[ctx.pc <span class="kw">as </span>usize..];
             <span class="kw">let </span>consumed_bytes_prev = slice.len();
@@ -196,7 +224,9 @@
             <span class="kw">let </span><span class="kw-2">mut </span>instruction_bytes = BytesMut::new();
             instruction_bytes.extend_from_slice(slice);
 
-            <span class="kw">let </span>instruction = decode_instruction(<span class="self">self</span>, <span class="kw-2">&amp;mut </span>instruction_bytes)<span class="question-mark">?</span>;
+            <span class="kw">let </span>instruction = decode_instruction(<span class="self">self</span>, <span class="kw-2">&amp;mut </span>instruction_bytes)
+                .map_err(|e| (e, ThrownState { pc: ctx.pc }))<span class="question-mark">?</span>;
+
             <span class="kw">let </span>consumed_bytes_post = instruction_bytes.len();
             <span class="kw">let </span>bytes_consumed_by_opcode = (consumed_bytes_prev - consumed_bytes_post) <span class="kw">as </span>i32;
             <span class="macro">info!</span>(
@@ -204,8 +234,11 @@
                 instruction, bytes_consumed_by_opcode
             );
 
-            <span class="comment">// If the instruction doesn&#39;t want us to jump anywhere, proceed to the next instruction
-            </span><span class="kw">match </span>instruction.handle(<span class="self">self</span>, <span class="kw-2">&amp;mut </span>ctx)<span class="question-mark">? </span>{
+            <span class="kw">let </span>progression = instruction
+                .handle(<span class="self">self</span>, <span class="kw-2">&amp;mut </span>ctx)
+                .map_err(|e| (e, ThrownState { pc: ctx.pc }))<span class="question-mark">?</span>;
+
+            <span class="kw">match </span>progression {
                 bytecode::Progression::JumpAbs(new_pc) =&gt; {
                     <span class="macro">info!</span>(<span class="string">&quot;Jumping from {} to {}&quot;</span>, ctx.pc, new_pc);
                     ctx.pc = new_pc;
@@ -231,8 +264,8 @@
                     <span class="kw">return </span><span class="prelude-val">Ok</span>(return_value);
                 }
                 bytecode::Progression::Throw(err) =&gt; {
-                    <span class="macro">info!</span>(<span class="string">&quot;Throwing {:?}&quot;</span>, err);
-                    <span class="kw">return </span><span class="prelude-val">Err</span>(err);
+                    <span class="macro">info!</span>(<span class="string">&quot;Throwing {}&quot;</span>, err);
+                    <span class="kw">return </span><span class="prelude-val">Err</span>((err, ThrownState { pc: ctx.pc }));
                 }
             };
         }
@@ -240,7 +273,7 @@
         <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
     }
 
-    <span class="kw">pub fn </span>initialise_class(<span class="kw-2">&amp;mut </span><span class="self">self</span>, class: WrappedClassObject) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+    <span class="kw">pub fn </span>initialise_class(<span class="kw-2">&amp;mut </span><span class="self">self</span>, class: WrappedClassObject) -&gt; <span class="prelude-ty">Result</span>&lt;(), Throwable&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>locked_class = class.write();
         <span class="kw">let </span>class_name = locked_class.get_class_name();
 
@@ -274,7 +307,8 @@
                 locals: <span class="macro">vec!</span>[],
             };
 
-            <span class="self">self</span>.run(ctx)<span class="question-mark">?</span>;
+            <span class="comment">// TODO: Handle this properly, as clinit errors should be caught
+            </span><span class="self">self</span>.run(ctx).map_err(|e| e.<span class="number">0</span>)<span class="question-mark">?</span>;
         } <span class="kw">else </span>{
             <span class="macro">info!</span>(<span class="string">&quot;No clinit in {}&quot;</span>, class_name);
             <span class="comment">// Might as well mark this as initialised to avoid future

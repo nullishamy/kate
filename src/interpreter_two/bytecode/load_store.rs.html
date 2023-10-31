@@ -342,9 +342,9 @@
 <span class="kw">use crate</span>::{
     arg,
     object::{statics::StaticFieldRef, RuntimeValue},
-    pop, Context, VM,
+    pop, Context, VM, error::Throwable, internal,
 };
-<span class="kw">use </span>anyhow::{anyhow, Context <span class="kw">as </span>AnyhowContext, <span class="prelude-ty">Result</span>};
+<span class="kw">use </span>anyhow::{Context <span class="kw">as </span>AnyhowContext, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>parse::{
     classfile::Resolvable,
     pool::{ConstantEntry, ConstantField},
@@ -358,7 +358,7 @@
 }
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>PushConst {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression, Throwable&gt; {
         ctx.operands.push(<span class="self">self</span>.value.clone());
         <span class="prelude-val">Ok</span>(Progression::Next)
     }
@@ -370,7 +370,7 @@
 }
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>Ldc2W {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression, Throwable&gt; {
         <span class="kw">let </span>value = ctx
             .class
             .read()
@@ -387,7 +387,7 @@
             ConstantEntry::Double(data) =&gt; {
                 ctx.operands.push(RuntimeValue::Floating(data.bytes.into()));
             }
-            v =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;cannot load {:#?} with ldc2w&quot;</span>, v)),
+            v =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">internal!</span>(<span class="string">&quot;cannot load {:#?} with ldc2w&quot;</span>, v)),
         };
 
         <span class="prelude-val">Ok</span>(Progression::Next)
@@ -400,7 +400,7 @@
 }
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>Ldc {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression, Throwable&gt; {
         <span class="kw">let </span>value = ctx
             .class
             .read()
@@ -428,7 +428,7 @@
                 <span class="kw">let </span>class = vm.class_loader.load_class(class_name)<span class="question-mark">?</span>;
                 ctx.operands.push(RuntimeValue::Object(class));
             }
-            v =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;cannot load {:#?} with ldc&quot;</span>, v)),
+            v =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">internal!</span>(<span class="string">&quot;cannot load {:#?} with ldc&quot;</span>, v)),
         };
 
         <span class="prelude-val">Ok</span>(Progression::Next)
@@ -441,7 +441,7 @@
 }
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>LoadLocal {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression, Throwable&gt; {
         <span class="kw">let </span>local = ctx
             .locals
             .get(<span class="self">self</span>.index)
@@ -459,7 +459,7 @@
 }
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>StoreLocal {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression, Throwable&gt; {
         <span class="kw">let </span>locals = <span class="kw-2">&amp;mut </span>ctx.locals;
         <span class="kw">let </span>target_index = <span class="kw">if </span><span class="self">self</span>.store_next {
             <span class="self">self</span>.index + <span class="number">1
@@ -490,7 +490,7 @@
 }
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>GetField {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression, Throwable&gt; {
         <span class="comment">// The run-time constant pool entry at the index must be a symbolic
         // reference to a field (§5.1), which gives the name and descriptor of
         // the field as well as a symbolic reference to the class in which the
@@ -529,7 +529,7 @@
 }
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>PutField {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression, Throwable&gt; {
         <span class="comment">// The run-time constant pool entry at the index must be a symbolic
         // reference to a field (§5.1), which gives the name and descriptor of
         // the field as well as a symbolic reference to the class in which the
@@ -571,7 +571,7 @@
 }
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>GetStatic {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression, Throwable&gt; {
         <span class="comment">// The run-time constant pool entry at the index must be a symbolic
         // reference to a field (§5.1), which gives the name and descriptor of
         // the field as well as a symbolic reference to the class in which the
@@ -626,7 +626,7 @@
 }
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>PutStatic {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression, Throwable&gt; {
         <span class="comment">// The run-time constant pool entry at the index must be a symbolic
         // reference to a field (§5.1), which gives the name and descriptor of
         // the field as well as a symbolic reference to the class in which the
@@ -669,7 +669,7 @@
 </span><span class="kw">pub struct </span>Dup;
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>Dup {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression, Throwable&gt; {
         <span class="kw">let </span>value = <span class="macro">pop!</span>(ctx);
         ctx.operands.push(value.clone());
         ctx.operands.push(value);

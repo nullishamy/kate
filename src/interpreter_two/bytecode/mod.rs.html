@@ -478,8 +478,8 @@
 <a href="#478" id="478">478</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::fmt;
 
-<span class="kw">use crate</span>::{object::RuntimeValue, Context, VM};
-<span class="kw">use </span>anyhow::{anyhow, Error, <span class="prelude-ty">Result</span>};
+<span class="kw">use crate</span>::{object::RuntimeValue, Context, VM, error::Throwable, internal};
+<span class="kw">use </span>anyhow::{anyhow, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>bytes::BytesMut;
 <span class="kw">use </span>support::bytes_ext::SafeBuf;
 
@@ -494,11 +494,11 @@
     JumpRel(i32),
     Next,
     Return(<span class="prelude-ty">Option</span>&lt;RuntimeValue&gt;),
-    Throw(Error),
+    Throw(Throwable),
 }
 
 <span class="kw">pub trait </span>Instruction: fmt::Debug {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, _ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, _ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression, Throwable&gt; {
         <span class="prelude-val">Ok</span>(Progression::Next)
     }
 }
@@ -508,7 +508,7 @@
     Box::new(v)
 }
 
-<span class="kw">pub fn </span>decode_instruction(_vm: <span class="kw-2">&amp;</span>VM, bytes: <span class="kw-2">&amp;mut </span>BytesMut) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>Instruction&gt;&gt; {
+<span class="kw">pub fn </span>decode_instruction(_vm: <span class="kw-2">&amp;</span>VM, bytes: <span class="kw-2">&amp;mut </span>BytesMut) -&gt; <span class="prelude-ty">Result</span>&lt;Box&lt;<span class="kw">dyn </span>Instruction&gt;, Throwable&gt; {
     <span class="kw">let </span>instruction = bytes.try_get_u8()<span class="question-mark">?</span>;
     <span class="prelude-val">Ok</span>(<span class="kw">match </span>instruction {
         <span class="number">0x00 </span>=&gt; b(ops::Nop),
@@ -951,7 +951,7 @@
         </span><span class="number">0xca </span>=&gt; b(ops::Nop),
         <span class="number">0xfe </span>=&gt; b(ops::Nop),
         <span class="number">0xff </span>=&gt; b(ops::Nop),
-        e =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;unknown opcode {:#01x}&quot;</span>, e)),
+        e =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">internal!</span>(<span class="string">&quot;unknown opcode {:#01x}&quot;</span>, e)),
     })
 }
 </code></pre></div></section></main></body></html>

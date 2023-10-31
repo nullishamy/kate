@@ -171,12 +171,19 @@
 <a href="#171" id="171">171</a>
 <a href="#172" id="172">172</a>
 <a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{process::exit, rc::Rc};
 
-<span class="kw">use </span>anyhow::Context <span class="kw">as </span>AnyhowContext;
 <span class="kw">use </span>args::Cli;
 <span class="kw">use </span>clap::Parser;
 <span class="kw">use </span>interpreter_two::{
+    error::{Frame, Throwable},
     native::NativeFunction,
     object::{classloader::ClassLoader, statics::StaticFields, string::Interner, RuntimeValue},
     static_method, Context, VM,
@@ -232,6 +239,7 @@
         class_loader,
         statics: StaticFields::new(),
         interner: Interner::new(Rc::clone(<span class="kw-2">&amp;</span>jls)),
+        frames: Vec::new(),
     };
 
     <span class="comment">// Init these classes so that their static fields can get set
@@ -326,18 +334,24 @@
             pc: <span class="number">0</span>,
         };
 
-        <span class="kw">let </span>res = vm.run(ctx).context(<span class="macro">format!</span>(<span class="string">&quot;at {}.main&quot;</span>, class_name));
+        <span class="kw">let </span>res = vm.run(ctx);
 
-        <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = res {
-            <span class="kw">let </span><span class="kw-2">mut </span>chain = e.chain().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;();
-            <span class="kw">let </span>source = chain.pop().unwrap();
-            chain.reverse();
+        <span class="kw">if let </span><span class="prelude-val">Err</span>((e, <span class="kw">_</span>)) = res {
+            <span class="macro">println!</span>(<span class="string">&quot;Uncaught exception in main: {}&quot;</span>, e);
 
-            <span class="macro">println!</span>(<span class="string">&quot;{}&quot;</span>, source);
-            <span class="kw">for </span>err <span class="kw">in </span>chain {
-                <span class="macro">println!</span>(<span class="string">&quot;    {}&quot;</span>, err);
+            <span class="kw">if let </span>Throwable::Runtime(err) = e {
+                <span class="kw">for </span>source <span class="kw">in </span>err.sources.iter().rev() {
+                    <span class="macro">println!</span>(<span class="string">&quot;  {}&quot;</span>, source);
+                }
             }
 
+            <span class="macro">println!</span>(
+                <span class="string">&quot;  {}&quot;</span>,
+                Frame {
+                    class_name,
+                    method_name: <span class="string">&quot;main&quot;</span>.to_string()
+                }
+            );
             exit(<span class="number">1</span>);
         } <span class="kw">else </span>{
             <span class="macro">info!</span>(<span class="string">&quot;Execution concluded without error&quot;</span>)

@@ -213,6 +213,10 @@
 <a href="#213" id="213">213</a>
 <a href="#214" id="214">214</a>
 <a href="#215" id="215">215</a>
+<a href="#216" id="216">216</a>
+<a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::{collections::HashMap, fmt, rc::Rc};
 
 <span class="kw">use </span>anyhow::Result;
@@ -224,7 +228,7 @@
     flags::ClassFileAccessFlag,
     pool::ConstantClass,
 };
-<span class="kw">use </span>support::encoding::{EncodedString, decode_string};
+<span class="kw">use </span>support::encoding::{decode_string, EncodedString};
 
 <span class="kw">use </span><span class="kw">crate</span>::runtime::{
     native::NativeFunction,
@@ -245,7 +249,10 @@
             <span class="self">Self</span>::Runtime(<span class="kw">_</span>) =&gt; f.debug_tuple(<span class="string">&quot;-RuntimeObject-&quot;</span>).finish(),
             <span class="comment">// HACK: We should ***not*** be locking here, but fuck it i dont care
             // HACK2: We should also not be in a state where we can panic here, but i do not care again
-            </span><span class="self">Self</span>::String(arg0) =&gt; f.debug_tuple(<span class="string">&quot;String&quot;</span>).field(<span class="kw-2">&amp;</span>decode_string(arg0.lock().value.clone()).unwrap()).finish(),
+            </span><span class="self">Self</span>::String(arg0) =&gt; f
+                .debug_tuple(<span class="string">&quot;String&quot;</span>)
+                .field(<span class="kw-2">&amp;</span>decode_string(arg0.lock().value.clone()).unwrap())
+                .finish(),
         }
     }
 }
@@ -321,7 +328,8 @@
             (<span class="string">&quot;value&quot;</span>.to_string(), <span class="string">&quot;[B&quot;</span>.to_string()),
             RuntimeValue::Array(Rc::new(Mutex::new(Array {
                 ty: ArrayType::Primitive(ArrayPrimitive::Byte),
-                values: value.<span class="number">1
+                values: value
+                    .<span class="number">1
                     </span>.iter()
                     .map(|b| RuntimeValue::Integral((<span class="kw-2">*</span>b <span class="kw">as </span>i64).into()))
                     .collect::&lt;Vec&lt;RuntimeValue&gt;&gt;(),

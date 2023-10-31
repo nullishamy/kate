@@ -210,9 +210,9 @@
         numeric::{Floating, FloatingType, Integral, IntegralType},
         RuntimeValue,
     },
-    pop, Context, VM,
+    pop, Context, VM, error::Throwable,
 };
-<span class="kw">use </span>anyhow::{anyhow, Context <span class="kw">as </span>AnyhowContext, <span class="prelude-ty">Result</span>};
+<span class="kw">use </span>anyhow::{Context <span class="kw">as </span>AnyhowContext, <span class="prelude-ty">Result</span>};
 
 <span class="macro">macro_rules! </span>unop {
     <span class="comment">// Generic value transformation
@@ -221,7 +221,7 @@
         </span><span class="kw">pub struct </span><span class="macro-nonterminal">$ins</span>;
 
         <span class="kw">impl </span>Instruction <span class="kw">for </span><span class="macro-nonterminal">$ins </span>{
-            <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+            <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression, Throwable&gt; {
                 <span class="kw">let </span>val = <span class="macro">arg!</span>(ctx, <span class="string">&quot;unary value&quot; </span>=&gt; <span class="macro-nonterminal">$res_ty</span>);
 
                 <span class="kw">let </span>result = <span class="macro-nonterminal">$op</span>(val);
@@ -237,7 +237,7 @@
         </span><span class="kw">pub struct </span><span class="macro-nonterminal">$ins</span>;
 
         <span class="kw">impl </span>Instruction <span class="kw">for </span><span class="macro-nonterminal">$ins </span>{
-            <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+            <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression, Throwable&gt; {
                 <span class="kw">let </span>val = <span class="macro">arg!</span>(ctx, <span class="string">&quot;unary value&quot; </span>=&gt; <span class="macro-nonterminal">$res_ty</span>);
 
                 <span class="kw">let </span>result: <span class="macro-nonterminal">$res_ty </span>= <span class="macro-nonterminal">$op</span>(val);
@@ -256,7 +256,7 @@
         }
 
         <span class="kw">impl </span>Instruction <span class="kw">for </span><span class="macro-nonterminal">$ins </span>{
-            <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+            <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression, Throwable&gt; {
                 <span class="kw">let </span>val = <span class="macro">arg!</span>(ctx, <span class="string">&quot;unary value&quot; </span>=&gt; <span class="macro-nonterminal">$res_ty</span>);
 
                 <span class="kw">let </span>result: bool = <span class="macro-nonterminal">$op</span>(val);
@@ -342,7 +342,7 @@
 }
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>IfNull {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression, Throwable&gt; {
         <span class="kw">let </span>val = <span class="macro">pop!</span>(ctx);
 
         <span class="kw">if </span>val.is_null() {
@@ -359,7 +359,7 @@
 }
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>IfNotNull {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression, Throwable&gt; {
         <span class="kw">let </span>val = <span class="macro">pop!</span>(ctx);
 
         <span class="kw">if </span>val.is_null() {
@@ -376,7 +376,7 @@
 }
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>Pop {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression, Throwable&gt; {
         <span class="kw">for _ in </span><span class="number">0</span>..<span class="self">self</span>.amount {
             <span class="macro">pop!</span>(ctx);
         }
@@ -392,7 +392,7 @@
 }
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>Iinc {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression, Throwable&gt; {
         <span class="kw">let </span>local = ctx
             .locals
             .get_mut(<span class="self">self</span>.index <span class="kw">as </span>usize)

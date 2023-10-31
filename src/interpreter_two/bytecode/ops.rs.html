@@ -253,14 +253,16 @@
 <a href="#253" id="253">253</a>
 <a href="#254" id="254">254</a>
 <a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>std::rc::Rc;
 
 <span class="kw">use super</span>::{Instruction, Progression};
+<span class="kw">use </span><span class="kw">crate</span>::error::Throwable;
 <span class="kw">use </span><span class="kw">crate</span>::object::array::{Array, ArrayPrimitive, ArrayType};
 <span class="kw">use </span><span class="kw">crate</span>::object::numeric::IntegralType;
 <span class="kw">use </span><span class="kw">crate</span>::object::RuntimeValue;
-<span class="kw">use crate</span>::{Context, VM};
-<span class="kw">use </span>anyhow::{anyhow, Context <span class="kw">as </span>AnyhowContext, <span class="prelude-ty">Result</span>};
+<span class="kw">use crate</span>::{Context, VM, internal};
+<span class="kw">use </span>anyhow::{Context <span class="kw">as </span>AnyhowContext, <span class="prelude-ty">Result</span>};
 <span class="kw">use </span>parking_lot::RwLock;
 <span class="kw">use </span>parse::classfile::Resolvable;
 <span class="kw">use </span>parse::pool::ConstantEntry;
@@ -288,7 +290,7 @@
             .as_integral()
             .context(<span class="macro">format!</span>(<span class="string">&quot;{} was not an integral&quot;</span>, <span class="macro-nonterminal">$side</span>))<span class="question-mark">?</span>;
         <span class="kw">if </span>val.ty != IntegralType::Int {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="macro">format!</span>(<span class="string">&quot;{} was not an int, got {:#?}&quot;</span>, <span class="macro-nonterminal">$side</span>, val)));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro-nonterminal">$</span><span class="macro">crate::internal!</span>(<span class="macro">format!</span>(<span class="string">&quot;{} was not an int, got {:#?}&quot;</span>, <span class="macro-nonterminal">$side</span>, val)));
         }
 
         val.clone()
@@ -300,7 +302,7 @@
             .as_integral()
             .context(<span class="macro">format!</span>(<span class="string">&quot;{} was not an integral&quot;</span>, <span class="macro-nonterminal">$side</span>))<span class="question-mark">?</span>;
         <span class="kw">if </span>val.ty != IntegralType::Long {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="macro">format!</span>(<span class="string">&quot;{} was not a long, got {:#?}&quot;</span>, <span class="macro-nonterminal">$side</span>, val)));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro-nonterminal">$</span><span class="macro">crate::internal!</span>(<span class="macro">format!</span>(<span class="string">&quot;{} was not a long, got {:#?}&quot;</span>, <span class="macro-nonterminal">$side</span>, val)));
         }
 
         val.clone()
@@ -312,7 +314,7 @@
             .as_floating()
             .context(<span class="macro">format!</span>(<span class="string">&quot;{} was not a float&quot;</span>, <span class="macro-nonterminal">$side</span>))<span class="question-mark">?</span>;
         <span class="kw">if </span>val.ty != FloatingType::Float {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="macro">format!</span>(<span class="string">&quot;{} was not a float&quot;</span>, <span class="macro-nonterminal">$side</span>)));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro-nonterminal">$</span><span class="macro">crate::internal!</span>(<span class="macro">format!</span>(<span class="string">&quot;{} was not a float&quot;</span>, <span class="macro-nonterminal">$side</span>)));
         }
 
         val.clone()
@@ -324,7 +326,7 @@
             .as_floating()
             .context(<span class="macro">format!</span>(<span class="string">&quot;{} was not a float&quot;</span>, <span class="macro-nonterminal">$side</span>))<span class="question-mark">?</span>;
         <span class="kw">if </span>val.ty != FloatingType::Float {
-            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="macro">format!</span>(<span class="string">&quot;{} was not a float&quot;</span>, <span class="macro-nonterminal">$side</span>)));
+            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro-nonterminal">$</span><span class="macro">crate::internal!</span>(<span class="macro">format!</span>(<span class="string">&quot;{} was not a float&quot;</span>, <span class="macro-nonterminal">$side</span>)));
         }
 
         val.clone()
@@ -359,7 +361,7 @@
 </span><span class="kw">pub struct </span>ValueReturn;
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>ValueReturn {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression, Throwable&gt; {
         <span class="kw">let </span>return_value = ctx.operands.pop().context(<span class="string">&quot;no return value popped&quot;</span>)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(Progression::Return(<span class="prelude-val">Some</span>(return_value)))
@@ -372,7 +374,7 @@
 }
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>Goto {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, _ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, _ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression, Throwable&gt; {
         <span class="prelude-val">Ok</span>(Progression::JumpRel(<span class="self">self</span>.jump_to <span class="kw">as </span>i32))
     }
 }
@@ -381,7 +383,7 @@
 </span><span class="kw">pub struct </span>ArrayLength;
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>ArrayLength {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression, Throwable&gt; {
         <span class="comment">// The arrayref must be of type reference and must refer to an array. It is popped from the operand stack.
         </span><span class="kw">let </span>array = <span class="macro">arg!</span>(ctx, <span class="string">&quot;array&quot; </span>=&gt; Array);
 
@@ -400,7 +402,7 @@
 }
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>ANewArray {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression, Throwable&gt; {
         <span class="comment">// The count must be of type int. It is popped off the operand stack.
         </span><span class="kw">let </span>count = <span class="macro">arg!</span>(ctx, <span class="string">&quot;count&quot; </span>=&gt; i32);
 
@@ -420,7 +422,7 @@
                 <span class="kw">let </span>cls = vm.class_loader.load_class(class_name)<span class="question-mark">?</span>;
                 ArrayType::Object(cls)
             }
-            e =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">anyhow!</span>(<span class="string">&quot;{:#?} cannot be used as an array type&quot;</span>, e)),
+            e =&gt; <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">internal!</span>(<span class="string">&quot;{:#?} cannot be used as an array type&quot;</span>, e)),
         };
 
         <span class="comment">// All components of the new array are initialized to null, the default value for reference types (§2.4).
@@ -448,7 +450,7 @@
 }
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>NewArray {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression, Throwable&gt; {
         <span class="comment">// The count must be of type int. It is popped off the operand stack.
         </span><span class="kw">let </span>count = <span class="macro">arg!</span>(ctx, <span class="string">&quot;count&quot; </span>=&gt; i32);
 
@@ -481,7 +483,7 @@
 </span><span class="kw">pub struct </span>ArrayStore;
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>ArrayStore {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression, Throwable&gt; {
         <span class="kw">let </span>value = <span class="macro">pop!</span>(ctx);
         <span class="kw">let </span>index = <span class="macro">arg!</span>(ctx, <span class="string">&quot;index&quot; </span>=&gt; i32);
         <span class="kw">let </span>array = <span class="macro">arg!</span>(ctx, <span class="string">&quot;array&quot; </span>=&gt; Array);
@@ -497,7 +499,7 @@
 </span><span class="kw">pub struct </span>ArrayLoad;
 
 <span class="kw">impl </span>Instruction <span class="kw">for </span>ArrayLoad {
-    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression&gt; {
+    <span class="kw">fn </span>handle(<span class="kw-2">&amp;</span><span class="self">self</span>, _vm: <span class="kw-2">&amp;mut </span>VM, ctx: <span class="kw-2">&amp;mut </span>Context) -&gt; <span class="prelude-ty">Result</span>&lt;Progression, Throwable&gt; {
         <span class="kw">let </span>index = <span class="macro">arg!</span>(ctx, <span class="string">&quot;index&quot; </span>=&gt; i32);
         <span class="kw">let </span>array = <span class="macro">arg!</span>(ctx, <span class="string">&quot;array&quot; </span>=&gt; Array);
 

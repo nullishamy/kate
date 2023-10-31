@@ -89,7 +89,7 @@
 
 <span class="kw">use crate</span>::{
     object::{RuntimeValue, WrappedClassObject, WrappedObject},
-    VM,
+    VM, error::Throwable,
 };
 
 <span class="kw">pub mod </span>lang;
@@ -100,10 +100,10 @@
     class: WrappedClassObject,
     args: Vec&lt;RuntimeValue&gt;,
     vm: <span class="kw-2">&amp;mut </span>VM,
-) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;RuntimeValue&gt;&gt;;
+) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;RuntimeValue&gt;, Throwable&gt;;
 
 <span class="kw">pub type </span>NativeInstanceFunction =
-    <span class="kw">fn</span>(this: WrappedObject, args: Vec&lt;RuntimeValue&gt;, vm: <span class="kw-2">&amp;mut </span>VM) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;RuntimeValue&gt;&gt;;
+    <span class="kw">fn</span>(this: WrappedObject, args: Vec&lt;RuntimeValue&gt;, vm: <span class="kw-2">&amp;mut </span>VM) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;RuntimeValue&gt;, Throwable&gt;;
 
 <span class="attr">#[derive(Clone, Debug)]
 </span><span class="kw">pub enum </span>NativeFunction {
