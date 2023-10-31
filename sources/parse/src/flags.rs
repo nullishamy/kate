@@ -16,7 +16,6 @@ macro_rules! impl_flags {
                 let mut flags = <$flag_type>::from_bits(raw);
 
                 if flags.is_none() {
-                    // warn!("unrecognised bits {:b} for {}", raw, stringify!($flag_type));
                     flags = Some(<$flag_type>::from_bits_truncate(raw));
                 }
 

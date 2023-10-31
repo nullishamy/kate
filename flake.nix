@@ -25,9 +25,10 @@
             libunwind.dev
             python310
             (rust-bin.selectLatestNightlyWith (toolchain: toolchain.default.override {
-              extensions = [ "rust-src" ];
+              extensions = [ "rust-src" "rust-analyzer" "clippy" "miri" ];
             }))
 
+            cargo-nextest
             filecheck
           ];
         };

@@ -10,6 +10,6 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 anyhow = { workspace = true }
 parse = { path = '../parse/' }
-interpreter_two = { path = '../interpreter_two/' }
+interpreter = { path = '../interpreter/' }
 support = { path = '../support/' }
 clap = { version = "4.4.6", features = ['derive'] }

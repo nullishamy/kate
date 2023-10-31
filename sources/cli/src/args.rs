@@ -11,8 +11,12 @@ pub struct Cli {
     pub classes: Vec<String>,
 
     #[arg(long)]
-    /// Whether to run in "test mode", which will emit more machine friendly logs
+    /// Whether to run in "test mode", which will emit more machine friendly logs, and will enable helpers used to print data
     pub test: bool,
+
+    #[arg(long)]
+    /// Whether to boot the System.
+    pub boot_system: bool,
 
     #[arg(long("cp"))]
     /// A list of paths to add to the classpath

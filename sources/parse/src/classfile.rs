@@ -6,9 +6,14 @@ use crate::{
         ConstantUtf8,
     },
 };
-use anyhow::Result;
+use anyhow::{Result};
 use parking_lot::RwLock;
-use std::{fmt, marker::PhantomData, rc::Rc};
+use std::{
+    fmt,
+    marker::PhantomData,
+    sync::Arc,
+};
+
 
 #[derive(Debug, Clone)]
 pub struct ClassFile {
@@ -34,7 +39,7 @@ pub struct Field {
 }
 #[derive(Debug, Clone)]
 pub struct Fields {
-    pub(crate) values: Vec<Field>,
+    pub values: Vec<Field>,
 }
 
 #[derive(Debug, Clone)]
@@ -61,7 +66,7 @@ impl Methods {
 
 #[derive(Debug, Clone)]
 pub struct Interfaces {
-    pub(crate) values: Vec<Addressed<ConstantClass>>,
+    pub values: Vec<Addressed<ConstantClass>>,
 }
 
 #[derive(Debug, Clone)]
@@ -74,11 +79,11 @@ pub struct Addressed<T> {
     phantom: PhantomData<T>,
 
     index: u16,
-    entries: Rc<RwLock<Vec<ConstantEntry>>>,
+    entries: Arc<RwLock<Vec<ConstantEntry>>>,
 }
 
 impl<T> Addressed<T> {
-    pub fn from(index: u16, pool: Rc<RwLock<Vec<ConstantEntry>>>) -> Self {
+    pub fn from(index: u16, pool: Arc<RwLock<Vec<ConstantEntry>>>) -> Self {
         Self {
             phantom: PhantomData,
             index,

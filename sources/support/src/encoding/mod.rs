@@ -10,6 +10,23 @@ pub enum CompactEncoding {
     Utf16,
 }
 
+impl CompactEncoding {
+    pub fn coder(&self) -> u8 {
+        match self {
+            CompactEncoding::Latin1 => 0,
+            CompactEncoding::Utf16 => 1,
+        }
+    }
+
+    pub fn from_coder(coder: u8) -> Self {
+        match coder {
+            0 => CompactEncoding::Latin1,
+            1 => CompactEncoding::Utf16,
+            p => panic!("bogus coder {p}")
+        }
+    }
+}
+
 pub type EncodedString = (CompactEncoding, Vec<u8>);
 
 pub trait EncodingFormat {

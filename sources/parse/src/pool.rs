@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use anyhow::Result;
 use enum_as_inner::EnumAsInner;
@@ -9,7 +9,9 @@ use crate::classfile::Resolvable;
 
 #[derive(Debug, Clone)]
 pub struct ConstantPool {
-    pub entries: Rc<RwLock<Vec<ConstantEntry>>>,
+    // Needs to be shared because `Addressed` takes it
+    // Might refactor this such that `Addressed` takes the pool when it tries to resolve
+    entries: Arc<RwLock<Vec<ConstantEntry>>>,
 }
 
 impl Default for ConstantPool {
@@ -21,7 +23,7 @@ impl Default for ConstantPool {
 impl ConstantPool {
     pub fn new() -> Self {
         Self {
-            entries: Rc::new(RwLock::new(vec![])),
+            entries: Arc::new(RwLock::new(vec![])),
         }
     }
 
@@ -36,7 +38,7 @@ impl ConstantPool {
     }
 
     pub fn address<T>(&self, for_index: u16) -> Addressed<T> {
-        Addressed::from(for_index, Rc::clone(&self.entries))
+        Addressed::from(for_index, Arc::clone(&self.entries))
     }
 
     pub(crate) fn perform_format_checking(&self) -> Result<()> {
@@ -248,7 +250,7 @@ impl ConstantUtf8 {
 
 impl ConstantString {
     pub fn string(&self) -> String {
-        String::from_utf8(self.string.resolve().bytes).unwrap()
+        String::from_utf8_lossy(&self.string.resolve().bytes).to_string()
     }
 
     pub fn try_string(&self) -> Result<String> {

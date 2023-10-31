@@ -1,11 +1,18 @@
-use std::{process::exit, rc::Rc};
+use std::process::exit;
 
 use args::Cli;
 use clap::Parser;
-use interpreter_two::{
+use interpreter::{
     error::{Frame, Throwable},
     native::NativeFunction,
-    object::{classloader::ClassLoader, statics::StaticFields, string::Interner, RuntimeValue},
+    object::{
+        builtins::{Array, Class},
+        interner::{set_interner, StringInterner},
+        layout::types::Byte,
+        loader::ClassLoader,
+        mem::{FieldRef, RefTo},
+        runtime::RuntimeValue,
+    },
     static_method, Context, VM,
 };
 use parse::attributes::CodeAttribute;
@@ -14,6 +21,86 @@ use tracing::{error, info, Level};
 use tracing_subscriber::fmt;
 
 mod args;
+
+fn test_init(cls: RefTo<Class>) {
+    let cls = cls.borrow_mut();
+    macro_rules! printer {
+                ($desc: expr, $printer: expr) => {
+                    static_method!(name: "print", descriptor: $desc => |_, args, _| {
+                        let printer = $printer;
+                        printer(args[0].clone());
+                        Ok(None)
+                    })
+                };
+                ($desc: expr) => {
+                    printer!($desc, |a| {
+                        println!("{}", a);
+                    })
+                };
+            }
+
+    for printer in [
+        printer!("(I)V"),
+        printer!("(Z)V", |a: RuntimeValue| {
+            let int_value = a.as_integral().expect("was not an int (bool)").value;
+            if int_value == 0 {
+                println!("false")
+            } else {
+                println!("true")
+            }
+        }),
+        printer!("(C)V", |a: RuntimeValue| {
+            let char_value = a.as_integral().expect("was not an int (char)").value;
+            println!(
+                "{}",
+                char::from_u32(char_value as u32).unwrap_or_else(|| {
+                    panic!("{} was not a char", char_value);
+                })
+            )
+        }),
+        printer!("(J)V"),
+        printer!("(D)V"),
+        printer!("(F)V"),
+        printer!("(S)V"),
+        printer!("(B)V"),
+        printer!("(Ljava/lang/String;)V", |a: RuntimeValue| {
+            let string = a.as_object().expect("was not an object (string)");
+            if string.is_null() {
+                println!("null");
+                return;
+            }
+
+            let string = string.borrow_mut();
+            let bytes: FieldRef<RefTo<Array<u8>>> = string
+                .field(("value".to_string(), "[B".to_string()))
+                .expect("could not locate value field");
+
+            let bytes = bytes.copy_out();
+            let bytes = bytes.borrow().slice().to_vec();
+
+            let str =
+                decode_string((CompactEncoding::Utf16, bytes)).expect("could not decode string");
+
+            println!("{:#?}", str);
+        }),
+        printer!("([B)V", |arr: RuntimeValue| {
+            let arr = arr.as_object().expect("not an object (byte[])");
+            let arr = unsafe { arr.cast::<Array<Byte>>() };
+
+            println!(
+                "[{}]",
+                arr.borrow()
+                    .slice()
+                    .iter()
+                    .map(|f| f.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            );
+        }),
+    ] {
+        cls.native_methods_mut().insert(printer.0, printer.1);
+    }
+}
 
 fn main() {
     let args = Cli::parse();
@@ -37,6 +124,8 @@ fn main() {
         .with_writer(std::io::stderr)
         .init();
 
+    info!("System starting up");
+
     if args.classes.is_empty() {
         error!("No classes given.");
         return;
@@ -46,114 +135,130 @@ fn main() {
     let mut class_loader = ClassLoader::new();
 
     class_loader
-        .add_path(format!("{source_root}/../../std/java.base").into())
-        .add_path(format!("{source_root}/../../samples").into());
+        .add_path(format!("{source_root}/../../std/java.base"))
+        .add_path(format!("{source_root}/../../samples"));
 
     for cp in args.classpath {
-        class_loader.add_path(cp.into());
+        class_loader.add_path(cp);
     }
 
-    let (_, jls) = class_loader.bootstrap().unwrap();
+    let bootstrapped_classes = class_loader.bootstrap().unwrap();
+
+    let interner = StringInterner::new(
+        bootstrapped_classes.java_lang_string.clone(),
+        bootstrapped_classes.java_lang_object.clone(),
+    );
+
+    set_interner(interner);
 
     let mut vm = VM {
         class_loader,
-        statics: StaticFields::new(),
-        interner: Interner::new(Rc::clone(&jls)),
         frames: Vec::new(),
+        main_thread: RefTo::null()
     };
-
-    // Init these classes so that their static fields can get set
-    // this is mainly so that we can go in afterward (in vm.bootstrap)
-    // and set COMPACT_STRINGS
-    vm.initialise_class(Rc::clone(&jls)).unwrap();
 
     vm.bootstrap().unwrap();
 
+    info!("Bootstrap complete");
+
     for class_name in args.classes {
-        let _cls = vm.class_loader.load_class(class_name.clone()).unwrap();
-        let mut cls = _cls.write();
+        let cls = vm.class_loader.for_name(class_name.clone()).unwrap();
         if args.test {
-            macro_rules! printer {
-                ($desc: expr, $printer: expr) => {
-                    static_method!(name: "print", descriptor: $desc => |_, args, _| {
-                        let printer = $printer;
-                        printer(args[0].clone());
-                        Ok(None)
-                    })
-                };
-                ($desc: expr) => {
-                    printer!($desc, |a| {
-                        println!("{}", a);
-                    })
-                };
-            }
+            test_init(cls.clone());
+        }
 
-            for printer in [
-                printer!("(I)V"),
-                printer!("(Z)V", |a: RuntimeValue| {
-                    let int_value = a.as_integral().expect("was not an int (bool)").value;
-                    if int_value == 0 {
-                        println!("false")
-                    } else {
-                        println!("true")
+        cls.borrow_mut().native_methods_mut().insert(
+            ("getValue".to_string(), "(Ljava/lang/String;)[B".to_string()),
+            NativeFunction::Static(|_, args, _| {
+                let str = args.get(0).unwrap().clone();
+                let str = str.as_object().unwrap();
+                let value: FieldRef<RefTo<Array<u8>>> = str
+                    .borrow_mut()
+                    .field(("value".to_string(), "[B".to_string()))
+                    .unwrap();
+
+                let value = value.copy_out();
+                Ok(Some(RuntimeValue::Object(value.erase())))
+            }),
+        );
+
+        if args.boot_system {
+            info!("Booting system");
+
+            let java_lang_system = vm
+                .class_loader
+                .for_name("java/lang/System".to_string())
+                .unwrap();
+
+            let init_phase_1 = java_lang_system
+                .borrow()
+                .class_file()
+                .methods
+                .locate("initPhase1".to_string(), "()V".to_string())
+                .cloned()
+                .unwrap();
+
+            let code = init_phase_1
+                .attributes
+                .known_attribute::<CodeAttribute>(&cls.borrow().class_file().constant_pool)
+                .unwrap();
+
+            let ctx = Context {
+                class: java_lang_system,
+                code,
+                operands: vec![],
+                locals: vec![],
+                pc: 0,
+            };
+
+            let res = vm.run(ctx);
+            if let Err((e, _)) = res {
+                println!("Uncaught exception when booting system: {}", e);
+
+                if let Throwable::Runtime(err) = e {
+                    for source in err.sources.iter().rev() {
+                        println!("  {}", source);
                     }
-                }),
-                printer!("(C)V", |a: RuntimeValue| {
-                    let char_value = a.as_integral().expect("was not an int (char)").value;
-                    println!(
-                        "{}",
-                        char::from_u32(char_value as u32)
-                            .expect(&format!("{} was not a char", char_value))
-                    )
-                }),
-                printer!("(J)V"),
-                printer!("(D)V"),
-                printer!("(F)V"),
-                printer!("(S)V"),
-                printer!("(B)V"),
-                printer!("(Ljava/lang/String;)V", |a: RuntimeValue| {
-                    let string = a.as_object().expect("was not an object (string)");
-                    let string = string.read();
-                    let bytes = string
-                        .get_instance_field(("value".to_string(), "[B".to_string()))
-                        .expect("could not locate value field");
-                    let bytes = bytes.as_array().expect("bytes was not an array (byte[])");
+                } else if let Throwable::Internal(_) = e {
+                    for source in vm.frames.iter().rev() {
+                        println!("  {}", source);
+                    }
+                }
 
-                    let bytes = bytes
-                        .read()
-                        .values
-                        .iter()
-                        .map(|v| v.as_integral().expect("value was not an int (char)"))
-                        .map(|v| v.value as u8)
-                        .collect::<Vec<_>>();
-
-                    let str = decode_string((CompactEncoding::Utf16, bytes))
-                        .expect("could not decode string");
-                    println!("{:#?}", str);
-                }),
-            ] {
-                cls.register_native(printer.0, printer.1);
+                println!(
+                    "  {}",
+                    Frame {
+                        class_name: "java/lang/System".to_string(),
+                        method_name: "initPhase1".to_string()
+                    }
+                );
+                exit(1);
+            } else {
+                info!("Booted system")
             }
         }
+
         let method = cls
-            .get_method(("main".to_string(), "([Ljava/lang/String;)V".to_string()))
+            .borrow()
+            .class_file()
+            .methods
+            .locate("main".to_string(), "([Ljava/lang/String;)V".to_string())
             .unwrap();
 
         let code = method
             .attributes
-            .known_attribute::<CodeAttribute>(cls.constant_pool())
+            .known_attribute::<CodeAttribute>(&cls.borrow().class_file().constant_pool)
             .unwrap();
 
-        drop(cls);
-
         let ctx = Context {
-            class: _cls,
+            class: cls,
             code,
             operands: vec![],
             locals: vec![],
             pc: 0,
         };
 
+        info!("Entering main");
         let res = vm.run(ctx);
 
         if let Err((e, _)) = res {

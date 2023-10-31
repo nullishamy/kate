@@ -1,0 +1,20 @@
+[package]
+name = "tests"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dev-dependencies]
+interpreter = { path = "../sources/interpreter/" }
+
+[[test]]
+name = "execution"
+path = "execution.rs"
+
+[[test]]
+name = "program"
+path = "program.rs"
+
+[[test]]
+name = "openjdk"
+path = "jdk.rs"

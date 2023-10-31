@@ -131,6 +131,7 @@ impl Parser {
                 pool.insert(ConstantEntry::Reserved);
                 i += 1;
             }
+
             i += 1;
         }
 
