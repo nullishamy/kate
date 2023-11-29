@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"macro":["class","field","instance_method","static_method"],"mod":["interpreter","opcode","runtime"]};
+window.SIDEBAR_ITEMS = {"macro":["arg","field","instance_method","internal","internalise","pop","static_method"],"mod":["bytecode","error","native","object"],"struct":["Context","ThrownState","VM"]};

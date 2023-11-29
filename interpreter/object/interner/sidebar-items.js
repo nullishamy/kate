@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["intern_string","interner_meta_class","set_interner"],"struct":["StringInterner"]};

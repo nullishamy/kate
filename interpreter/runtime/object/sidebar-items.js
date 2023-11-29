@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["JavaObject"],"struct":["ClassObject","RuntimeObject","StringObject"],"type":["NameAndDescriptor"]};

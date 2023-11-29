@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["ARRAY_BASE","BOOL","BYTE","CHAR","DOUBLE","FLOAT","INT","LONG","OBJECT","SHORT"],"fn":["for_field_type"],"struct":["Alignment","JavaType","Size"],"type":["Bool","Byte","Char","Double","Float","Int","Long","Short"]};

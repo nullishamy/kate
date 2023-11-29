@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["basic_layout","full_layout"],"mod":["types"],"struct":["BasicLayout","ClassFileLayout","FieldInfo","FieldLocation"]};

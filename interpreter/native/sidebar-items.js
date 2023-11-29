@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["NativeFunction"],"mod":["io","jdk","lang"],"trait":["NativeModule"],"type":["NameAndDescriptor","NativeInstanceFunction","NativeStaticFunction"]};

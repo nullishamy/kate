@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["ArrayPrimitive","ArrayType"],"struct":["Array","BuiltinString","Class","Object"]};

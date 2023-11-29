@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["main"],"mod":["args"]};
+window.SIDEBAR_ITEMS = {"fn":["main","test_init"],"mod":["args"]};

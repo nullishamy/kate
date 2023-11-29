@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["NativeFunction"],"mod":["lang"],"trait":["NativeModule"],"type":["NameAndDescriptor","NativeInstanceFunction","NativeStaticFunction"]};
