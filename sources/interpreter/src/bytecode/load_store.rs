@@ -195,12 +195,12 @@ impl Instruction for GetField {
             FieldType::Base(ty) => match ty {
                 BaseType::Boolean => {
                     let field: FieldRef<Bool> =
-                        objectref.borrow_mut().field((name, descriptor)).unwrap();
+                        objectref.borrow().field((name, descriptor)).unwrap();
                     RuntimeValue::Integral(field.copy_out().into())
                 }
                 BaseType::Char => {
                     let field: FieldRef<Char> =
-                        objectref.borrow_mut().field((name, descriptor)).unwrap();
+                        objectref.borrow().field((name, descriptor)).unwrap();
 
                     // TODO: Not entirely sure what the behaviour is supposed to be here wrt extension
                     let val = field.copy_out();
@@ -208,17 +208,17 @@ impl Instruction for GetField {
                 }
                 BaseType::Float => {
                     let field: FieldRef<Float> =
-                        objectref.borrow_mut().field((name, descriptor)).unwrap();
+                        objectref.borrow().field((name, descriptor)).unwrap();
                     RuntimeValue::Floating(field.copy_out().into())
                 }
                 BaseType::Double => {
                     let field: FieldRef<Double> =
-                        objectref.borrow_mut().field((name, descriptor)).unwrap();
+                        objectref.borrow().field((name, descriptor)).unwrap();
                     RuntimeValue::Floating(field.copy_out().into())
                 }
                 BaseType::Byte => {
                     let field: FieldRef<Byte> =
-                        objectref.borrow_mut().field((name, descriptor)).unwrap();
+                        objectref.borrow().field((name, descriptor)).unwrap();
 
                     // TODO: Not entirely sure what the behaviour is supposed to be here wrt extension
                     let val = field.copy_out();
@@ -226,7 +226,7 @@ impl Instruction for GetField {
                 }
                 BaseType::Short => {
                     let field: FieldRef<Short> =
-                        objectref.borrow_mut().field((name, descriptor)).unwrap();
+                        objectref.borrow().field((name, descriptor)).unwrap();
 
                     // TODO: Not entirely sure what the behaviour is supposed to be here wrt extension
                     let val = field.copy_out();
@@ -234,24 +234,25 @@ impl Instruction for GetField {
                 }
                 BaseType::Int => {
                     let field: FieldRef<Int> =
-                        objectref.borrow_mut().field((name, descriptor)).unwrap();
+                        objectref.borrow().field((name, descriptor)).unwrap();
+
                     RuntimeValue::Integral(field.copy_out().into())
                 }
                 BaseType::Long => {
                     let field: FieldRef<Long> =
-                        objectref.borrow_mut().field((name, descriptor)).unwrap();
+                        objectref.borrow().field((name, descriptor)).unwrap();
                     RuntimeValue::Integral(field.copy_out().into())
                 }
                 BaseType::Void => panic!("cannot read void field"),
             },
             FieldType::Object(_) => {
                 let field: FieldRef<RefTo<Object>> =
-                    objectref.borrow_mut().field((name, descriptor)).unwrap();
+                        objectref.borrow().field((name, descriptor)).unwrap();
                 RuntimeValue::Object(field.borrow().clone())
             }
             FieldType::Array(_) => {
                 let field: FieldRef<RefTo<Object>> =
-                    objectref.borrow_mut().field((name, descriptor)).unwrap();
+                        objectref.borrow().field((name, descriptor)).unwrap();
                 let value = field.borrow();
                 RuntimeValue::Object(value.clone())
             }
@@ -308,7 +309,7 @@ impl Instruction for PutField {
             }};
         }
 
-        let o = objectref.borrow_mut();
+        let o = objectref.borrow();
         let name = name.clone();
 
         match descriptor {

@@ -290,11 +290,7 @@ impl NativeModule for LangClass {
                 };
 
                 let cls = RefTo::new(Class::new_primitive(
-                    Object {
-                        class: jlc,
-                        super_class: jlo,
-                        ref_count: 0,
-                    },
+                    Object::new(jlc, jlo),
                     prim_str,
                     layout
                 ));

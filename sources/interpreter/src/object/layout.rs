@@ -3,6 +3,7 @@ use std::{
     collections::HashMap,
 };
 
+use parking_lot::RwLock;
 use parse::{
     classfile::{ClassFile, Field, Resolvable},
     flags::FieldAccessFlag,

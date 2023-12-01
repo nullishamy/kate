@@ -224,11 +224,7 @@ impl VM {
         // self.initialise_class(thread_class.clone())?;
 
         let thread = BuiltinThread {
-            object: Object {
-                class: thread_class.clone(),
-                super_class: thread_class.borrow().super_class(),
-                ref_count: 0,
-            },
+            object: Object::new(thread_class.clone(), thread_class.borrow().super_class()),
             name: intern_string("main".to_string())?,
             priority: 0,
             daemon: 0,
@@ -237,11 +233,7 @@ impl VM {
             eetop: 0,
             target: RefTo::null(),
             thread_group: RefTo::new(BuiltinThreadGroup {
-                object: Object {
-                    class: thread_group_class.clone(),
-                    super_class: thread_group_class.borrow().super_class(),
-                    ref_count: 0,
-                },
+                object: Object::new(thread_group_class.clone(), thread_group_class.borrow().super_class()),
                 parent: RefTo::null(),
                 name: intern_string("main".to_string())?,
                 max_priority: 0,

@@ -1,3 +1,5 @@
+use std::sync::atomic::AtomicU64;
+
 use super::{Instruction, Progression};
 use crate::{
     arg,
@@ -15,6 +17,7 @@ use crate::{
 };
 use anyhow::Context as AnyhowContext;
 
+use parking_lot::RwLock;
 use parse::{
     attributes::CodeAttribute,
     classfile::{Method, Resolvable},
@@ -736,7 +739,8 @@ impl Instruction for New {
 
         unsafe {
             (*ptr).class = object_ty.clone();
-            (*ptr).ref_count = 0;
+            (*ptr).ref_count = AtomicU64::new(0);
+            (*ptr).field_lock = RwLock::new(());
             (*ptr).super_class = super_class;
         }
 
@@ -924,7 +928,7 @@ impl Instruction for Athrow {
             .context("throwable was not an object")?
             .clone();
 
-        let throwable = throwable.borrow_mut();
+        let throwable = throwable.borrow();
         let class = throwable.header().class.clone();
         let class_name = class.borrow().name();
 

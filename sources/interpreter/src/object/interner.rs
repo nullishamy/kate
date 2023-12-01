@@ -68,11 +68,7 @@ impl StringInterner {
         );
 
         let obj = BuiltinString {
-            object: Object {
-                class: self.string_class.clone(),
-                super_class: self.super_class.clone(),
-                ref_count: 0,
-            },
+            object: Object::new(self.string_class.clone(), self.super_class.clone()),
             value: array,
             coder: encoding.coder(),
             hash: 0,

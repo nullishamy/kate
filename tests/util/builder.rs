@@ -2,6 +2,7 @@
 // When doing basic numeric assertions. These overloads use manual string builders to work around
 // javac inserting "invokedynamic"s to make the strings.
 // TODO: Remove these when we support invokedynamic
+// TODO: Move this into another class?
 
 use std::path::PathBuf;
 

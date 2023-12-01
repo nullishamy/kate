@@ -70,13 +70,12 @@ fn test_init(cls: RefTo<Class>) {
                 return;
             }
 
-            let string = string.borrow_mut();
+            let string = string.borrow();
             let bytes: FieldRef<RefTo<Array<u8>>> = string
                 .field(("value".to_string(), "[B".to_string()))
                 .expect("could not locate value field");
 
-            let bytes = bytes.copy_out();
-            let bytes = bytes.borrow().slice().to_vec();
+            let bytes = bytes.borrow().borrow().slice().to_vec();
 
             let str =
                 decode_string((CompactEncoding::Utf16, bytes)).expect("could not decode string");
@@ -173,11 +172,11 @@ fn main() {
                 let str = args.get(0).unwrap().clone();
                 let str = str.as_object().unwrap();
                 let value: FieldRef<RefTo<Array<u8>>> = str
-                    .borrow_mut()
+                    .borrow()
                     .field(("value".to_string(), "[B".to_string()))
                     .unwrap();
 
-                let value = value.copy_out();
+                let value = value.borrow().clone();
                 Ok(Some(RuntimeValue::Object(value.erase())))
             }),
         );

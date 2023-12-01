@@ -87,13 +87,7 @@ impl ClassLoader {
         }
 
         let cls = Class::new(
-            Object {
-                super_class: super_class.unwrap_or(RefTo::null()),
-                // Layout for the meta class is stored in here.
-                // This will be set to the real meta class after bootstrap
-                class: self.meta_class.clone(),
-                ref_count: 0,
-            },
+            Object::new(self.meta_class.clone(), super_class.unwrap_or(RefTo::null())),
             name_key.clone(),
             class_file,
             layout,
@@ -158,20 +152,12 @@ impl ClassLoader {
         macro_rules! primitive {
             ($layout_ty: ident, $array_ty: ident,  $name: expr) => {{
                 let prim = RefTo::new(Class::new_primitive(
-                    Object {
-                        class: jlc.clone(),
-                        super_class: jlo.clone(),
-                        ref_count: 0,
-                    },
+                    Object::new(jlc.clone(), jlo.clone()),
                     $name.to_string(),
                     ClassFileLayout::from_java_type(types::$layout_ty)
                 ));
                 let array = RefTo::new(Class::new_array(
-                    Object {
-                        class: prim.clone(),
-                        super_class: RefTo::null(),
-                        ref_count: 0,
-                    },
+                    Object::new(prim.clone(), RefTo::null()),
                     format!("[{}", $name.to_string()),
                     ArrayType::Primitive(ArrayPrimitive::$array_ty),
                     ClassFileLayout::from_java_type(types::$layout_ty)
@@ -201,11 +187,7 @@ impl ClassLoader {
         let char = primitive!(CHAR, Char, "C");
         insert!(self, char.clone(), "C");
         let char_2d_array = RefTo::new(Class::new_array(
-            Object {
-                class: char.0.clone(),
-                super_class: RefTo::null(),
-                ref_count: 0,
-            },
+            Object::new(char.0.clone(), RefTo::null()),
             "[[C".to_string(),
             ArrayType::Primitive(ArrayPrimitive::Char),
             ClassFileLayout::from_java_type(types::CHAR)
@@ -226,11 +208,7 @@ impl ClassLoader {
         insert!(self, double, "D");
 
         let jlo_array = RefTo::new(Class::new_array(
-            Object {
-                class: jlo.clone(),
-                super_class: RefTo::null(),
-                ref_count: 0,
-            },
+            Object::new(jlo.clone(), RefTo::null()),
             "[Ljava/lang/Object;".to_string(),
             ArrayType::Object(jlo.clone()),
             ClassFileLayout::from_java_type(types::ARRAY_BASE)
@@ -241,11 +219,7 @@ impl ClassLoader {
         {
             let cls = self.for_name("java/util/concurrent/ConcurrentHashMap$Segment".to_string())?;
             let arr = RefTo::new(Class::new_array(
-                Object {
-                    super_class: cls.borrow().super_class(),
-                    class: cls,
-                    ref_count: 0,
-                },
+                Object::new(cls.clone(), cls.borrow().super_class()),
                 "[Ljava/util/concurrent/ConcurrentHashMap$Segment;".to_string(),
                 ArrayType::Object(jlo.clone()),
                 ClassFileLayout::from_java_type(types::ARRAY_BASE)
@@ -257,11 +231,7 @@ impl ClassLoader {
         {
             let cls = self.for_name("java/util/concurrent/ConcurrentHashMap$Node".to_string())?;
             let arr = RefTo::new(Class::new_array(
-                Object {
-                    super_class: cls.borrow().super_class(),
-                    class: cls,
-                    ref_count: 0,
-                },
+                Object::new(cls.clone(), cls.borrow().super_class()),
                 "[Ljava/util/concurrent/ConcurrentHashMap$Node;".to_string(),
                 ArrayType::Object(jlo.clone()),
                 ClassFileLayout::from_java_type(types::ARRAY_BASE)
@@ -273,11 +243,7 @@ impl ClassLoader {
         {
             let cls = jls.clone();
             let arr = RefTo::new(Class::new_array(
-                Object {
-                    super_class: cls.borrow().super_class(),
-                    class: cls,
-                    ref_count: 0,
-                },
+                Object::new(cls.clone(), cls.borrow().super_class()),
                 "[Ljava/lang/String;".to_string(),
                 ArrayType::Object(jlo.clone()),
                 ClassFileLayout::from_java_type(types::ARRAY_BASE)

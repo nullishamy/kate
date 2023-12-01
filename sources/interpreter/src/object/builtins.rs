@@ -4,8 +4,10 @@ use std::{
     fmt,
     marker::PhantomData,
     mem::{offset_of, size_of},
+    sync::atomic::{AtomicU64, Ordering},
 };
 
+use parking_lot::RwLock;
 use parse::{
     classfile::ClassFile,
     flags::{ClassFileAccessFlag, ClassFileAccessFlags},
@@ -28,12 +30,23 @@ use super::{
 pub struct Object {
     pub class: RefTo<Class>,
     pub super_class: RefTo<Class>,
-    pub ref_count: u64,
+    pub ref_count: AtomicU64,
+    pub field_lock: RwLock<()>,
 }
 
 impl Object {
-    pub fn field<T>(&mut self, field: NameAndDescriptor) -> Option<FieldRef<T>> {
-        self.ref_count += 1;
+    pub fn new(class: RefTo<Class>, super_class: RefTo<Class>) -> Self {
+        Self {
+            class,
+            super_class,
+            ref_count: AtomicU64::new(0),
+            field_lock: RwLock::new(()),
+        }
+    }
+
+    pub fn field<T>(&self, field: NameAndDescriptor) -> Option<FieldRef<T>> {
+        self.inc_count();
+
         let class = self.class();
         let layout = &class.borrow().layout_for_instances_of_this_class;
         let field_info = layout.field_info(&field.0)?;
@@ -52,11 +65,15 @@ impl Object {
     }
 
     pub fn ref_count(&self) -> u64 {
-        self.ref_count
+        self.ref_count.load(Ordering::SeqCst)
     }
 
-    pub fn inc_count(&mut self) {
-        self.ref_count += 1;
+    pub fn inc_count(&self) {
+        self.ref_count.fetch_add(1, Ordering::SeqCst);
+    }
+
+    pub fn dec_count(&self) {
+        self.ref_count.fetch_sub(1, Ordering::SeqCst);
     }
 }
 
@@ -339,20 +356,15 @@ impl<T: Copy> Array<T> {
 
         let array_ref = unsafe {
             let mem = std::alloc::alloc_zeroed(layout).cast::<Array<T>>();
-            (*mem).object = Object {
-                class: RefTo::new(Class::new_array(
-                    Object {
-                        class: RefTo::null(),
-                        super_class: RefTo::null(),
-                        ref_count: 0,
-                    },
+            (*mem).object = Object::new(
+                RefTo::new(Class::new_array(
+                    Object::new(RefTo::null(), RefTo::null()),
                     ty_name,
                     ty,
                     ClassFileLayout::from_java_type(types::ARRAY_BASE),
                 )),
-                super_class: RefTo::null(),
-                ref_count: 0,
-            };
+                RefTo::null(),
+            );
 
             (*mem).capacity = data.len();
             (*mem).count = data.len();
@@ -376,20 +388,16 @@ impl<T> Array<T> {
 
         let array_ref = unsafe {
             let mem = std::alloc::alloc_zeroed(layout).cast::<Array<T>>();
-            (*mem).object = Object {
-                class: RefTo::new(Class::new_array(
-                    Object {
-                        class: RefTo::null(),
-                        super_class: RefTo::null(),
-                        ref_count: 0,
-                    },
+            (*mem).object = Object::new(
+                RefTo::new(Class::new_array(
+                    Object::new(RefTo::null(), RefTo::null()),
                     ty_name,
                     ty,
                     ClassFileLayout::from_java_type(types::ARRAY_BASE),
                 )),
-                super_class: RefTo::null(),
-                ref_count: 0,
-            };
+                RefTo::null(),
+            );
+
             (*mem).capacity = data.len();
             (*mem).count = data.len();
 

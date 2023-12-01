@@ -10,27 +10,24 @@ use super::{builtins::Object, layout::FieldLocation};
 /// A handle to a field in an object.
 /// Can be trivially cloned around for efficient references to fields.
 pub struct FieldRef<T> {
-    object: *mut Object,
+    object: *const Object,
     field: FieldLocation,
     phantom: PhantomData<T>,
 }
 
+impl <T : Copy> FieldRef<T> {
+    pub fn copy_out(&self) -> T {
+        *self.borrow()
+    }
+}
+
 impl<T> FieldRef<T> {
-    pub fn new(object: *mut Object, field: FieldLocation) -> Self {
+    pub fn new(object: *const Object, field: FieldLocation) -> Self {
         Self {
             object,
             field,
             phantom: PhantomData,
         }
-    }
-
-    pub fn copy_out(&self) -> T {
-        assert!(!self.object.is_null(), "cannot read from null");
-
-        let offset = self.field.offset;
-        let data_ptr = unsafe { self.object.byte_add(offset).cast::<T>() };
-
-        unsafe { data_ptr.read() }
     }
 
     pub fn borrow(&self) -> &T {
@@ -43,45 +40,42 @@ impl<T> FieldRef<T> {
 
     pub fn write(&self, value: T) {
         assert!(!self.object.is_null(), "cannot write to null");
+        let object = self.object().unwrap();
+        let _field_lock = object.field_lock.write();
 
         let offset = self.field.offset;
         let data_ptr = unsafe { self.object.byte_add(offset).cast::<T>() };
-        unsafe { data_ptr.write(value) };
+        
+        // SAFETY:
+        // No other aliases can exist at this time because we are holding the write lock
+        unsafe { data_ptr.cast_mut().write(value) };
     }
 
     pub fn object(&self) -> Option<&Object> {
-        assert!(!self.object.is_null(), "cannot ref to null");
-
         unsafe { self.object.as_ref() }
-    }
-
-    pub fn object_mut(&self) -> Option<&mut Object> {
-        assert!(!self.object.is_null(), "cannot ref to null");
-
-        unsafe { self.object.as_mut() }
     }
 }
 
 impl<T> Drop for FieldRef<T> {
     fn drop(&mut self) {
-        let object = self.object_mut().unwrap();
+        let object = self.object().unwrap();
         let binding = ManuallyDrop::new(object.class());
         let layout = ManuallyDrop::new(binding.borrow().instance_layout());
 
         // We are the last ref, deallocate the entire object we refer to
-        if object.ref_count == 1 {
+        if object.ref_count() == 1 {
             unsafe { std::alloc::dealloc(self.object as *mut u8, layout.layout()) };
             return;
         }
 
-        object.ref_count -= 1;
+        object.dec_count();
     }
 }
 
 impl<T> Clone for FieldRef<T> {
     fn clone(&self) -> Self {
-        let object = self.object_mut().unwrap();
-        object.ref_count += 1;
+        let object = self.object().unwrap();
+        object.inc_count();
 
         Self {
             object: self.object,
@@ -110,6 +104,12 @@ pub trait HasObjectHeader<T> {
     fn header_mut(&mut self) -> &mut Object;
 }
 
+impl<T: HasObjectHeader<T> + Copy> RefTo<T> {
+    pub fn copy_out(&self) -> T {
+        *self.borrow()
+    }
+}
+
 impl<T: HasObjectHeader<T>> RefTo<T> {
     pub fn new(object: impl HasObjectHeader<T> + 'static) -> Self {
         let b = Box::new(object);
@@ -127,14 +127,6 @@ impl<T: HasObjectHeader<T>> RefTo<T> {
         Self {
             object: object_ptr,
             phantom: PhantomData,
-        }
-    }
-
-    pub fn copy_out(&self) -> Option<T> {
-        if self.object.is_null() {
-            None
-        } else {
-            Some(unsafe { self.object.cast::<T>().read() })
         }
     }
 
@@ -199,8 +191,8 @@ impl<T: HasObjectHeader<T>> Clone for RefTo<T> {
                 phantom: PhantomData,
             }
         } else {
-            let s = unsafe { self.object.as_mut().unwrap() };
-            s.ref_count += 1;
+            let s = unsafe { self.object.as_ref().unwrap() };
+            s.inc_count();
 
             Self {
                 object: self.object,
