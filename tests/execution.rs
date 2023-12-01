@@ -4,7 +4,7 @@ mod util;
 #[cfg(test)]
 mod instruction {
     use crate::util::{
-        builder::{using_helpers, using_main},
+        builder::{using_helpers, using_main, using_class},
         compare, execute, expected, inline, state, TestResult,
     };
 
@@ -500,6 +500,57 @@ mod instruction {
             // print(x + z);
             // CHECK: -211843659.6
             // print(y + z);
+            "#,
+        );
+
+        let got = execute(state, inline(source)?)?;
+        let expected = expected().has_success();
+
+        compare(got, expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn getstatic() -> TestResult {
+        let state = state().init();
+
+        let source = using_helpers(
+            "GetStatic",
+            r#"
+                static int x = 32;
+
+                public static void main(String[] args) {
+                    assertEqual(x, 32);
+                }
+            "#,
+        );
+
+        let got = execute(state, inline(source)?)?;
+        let expected = expected().has_success();
+
+        compare(got, expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn putstatic() -> TestResult {
+        let state = state().init();
+
+        let source = using_helpers(
+            "PutStatic",
+            r#"
+                static int x;
+
+                public static void main(String[] args) {
+                    // Should default to 0
+                    assertEqual(x, 0);
+
+                    x = 32;
+
+                    assertEqual(x, 32);
+                }
             "#,
         );
 
