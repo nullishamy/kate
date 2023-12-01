@@ -561,6 +561,58 @@ mod instruction {
 
         Ok(())
     }
+
+
+    #[test]
+    fn getfield() -> TestResult {
+        let state = state().init();
+
+        let source = using_helpers(
+            "GetField",
+            r#"
+                int x = 32;
+
+                public static void main(String[] args) {
+                    GetField f = new GetField();
+                    assertEqual(f.x, 32);
+                }
+            "#,
+        );
+
+        let got = execute(state, inline(source)?)?;
+        let expected = expected().has_success();
+
+        compare(got, expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn putfield() -> TestResult {
+        let state = state().init();
+
+        let source = using_helpers(
+            "PutField",
+            r#"
+                int x;
+
+                public static void main(String[] args) {
+                    PutField f = new PutField();
+
+                    assertEqual(f.x, 0);
+                    f.x = 32;
+                    assertEqual(f.x, 32);
+                }
+            "#,
+        );
+
+        let got = execute(state, inline(source)?)?;
+        let expected = expected().has_success();
+
+        compare(got, expected);
+
+        Ok(())
+    }
 }
 
 // Test instructions to make sure they throw in exceptional cases
