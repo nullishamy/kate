@@ -570,11 +570,19 @@ mod instruction {
         let source = using_helpers(
             "GetField",
             r#"
+                Object y;
                 int x = 32;
 
                 public static void main(String[] args) {
                     GetField f = new GetField();
+                    Object o = new Object();
+
                     assertEqual(f.x, 32);
+                    assertEqual(f.y, null);
+
+                    f.y = o;
+
+                    assertEqual(f.y, o);
                 }
             "#,
         );
@@ -595,13 +603,20 @@ mod instruction {
             "PutField",
             r#"
                 int x;
+                Object y;
 
                 public static void main(String[] args) {
                     PutField f = new PutField();
+                    Object o = new Object();
 
                     assertEqual(f.x, 0);
+                    assertEqual(f.y, null);
+
                     f.x = 32;
+                    f.y = o;
+
                     assertEqual(f.x, 32);
+                    assertEqual(f.y, o);
                 }
             "#,
         );
