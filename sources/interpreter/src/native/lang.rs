@@ -3,15 +3,18 @@ use std::time::SystemTime;
 use support::encoding::{decode_string, CompactEncoding};
 
 use crate::{
-    instance_method,
+    instance_method, internal,
     object::{
-        builtins::{BuiltinString, Class, Object, Array, ArrayType, ArrayPrimitive},
+        builtins::{Array, ArrayPrimitive, ArrayType, BuiltinString, Class, Object},
         interner::intern_string,
-        layout::{types::{self, Bool, Byte, Char, Double}, ClassFileLayout},
+        layout::{
+            types::{self, Bool, Byte, Char, Double},
+            ClassFileLayout,
+        },
         mem::RefTo,
         runtime::RuntimeValue,
     },
-    static_method, internal,
+    static_method,
 };
 
 use super::{NativeFunction, NativeModule};
@@ -41,7 +44,6 @@ impl NativeModule for LangThread {
     fn classname() -> &'static str {
         "java/lang/Thread"
     }
-
 }
 
 impl NativeModule for System {
@@ -64,46 +66,37 @@ impl NativeModule for System {
             static_method!(name: "setIn0", descriptor: "(Ljava/io/InputStream;)V" => |cls, args, _| {
                 let stream = args.get(0).unwrap();
                 let stream = stream.as_object().unwrap();
-                let field = cls
-                    .borrow_mut()
-                    .static_field_info_mut((
-                        "in".to_string(),
-                        "Ljava/io/InputStream;".to_string()
-                    ))
-                    .unwrap();
+
+                let statics = cls.borrow().statics();
+                let mut statics = statics.write();
+                let field = statics.get_mut(&"in".to_string()).unwrap();
 
                 field.value = Some(RuntimeValue::Object(stream.clone()));
-                
+
                 Ok(None)
             }),
             static_method!(name: "setOut0", descriptor: "(Ljava/io/PrintStream;)V" => |cls, args, _| {
                 let stream = args.get(0).unwrap();
                 let stream = stream.as_object().unwrap();
-                let field = cls
-                    .borrow_mut()
-                    .static_field_info_mut((
-                        "out".to_string(),
-                        "Ljava/io/InputStream;".to_string()
-                    ))
-                    .unwrap();
+
+                let statics = cls.borrow().statics();
+                let mut statics = statics.write();
+                let field = statics.get_mut(&"out".to_string()).unwrap();
 
                 field.value = Some(RuntimeValue::Object(stream.clone()));
-                
+
                 Ok(None)
             }),
             static_method!(name: "setErr0", descriptor: "(Ljava/io/PrintStream;)V" => |cls, args, _| {
                 let stream = args.get(0).unwrap();
                 let stream = stream.as_object().unwrap();
-                let field = cls
-                    .borrow_mut()
-                    .static_field_info_mut((
-                        "err".to_string(),
-                        "Ljava/io/InputStream;".to_string()
-                    ))
-                    .unwrap();
+
+                let statics = cls.borrow().statics();
+                let mut statics = statics.write();
+                let field = statics.get_mut(&"err".to_string()).unwrap();
 
                 field.value = Some(RuntimeValue::Object(stream.clone()));
-                
+
                 Ok(None)
             }),
             static_method!(name: "arraycopy", descriptor: "(Ljava/lang/Object;ILjava/lang/Object;II)V" => |_, args, _| {
@@ -121,10 +114,10 @@ impl NativeModule for System {
 
                 let src_class = src.borrow().class();
                 let src_ty = src_class.borrow();
-                
+
                 let dest_class = dest.borrow().class();
                 let dest_ty = dest_class.borrow();
-                
+
                 let src_component = src_ty.component_type().unwrap();
                 let dest_component = dest_ty.component_type().unwrap();
 

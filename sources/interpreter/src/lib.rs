@@ -209,10 +209,13 @@ impl VM {
         // Init String so that we can set the static after it's done. The clinit sets it to a default.
         self.initialise_class(jls.clone())?;
 
-        jls.borrow_mut()
-            .static_field_info_mut(("COMPACT_STRINGS".to_string(), "Z".to_string()))
-            .unwrap()
-            .value = Some(RuntimeValue::Integral(0_i32.into()));
+        {
+            let statics = jls.borrow().statics();
+            let mut statics = statics.write();
+            let field = statics.get_mut(&"COMPACT_STRINGS".to_string()).unwrap();
+
+            field.value = Some(RuntimeValue::Integral(0_i32.into()));
+        }
 
         // Init thread
         let thread_class = self.class_loader.for_name("java/lang/Thread".to_string())?;
@@ -233,7 +236,10 @@ impl VM {
             eetop: 0,
             target: RefTo::null(),
             thread_group: RefTo::new(BuiltinThreadGroup {
-                object: Object::new(thread_group_class.clone(), thread_group_class.borrow().super_class()),
+                object: Object::new(
+                    thread_group_class.clone(),
+                    thread_group_class.borrow().super_class(),
+                ),
                 parent: RefTo::null(),
                 name: intern_string("main".to_string())?,
                 max_priority: 0,

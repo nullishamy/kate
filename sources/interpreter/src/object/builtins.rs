@@ -243,14 +243,8 @@ impl Class {
         &self.layout_for_instances_of_this_class
     }
 
-    pub fn static_field_info(&self, field: NameAndDescriptor) -> Option<&FieldInfo> {
-        self.layout_for_instances_of_this_class
-            .static_field_info(&field.0)
-    }
-
-    pub fn static_field_info_mut(&mut self, field: NameAndDescriptor) -> Option<&mut FieldInfo> {
-        self.layout_for_instances_of_this_class
-            .static_field_info_mut(&field.0)
+    pub fn statics(&self) -> &RwLock<HashMap<String, FieldInfo>> {
+        self.layout_for_instances_of_this_class.statics()
     }
 
     pub fn native_methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {

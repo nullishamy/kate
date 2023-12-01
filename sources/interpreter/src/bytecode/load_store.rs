@@ -18,7 +18,6 @@ use parse::{
 };
 use support::descriptor::{BaseType, FieldType};
 
-
 use super::{Instruction, Progression};
 
 #[derive(Debug)]
@@ -247,12 +246,12 @@ impl Instruction for GetField {
             },
             FieldType::Object(_) => {
                 let field: FieldRef<RefTo<Object>> =
-                        objectref.borrow().field((name, descriptor)).unwrap();
+                    objectref.borrow().field((name, descriptor)).unwrap();
                 RuntimeValue::Object(field.borrow().clone())
             }
             FieldType::Array(_) => {
                 let field: FieldRef<RefTo<Object>> =
-                        objectref.borrow().field((name, descriptor)).unwrap();
+                    objectref.borrow().field((name, descriptor)).unwrap();
                 let value = field.borrow();
                 RuntimeValue::Object(value.clone())
             }
@@ -404,36 +403,37 @@ impl Instruction for GetStatic {
         vm.initialise_class(class.clone())?;
 
         let name_and_type = field.name_and_type.resolve();
-        let (name, descriptor) = (
-            name_and_type.name.resolve().string(),
-            name_and_type.descriptor.resolve().string(),
-        );
+        let name = name_and_type.name.resolve().string();
 
         let _class_name = class.borrow().name();
 
         // The value of the class or interface field is fetched and pushed onto the operand stack.
 
-        // HACK: Hacking in inherited statics
+        // HACK: Hacking in inherited statics, not sure how those are actually supposed to be implemented yet
         let mut cls = class.clone();
         loop {
-            let field = cls
-                .borrow()
-                .static_field_info((name.clone(), descriptor.clone()));
+            let statics = cls.borrow().statics();
+            let statics = statics.read();
+            let field = statics.get(&name);
 
             if let Some(f) = field {
                 let value = f.value.clone().unwrap();
                 ctx.operands.push(value);
-                break
+                break;
             } else {
                 let sup = cls.borrow().super_class();
-                vm.initialise_class(sup.clone())?;
+                // We searched every class and could not find the static
                 if sup.is_null() {
-                    panic!("no field");
+                    panic!("could not locate static field in class or super class(es)");
                 }
+
+                vm.initialise_class(sup.clone())?;
+
+                drop(statics);
 
                 cls = sup;
             }
-        };
+        }
 
         Ok(Progression::Next)
     }
@@ -469,18 +469,14 @@ impl Instruction for PutStatic {
         vm.initialise_class(class.clone())?;
 
         let name_and_type = field.name_and_type.resolve();
-        let (name, descriptor) = (
-            name_and_type.name.resolve().string(),
-            name_and_type.descriptor.resolve().string(),
-        );
+        let name = name_and_type.name.resolve().string();
 
         // TODO: Type check & convert as needed
         let value = pop!(ctx);
-        class
-            .borrow_mut()
-            .static_field_info_mut((name, descriptor))
-            .unwrap()
-            .value = Some(value);
+        let statics = class.borrow().statics();
+        let mut statics = statics.write();
+
+        statics.get_mut(&name).unwrap().value = Some(value);
 
         Ok(Progression::Next)
     }

@@ -33,11 +33,11 @@ pub struct FieldLocation {
     pub offset: usize,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ClassFileLayout {
     pub(crate) layout: Layout,
     pub(crate) field_info: HashMap<String, FieldInfo>,
-    pub(crate) statics: HashMap<String, FieldInfo>,
+    pub(crate) statics: RwLock<HashMap<String, FieldInfo>>,
 }
 
 impl ClassFileLayout {
@@ -45,7 +45,7 @@ impl ClassFileLayout {
         Self {
             layout: ty.layout,
             field_info: HashMap::new(),
-            statics: HashMap::new(),
+            statics: RwLock::new(HashMap::new()),
         }
     }
 
@@ -53,7 +53,7 @@ impl ClassFileLayout {
         Self {
             layout: Layout::new::<()>(),
             field_info: HashMap::new(),
-            statics: HashMap::new(),
+            statics: RwLock::new(HashMap::new()),
         }
     }
 
@@ -73,12 +73,8 @@ impl ClassFileLayout {
         self.field_info.get_mut(name)
     }
 
-    pub fn static_field_info(&self, name: &String) -> Option<&FieldInfo> {
-        self.statics.get(name)
-    }
-
-    pub fn static_field_info_mut(&mut self, name: &String) -> Option<&mut FieldInfo> {
-        self.statics.get_mut(name)
+    pub fn statics(&self) -> &RwLock<HashMap<String, FieldInfo>> {
+        &self.statics
     }
 
     pub fn alloc(&self) -> *mut Object {
@@ -91,10 +87,14 @@ pub mod types {
 
     use support::descriptor::{BaseType, FieldType};
 
-    use crate::{object::{
-        builtins::{Array, Object},
-        mem::RefTo,
-    }, error::Throwable, internal, internalise};
+    use crate::{
+        error::Throwable,
+        internal, internalise,
+        object::{
+            builtins::{Array, Object},
+            mem::RefTo,
+        },
+    };
 
     #[derive(Debug, Clone, Copy)]
     pub struct JavaType {
@@ -187,7 +187,8 @@ pub mod types {
                     // Select the largest alignment out of the component or the values in the array struct itself,
                     // this is probably always going to be 8, but we should check anyways.
                     *component.alignment.max(ARRAY_BASE.alignment),
-                ).map_err(internalise!())?;
+                )
+                .map_err(internalise!())?;
 
                 JavaType::new(layout)
             }
@@ -254,7 +255,8 @@ pub fn basic_layout(class_file: &ClassFile, base_layout: Layout) -> Result<Basic
         .max()
         .unwrap(); // Iterator can't be empty because we chain with at least one value
 
-    let mut final_layout = Layout::from_size_align(base_layout.size(), alignment).map_err(internalise!())?;
+    let mut final_layout =
+        Layout::from_size_align(base_layout.size(), alignment).map_err(internalise!())?;
     let mut offsets = Vec::new();
 
     for layout in field_layouts {
@@ -272,7 +274,10 @@ pub fn basic_layout(class_file: &ClassFile, base_layout: Layout) -> Result<Basic
     })
 }
 
-pub fn full_layout(class_file: &ClassFile, base_layout: Layout) -> Result<ClassFileLayout, Throwable> {
+pub fn full_layout(
+    class_file: &ClassFile,
+    base_layout: Layout,
+) -> Result<ClassFileLayout, Throwable> {
     let basic_layout = basic_layout(class_file, base_layout)?;
 
     let field_info = basic_layout
@@ -296,10 +301,12 @@ pub fn full_layout(class_file: &ClassFile, base_layout: Layout) -> Result<ClassF
     Ok(ClassFileLayout {
         layout: basic_layout.layout,
         field_info,
-        statics: basic_layout
-            .statics
-            .into_iter()
-            .map(|s| (s.name.clone(), s))
-            .collect(),
+        statics: RwLock::new(
+            basic_layout
+                .statics
+                .into_iter()
+                .map(|s| (s.name.clone(), s))
+                .collect(),
+        ),
     })
 }
