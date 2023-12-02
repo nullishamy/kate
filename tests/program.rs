@@ -25,6 +25,44 @@ pub fn hello_world() -> TestResult {
 }
 
 #[test]
+pub fn exit_success() -> TestResult {
+    let state = state().init();
+
+    let source = using_main(
+        "ExitSuccess",
+        r#"
+        System.exit(0);
+        "#,
+    );
+
+    let got = execute(state, inline(source)?)?;
+    let expected = expected().has_success();
+
+    compare(got, expected);
+
+    Ok(())
+}
+
+#[test]
+pub fn exit_error() -> TestResult {
+    let state = state().init();
+
+    let source = using_main(
+        "ExitError",
+        r#"
+        System.exit(1);
+        "#,
+    );
+
+    let got = execute(state, inline(source)?)?;
+    let expected = expected().with_exit(1);
+
+    compare(got, expected);
+
+    Ok(())
+}
+
+#[test]
 #[ignore]
 pub fn array_copy() -> TestResult {
     let state = state().init();
