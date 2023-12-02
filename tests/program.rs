@@ -1,8 +1,8 @@
 mod util;
 
 use crate::util::{
-    builder::{direct, using_class, using_helpers, using_main},
-    compare, compile, execute, expected, inline, state, TestResult,
+    builder::{direct, using_main},
+    compare, execute, expected, inline, state, TestResult,
 };
 
 #[test]

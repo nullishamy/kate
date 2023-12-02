@@ -53,7 +53,7 @@ impl ClassLoader {
             let mut _super = super_class.clone();
             while let Some(sup) = &_super {
                 // Get the superclass layout
-                let super_classfile = sup.borrow().class_file();
+                let super_classfile = sup.to_ref().class_file();
 
                 // We need to construct our own instead of just using the one stored by the class
                 // because it includes the header, which is not relevant for inherited fields.
@@ -77,7 +77,7 @@ impl ClassLoader {
                 // Assign our layout to the newly computed one
                 layout.layout = our_new_layout;
 
-                let next_super = sup.borrow().super_class();
+                let next_super = sup.to_ref().super_class();
                 if !next_super.is_null() {
                     _super = Some(next_super);
                 } else {
@@ -219,7 +219,7 @@ impl ClassLoader {
         {
             let cls = self.for_name("java/util/concurrent/ConcurrentHashMap$Segment".to_string())?;
             let arr = RefTo::new(Class::new_array(
-                Object::new(cls.clone(), cls.borrow().super_class()),
+                Object::new(cls.clone(), cls.to_ref().super_class()),
                 "[Ljava/util/concurrent/ConcurrentHashMap$Segment;".to_string(),
                 ArrayType::Object(jlo.clone()),
                 ClassFileLayout::from_java_type(types::ARRAY_BASE)
@@ -231,7 +231,7 @@ impl ClassLoader {
         {
             let cls = self.for_name("java/util/concurrent/ConcurrentHashMap$Node".to_string())?;
             let arr = RefTo::new(Class::new_array(
-                Object::new(cls.clone(), cls.borrow().super_class()),
+                Object::new(cls.clone(), cls.to_ref().super_class()),
                 "[Ljava/util/concurrent/ConcurrentHashMap$Node;".to_string(),
                 ArrayType::Object(jlo.clone()),
                 ClassFileLayout::from_java_type(types::ARRAY_BASE)
@@ -243,7 +243,7 @@ impl ClassLoader {
         {
             let cls = jls.clone();
             let arr = RefTo::new(Class::new_array(
-                Object::new(cls.clone(), cls.borrow().super_class()),
+                Object::new(cls.clone(), cls.to_ref().super_class()),
                 "[Ljava/lang/String;".to_string(),
                 ArrayType::Object(jlo.clone()),
                 ClassFileLayout::from_java_type(types::ARRAY_BASE)

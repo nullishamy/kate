@@ -144,7 +144,7 @@ impl Instruction for ArrayLength {
         let array = arg!(ctx, "array" => Array<()>);
 
         // The length of the array it references is determined.
-        let len = array.borrow().len() as i32;
+        let len = array.to_ref().len() as i32;
 
         // That length is pushed onto the operand stack as an int.
         ctx.operands.push(RuntimeValue::Integral(len.into()));
@@ -167,7 +167,7 @@ impl Instruction for ANewArray {
         // named class, array, or interface type is resolved (§5.4.3.1).
         let ty: ConstantEntry = ctx
             .class
-            .borrow()
+            .to_ref()
             .class_file()
             .constant_pool
             .address(self.type_index)
@@ -177,7 +177,7 @@ impl Instruction for ANewArray {
             ConstantEntry::Class(data) => {
                 let class_name = data.name.resolve().string();
                 let cls = vm.class_loader.for_name(class_name)?;
-                let name = cls.borrow().name().clone();
+                let name = cls.to_ref().name().clone();
 
                 (ArrayType::Object(cls), name)
             }
@@ -186,7 +186,7 @@ impl Instruction for ANewArray {
 
         // All components of the new array are initialized to null, the default value for reference types (§2.4).
         let mut values: Vec<RefTo<Object>> = Vec::with_capacity(count.value as usize);
-        values.resize_with(count.value as usize, || RefTo::null());
+        values.resize_with(count.value as usize, RefTo::null);
 
         // A new array with components of that type, of length count, is allocated
         // from the garbage-collected heap.
@@ -350,7 +350,7 @@ impl Instruction for ArrayLoad {
         let value = match &self.ty {
             ArrayType::Object(_) => {
                 let array = arg!(ctx, "array" => Array<RefTo<Object>>);
-                let array = array.borrow().slice();
+                let array = array.to_ref().slice();
                 let value = array[index.value as usize].clone();
                 RuntimeValue::Object(value)
             }
@@ -358,7 +358,7 @@ impl Instruction for ArrayLoad {
                 // ArrayPrimitive::Bool => todo!(),
                 ArrayPrimitive::Char => {
                     let array = arg!(ctx, "array" => Array<Char>);
-                    let array = array.borrow().slice();
+                    let array = array.to_ref().slice();
 
                     if index.value >= array.len() as i64 {
                         return Ok(Progression::Throw(
@@ -374,14 +374,14 @@ impl Instruction for ArrayLoad {
                 // ArrayPrimitive::Float => todo!(),
                 ArrayPrimitive::Double => {
                     let array = arg!(ctx, "array" => Array<Double>);
-                    let array = array.borrow().slice();
+                    let array = array.to_ref().slice();
                     let value = array[index.value as usize];
 
                     RuntimeValue::Floating(value.into())
                 }
                 ArrayPrimitive::Byte => {
                     let array = arg!(ctx, "array" => Array<Byte>);
-                    let array = array.borrow().slice();
+                    let array = array.to_ref().slice();
                     let value = array[index.value as usize];
 
                     // TODO: Sign extension here
@@ -389,7 +389,7 @@ impl Instruction for ArrayLoad {
                 }
                 ArrayPrimitive::Long => {
                     let array = arg!(ctx, "array" => Array<Long>);
-                    let array = array.borrow().slice();
+                    let array = array.to_ref().slice();
                     let value = array[index.value as usize];
 
                     RuntimeValue::Integral(value.into())

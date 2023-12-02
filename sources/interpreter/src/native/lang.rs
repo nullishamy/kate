@@ -49,9 +49,9 @@ impl NativeModule for LangClass {
 
             let prim_name = unsafe { prim_name.cast::<BuiltinString>() };
 
-            let bytes = prim_name.borrow().value.borrow().slice().to_vec();
+            let bytes = prim_name.to_ref().value.to_ref().slice().to_vec();
             let prim_str =
-                decode_string((CompactEncoding::from_coder(prim_name.borrow().coder), bytes))?;
+                decode_string((CompactEncoding::from_coder(prim_name.to_ref().coder), bytes))?;
             let jlc = vm.class_loader.for_name("java/lang/Class".to_string())?;
             let jlo = vm.class_loader.for_name("java/lang/Object".to_string())?;
 
@@ -111,7 +111,7 @@ impl NativeModule for LangClass {
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
             let class = unsafe { this.cast::<Class>() };
-            let result = if class.borrow().is_array() {
+            let result = if class.to_ref().is_array() {
                 1_i32
             } else {
                 0_i32
@@ -128,7 +128,7 @@ impl NativeModule for LangClass {
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
             let class = unsafe { this.cast::<Class>() };
-            let result = if class.borrow().is_interface() {
+            let result = if class.to_ref().is_interface() {
                 1_i32
             } else {
                 0_i32
@@ -145,7 +145,7 @@ impl NativeModule for LangClass {
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
             let class = unsafe { this.cast::<Class>() };
-            let result = if class.borrow().is_primitive() {
+            let result = if class.to_ref().is_primitive() {
                 1_i32
             } else {
                 0_i32
@@ -163,7 +163,7 @@ impl NativeModule for LangClass {
         ) -> Result<Option<RuntimeValue>, Throwable> {
             let class = unsafe { this.cast::<Class>() };
 
-            let name = class.borrow().name();
+            let name = class.to_ref().name();
 
             Ok(Some(RuntimeValue::Object(
                 intern_string(name.clone())?.erase(),
@@ -243,7 +243,7 @@ impl NativeModule for LangSystem {
             let stream = args.get(0).unwrap();
             let stream = stream.as_object().unwrap();
 
-            let statics = cls.borrow().statics();
+            let statics = cls.to_ref().statics();
             let mut statics = statics.write();
             let field = statics.get_mut("in").unwrap();
 
@@ -266,7 +266,7 @@ impl NativeModule for LangSystem {
             let stream = args.get(0).unwrap();
             let stream = stream.as_object().unwrap();
 
-            let statics = cls.borrow().statics();
+            let statics = cls.to_ref().statics();
             let mut statics = statics.write();
             let field = statics.get_mut("out").unwrap();
 
@@ -289,7 +289,7 @@ impl NativeModule for LangSystem {
             let stream = args.get(0).unwrap();
             let stream = stream.as_object().unwrap();
 
-            let statics = cls.borrow().statics();
+            let statics = cls.to_ref().statics();
             let mut statics = statics.write();
             let field = statics.get_mut("err").unwrap();
 
@@ -342,11 +342,11 @@ impl NativeModule for LangSystem {
             let dest_pos = dest_pos.value;
             let len = len.value;
 
-            let src_class = src.borrow().class();
-            let src_ty = src_class.borrow();
+            let src_class = src.to_ref().class();
+            let src_ty = src_class.to_ref();
 
-            let dest_class = dest.borrow().class();
-            let dest_ty = dest_class.borrow();
+            let dest_class = dest.to_ref().class();
+            let dest_ty = dest_class.to_ref();
 
             let src_component = src_ty.component_type().unwrap();
             let dest_component = dest_ty.component_type().unwrap();
@@ -513,7 +513,7 @@ impl NativeModule for LangObject {
             _: Vec<RuntimeValue>,
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
-            Ok(Some(RuntimeValue::Object(this.borrow().class().erase())))
+            Ok(Some(RuntimeValue::Object(this.to_ref().class().erase())))
         }
 
         self.set_method(

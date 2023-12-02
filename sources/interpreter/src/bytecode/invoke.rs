@@ -38,7 +38,7 @@ pub struct InvokeVirtual {
 impl Instruction for InvokeVirtual {
     fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         let cls = ctx.class.clone();
-        let cls = cls.borrow();
+        let cls = cls.to_ref();
         let pool = &cls.class_file().constant_pool;
 
         // The unsigned indExbyte1 and indexbyte2 are used to construct an
@@ -84,7 +84,7 @@ impl Instruction for InvokeVirtual {
 
         // Let C be the class of objectref. A method is selected with respect
         // to C and the resolved method (§5.4.6). This is the method to be invoked.
-        let objectclass = objectref.borrow().header().class.clone();
+        let objectclass = objectref.to_ref().header().class.clone();
 
         let (selected_class, selected_method) =
             select_method(vm, objectclass, loaded_class, loaded_method)?.ok_or(internal!(
@@ -117,7 +117,7 @@ pub struct InvokeSpecial {
 
 impl Instruction for InvokeSpecial {
     fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
-        let cls = ctx.class.borrow();
+        let cls = ctx.class.to_ref();
         let pool = &cls.class_file().constant_pool;
 
         // The unsigned indexbyte1 and indexbyte2 are used to construct an
@@ -190,7 +190,7 @@ pub struct InvokeStatic {
 
 impl Instruction for InvokeStatic {
     fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
-        let cls = ctx.class.borrow();
+        let cls = ctx.class.to_ref();
         let pool = &cls.class_file().constant_pool;
 
         // The unsigned indexbyte1 and indexbyte2 are used to construct an
@@ -288,7 +288,7 @@ impl Instruction for InvokeInterface {
             return Err(internal!("count was 0"));
         }
 
-        let cls = ctx.class.borrow();
+        let cls = ctx.class.to_ref();
         let pool = &cls.class_file().constant_pool;
 
         // The unsigned indexbyte1 and indexbyte2 are used to construct an
@@ -331,7 +331,7 @@ impl Instruction for InvokeInterface {
 
         // Let C be the class of objectref. A method is selected with respect
         // to C and the resolved method (§5.4.6). This is the method to be invoked.
-        let objectclass = objectref.borrow().header().class.clone();
+        let objectclass = objectref.to_ref().header().class.clone();
 
         let (selected_class, selected_method) =
             select_method(vm, objectclass, loaded_class, loaded_method)?.ok_or(internal!(
@@ -374,7 +374,7 @@ fn resolve_class_method(
 
     // When resolving a method reference:
     // 1. If C is an interface, method resolution throws an IncompatibleClassChangeError.
-    if class.borrow().is_interface() {
+    if class.to_ref().is_interface() {
         return Err(internal!("cannot resolve method on interface"));
     }
 
@@ -390,7 +390,7 @@ fn resolve_class_method(
     // the method reference, method lookup succeeds.
 
     let class_method = class
-        .borrow()
+        .to_ref()
         .class_file()
         .methods
         .locate(method_name.clone(), method_descriptor.clone())
@@ -402,7 +402,7 @@ fn resolve_class_method(
 
     // • Otherwise, if C has a superclass, step 2 of method resolution is recursively
     // invoked on the direct superclass of C.
-    if let Some(super_class) = class.borrow().super_class().into_option() {
+    if let Some(super_class) = class.to_ref().super_class().into_option() {
         let class_name = super_class.name();
         let super_class = vm.class_loader.for_name(class_name.to_string())?;
 
@@ -428,7 +428,7 @@ fn resolve_class_method(
         "could not resolve method {} ({}) in {}",
         method_name,
         method_descriptor,
-        class.borrow().name()
+        class.to_ref().name()
     ))
 }
 
@@ -443,14 +443,14 @@ fn resolve_interface_method(
 
     // When resolving an interface method reference:
     // 1. If C is not an interface, interface method resolution throws an IncompatibleClassChangeError
-    if !class.borrow().is_interface() {
+    if !class.to_ref().is_interface() {
         return Err(internal!("cannot resolve interface method on class"));
     }
 
     // 2. Otherwise, if C declares a method with the name and descriptor specified by
     // the interface method reference, method lookup succeeds.
     let own_method = class
-        .borrow()
+        .to_ref()
         .class_file()
         .methods
         .locate(method_name.clone(), method_descriptor.clone())
@@ -464,7 +464,7 @@ fn resolve_interface_method(
     // specified by the interface method reference, which has its ACC_PUBLIC flag set
     // and does not have its ACC_STATIC flag set, method lookup succeeds.
     // TODO: Respect the flags
-    if let Some(super_class) = class.borrow().super_class().into_option() {
+    if let Some(super_class) = class.to_ref().super_class().into_option() {
         let class_name = super_class.name();
         let super_class = vm.class_loader.for_name(class_name.to_string())?;
 
@@ -489,7 +489,7 @@ fn resolve_interface_method(
         "could not resolve method {} ({}) in {}",
         method_name,
         method_descriptor,
-        class.borrow().name()
+        class.to_ref().name()
     ))
 }
 
@@ -510,7 +510,7 @@ fn select_special_method(
     // same name and descriptor as the resolved method, then it is
     // the method to be invoked.
     let instance_method = class
-        .borrow()
+        .to_ref()
         .class_file()
         .methods
         .locate(method_name.clone(), method_descriptor.clone())
@@ -527,7 +527,7 @@ fn select_special_method(
     // superclass of that class, and so forth, until a match is found or
     // no further superclasses exist. If a match is found, then it is the
     // method to be invoked.
-    if let Some(super_class) = class.borrow().super_class().into_option() {
+    if let Some(super_class) = class.to_ref().super_class().into_option() {
         let class_name = super_class.name();
         let _super_class = vm.class_loader.for_name(class_name.to_string())?;
 
@@ -569,7 +569,7 @@ fn select_method(
     // 1. If mR is marked ACC_PRIVATE, then it is the selected method.
     if method.flags.has(MethodAccessFlag::PRIVATE) {
         let method = declared_class
-            .borrow()
+            .to_ref()
             .class_file()
             .methods
             .locate(method_name, method_descriptor)
@@ -582,7 +582,7 @@ fn select_method(
     // 2. Otherwise, the selected method is determined by the following lookup procedure:
     // If C contains a declaration of an instance method m that can override mR (§5.4.5), then m is the selected method.
     let instance_method = class
-        .borrow()
+        .to_ref()
         .class_file()
         .methods
         .locate(method_name.clone(), method_descriptor.clone())
@@ -599,7 +599,7 @@ fn select_method(
     // of C and continuing with the direct superclass of that class, and so forth, until
     // a method is found or no further superclasses exist. If a method is found, it
     // is the selected method.
-    if let Some(super_class) = class.borrow().super_class().into_option() {
+    if let Some(super_class) = class.to_ref().super_class().into_option() {
         let class_name = super_class.name();
         let _super_class = vm.class_loader.for_name(class_name.to_string())?;
 
@@ -667,7 +667,7 @@ impl Instruction for New {
         // type is resolved (§5.4.3.1) and should result in a class type.
         let entry: ConstantEntry = ctx
             .class
-            .borrow()
+            .to_ref()
             .class_file()
             .constant_pool
             .address(self.index)
@@ -685,7 +685,7 @@ impl Instruction for New {
         // garbage-collected heap, and the instance variables of the new
         // object are initialized to their default initial values (§2.3, §2.4).
 
-        let layout = object_ty.borrow().instance_layout();
+        let layout = object_ty.to_ref().instance_layout();
         let ptr = layout.alloc();
 
         // NOTE: layout.fields() contains the all inherited fields too.
@@ -735,7 +735,7 @@ impl Instruction for New {
             }
         }
 
-        let super_class = object_ty.borrow().super_class();
+        let super_class = object_ty.to_ref().super_class();
 
         unsafe {
             (*ptr).class = object_ty.clone();
@@ -842,7 +842,7 @@ fn do_call(
         // Native methods do not have a code attribute.
         let code = method
             .attributes
-            .known_attribute::<CodeAttribute>(&class.borrow().class_file().constant_pool)?;
+            .known_attribute::<CodeAttribute>(&class.to_ref().class_file().constant_pool)?;
 
         let new_context = Context {
             code: code.clone(),
@@ -860,7 +860,7 @@ fn do_call(
         // See if this code threw a (runtime // java) exception
         // If so, see if we (the caller) can handle it
         if let Err((Throwable::Runtime(err), state)) = &res {
-            let ty = err.ty.borrow();
+            let ty = err.ty.to_ref();
 
             for entry in &code.exception_table {
                 let entry_ty = {
@@ -869,7 +869,7 @@ fn do_call(
                 }?;
 
                 // The handler supports the type of the exception
-                let has_type_match = entry_ty.borrow().is_assignable_to(ty);
+                let has_type_match = entry_ty.to_ref().is_assignable_to(ty);
 
                 // The handler covers the range of code we just called
                 let has_range_match = (entry.start_pc..entry.end_pc).contains(&(state.pc as u16));
@@ -898,9 +898,9 @@ fn do_call(
         let method_name = method.name.resolve().string();
         let method_descriptor = method.descriptor.resolve().string();
 
-        let module = class.borrow().native_module().as_ref().ok_or(internal!(
+        let module = class.to_ref().native_module().as_ref().ok_or(internal!(
             "no native module on {} (when calling {:?} {} / {})",
-            class.borrow().name(),
+            class.to_ref().name(),
             method.flags.flags,
             method_name,
             method_descriptor
@@ -911,7 +911,7 @@ fn do_call(
             .get_method((method_name.clone(), method_descriptor.clone()))
             .ok_or(internal!(
                 "no native method {} {:?} {} / {}",
-                class.borrow().name(),
+                class.to_ref().name(),
                 method.flags.flags,
                 method_name,
                 method_descriptor
@@ -938,9 +938,9 @@ impl Instruction for Athrow {
             .context("throwable was not an object")?
             .clone();
 
-        let throwable = throwable.borrow();
+        let throwable = throwable.to_ref();
         let class = throwable.header().class.clone();
-        let class_name = class.borrow().name();
+        let class_name = class.to_ref().name();
 
         let message: FieldRef<RefTo<Object>> = throwable
             .field((
@@ -949,7 +949,7 @@ impl Instruction for Athrow {
             ))
             .unwrap();
 
-        let message = message.borrow();
+        let message = message.to_ref();
         // assert_eq!(message.borrow().ty, ObjectType::String);
         // Safety: Pray
         let message = unsafe { message.cast::<BuiltinString>() };
@@ -957,7 +957,7 @@ impl Instruction for Athrow {
         let message = message
             .into_option()
             .map(|m| {
-                let bytes = m.value.borrow();
+                let bytes = m.value.to_ref();
                 let bytes = bytes.slice().to_vec();
 
                 decode_string((CompactEncoding::from_coder(m.coder), bytes))

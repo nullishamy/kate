@@ -100,7 +100,7 @@ impl NativeModule for IOFileOutputStream {
                     .field(("fd".to_string(), "Ljava/io/FileDescriptor;".to_string()))
                     .unwrap();
 
-                let fd_obj = field.borrow();
+                let fd_obj = field.to_ref();
                 let fd_int: FieldRef<Int> = fd_obj
                     .borrow_mut()
                     .field(("fd".to_string(), "I".to_string()))
@@ -135,7 +135,7 @@ impl NativeModule for IOFileOutputStream {
             };
 
             let mut file = unsafe { File::from_raw_fd(fd) };
-            let data_ptr = bytes.borrow().data_ptr();
+            let data_ptr = bytes.to_ref().data_ptr();
             let data_start = unsafe { data_ptr.byte_add(offset as usize) };
             let buf = unsafe { &*std::ptr::slice_from_raw_parts(data_start, length as usize) };
             file.write_all(buf).unwrap();

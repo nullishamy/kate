@@ -1,5 +1,6 @@
 #![feature(pointer_byte_offsets)]
 #![feature(offset_of)]
+#![allow(clippy::new_without_default)]
 
 use std::cell::RefCell;
 
@@ -116,9 +117,9 @@ impl VM {
     }
 
     pub fn initialise_class(&mut self, class: RefTo<Class>) -> Result<(), Throwable> {
-        let class_name = class.borrow().name().clone();
+        let class_name = class.to_ref().name().clone();
 
-        if class.borrow().is_initialised() {
+        if class.to_ref().is_initialised() {
             debug!(
                 "Not initialising {}, class is already initialised",
                 class_name
@@ -128,7 +129,7 @@ impl VM {
         }
 
         let clinit = class
-            .borrow()
+            .to_ref()
             .class_file()
             .methods
             .locate("<clinit>".to_string(), "()V".to_string())
@@ -142,7 +143,7 @@ impl VM {
             class.borrow_mut().set_initialised(true);
             let code = clinit
                 .attributes
-                .known_attribute(&class.borrow().class_file().constant_pool)?;
+                .known_attribute(&class.to_ref().class_file().constant_pool)?;
 
             let ctx = Context {
                 code,
@@ -231,7 +232,7 @@ impl VM {
         self.initialise_class(jls.clone())?;
 
         {
-            let statics = jls.borrow().statics();
+            let statics = jls.to_ref().statics();
             let mut statics = statics.write();
             let field = statics.get_mut(&"COMPACT_STRINGS".to_string()).unwrap();
 
@@ -248,7 +249,7 @@ impl VM {
         // self.initialise_class(thread_class.clone())?;
 
         let thread = BuiltinThread {
-            object: Object::new(thread_class.clone(), thread_class.borrow().super_class()),
+            object: Object::new(thread_class.clone(), thread_class.to_ref().super_class()),
             name: intern_string("main".to_string())?,
             priority: 0,
             daemon: 0,
@@ -259,7 +260,7 @@ impl VM {
             thread_group: RefTo::new(BuiltinThreadGroup {
                 object: Object::new(
                     thread_group_class.clone(),
-                    thread_group_class.borrow().super_class(),
+                    thread_group_class.to_ref().super_class(),
                 ),
                 parent: RefTo::null(),
                 name: intern_string("main".to_string())?,

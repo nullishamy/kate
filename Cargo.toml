@@ -20,6 +20,7 @@ all = "warn"
 pedantic = "warn"
 nursery = "warn"
 cargo = "warn"
+new_without_default = "deny"
 
 # [package]
 # name = "kate"

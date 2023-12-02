@@ -17,7 +17,7 @@ pub struct FieldRef<T> {
 
 impl <T : Copy> FieldRef<T> {
     pub fn copy_out(&self) -> T {
-        *self.borrow()
+        *self.to_ref()
     }
 }
 
@@ -30,7 +30,7 @@ impl<T> FieldRef<T> {
         }
     }
 
-    pub fn borrow(&self) -> &T {
+    pub fn to_ref(&self) -> &T {
         assert!(!self.object.is_null(), "cannot read from null");
 
         let offset = self.field.offset;
@@ -60,7 +60,7 @@ impl<T> Drop for FieldRef<T> {
     fn drop(&mut self) {
         let object = self.object().unwrap();
         let binding = ManuallyDrop::new(object.class());
-        let layout = ManuallyDrop::new(binding.borrow().instance_layout());
+        let layout = ManuallyDrop::new(binding.to_ref().instance_layout());
 
         // We are the last ref, deallocate the entire object we refer to
         if object.ref_count() == 1 {
@@ -106,7 +106,7 @@ pub trait HasObjectHeader<T> {
 
 impl<T: HasObjectHeader<T> + Copy> RefTo<T> {
     pub fn copy_out(&self) -> T {
-        *self.borrow()
+        *self.to_ref()
     }
 }
 
@@ -123,6 +123,12 @@ impl<T: HasObjectHeader<T>> RefTo<T> {
         }
     }
 
+    /// ## Safety
+    /// 
+    /// Caller must ensure the pointer points to a valid heap allocated object.
+    /// The object must be brand new, not a pointer to an pre-existing allocation
+    /// This function will take ownership of the pointer. It is up to callers not 
+    /// to use it after this function is called.
     pub unsafe fn from_ptr(object_ptr: *mut Object) -> Self {
         Self {
             object: object_ptr,
@@ -137,7 +143,7 @@ impl<T: HasObjectHeader<T>> RefTo<T> {
     }
 
     #[track_caller]
-    pub fn borrow(&self) -> &T {
+    pub fn to_ref(&self) -> &T {
         assert!(!self.object.is_null(), "ref was null");
         unsafe { self.object.cast::<T>().as_ref().unwrap() }
     }
@@ -150,7 +156,9 @@ impl<T: HasObjectHeader<T>> RefTo<T> {
         self.object.is_null()
     }
 
-    /// Safety: Caller must ensure object is of this type
+    /// ## Safety
+    /// 
+    /// Caller must ensure object is of this type
     pub unsafe fn cast<U: HasObjectHeader<U>>(&self) -> RefTo<U> {
         RefTo {
             object: self.object,
@@ -176,7 +184,7 @@ impl<T: HasObjectHeader<T>> RefTo<T> {
         if self.is_null() {
             None
         } else {
-            Some(self.borrow())
+            Some(self.to_ref())
         }
     }
 }

@@ -1,8 +1,7 @@
-use interpreter::object::loader::ClassLoader;
+
 
 use std::{
-    fmt,
-    fs::{self, File},
+    fs::{File},
     io::{Error, Write},
     path::PathBuf,
     process::Command,
@@ -132,7 +131,7 @@ pub struct State {
 }
 
 impl State {
-    pub fn init(mut self) -> Self {
+    pub fn init(self) -> Self {
         self
     }
 

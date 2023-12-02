@@ -73,12 +73,12 @@ fn test_init(cls: RefTo<Class>) {
                 return;
             }
 
-            let string = string.borrow();
+            let string = string.to_ref();
             let bytes: FieldRef<RefTo<Array<u8>>> = string
                 .field(("value".to_string(), "[B".to_string()))
                 .expect("could not locate value field");
 
-            let bytes = bytes.borrow().borrow().slice().to_vec();
+            let bytes = bytes.to_ref().to_ref().slice().to_vec();
 
             let str =
                 decode_string((CompactEncoding::Utf16, bytes)).expect("could not decode string");
@@ -91,7 +91,7 @@ fn test_init(cls: RefTo<Class>) {
 
             println!(
                 "[{}]",
-                arr.borrow()
+                arr.to_ref()
                     .slice()
                     .iter()
                     .map(|f| f.to_string())
@@ -179,7 +179,7 @@ fn main() {
         }
 
         {
-            let module = cls.borrow().native_module().as_ref().unwrap();
+            let module = cls.to_ref().native_module().as_ref().unwrap();
             let mut module = module.borrow_mut();
             module.set_method(
                 "getValue",
@@ -188,11 +188,11 @@ fn main() {
                     let str = args.get(0).unwrap().clone();
                     let str = str.as_object().unwrap();
                     let value: FieldRef<RefTo<Array<u8>>> = str
-                        .borrow()
+                        .to_ref()
                         .field(("value".to_string(), "[B".to_string()))
                         .unwrap();
 
-                    let value = value.borrow().clone();
+                    let value = value.to_ref().clone();
                     Ok(Some(RuntimeValue::Object(value.erase())))
                 })),
             );
@@ -207,7 +207,7 @@ fn main() {
                 .unwrap();
 
             let init_phase_1 = java_lang_system
-                .borrow()
+                .to_ref()
                 .class_file()
                 .methods
                 .locate("initPhase1".to_string(), "()V".to_string())
@@ -216,7 +216,7 @@ fn main() {
 
             let code = init_phase_1
                 .attributes
-                .known_attribute::<CodeAttribute>(&cls.borrow().class_file().constant_pool)
+                .known_attribute::<CodeAttribute>(&cls.to_ref().class_file().constant_pool)
                 .unwrap();
 
             let ctx = Context {
@@ -255,7 +255,7 @@ fn main() {
         }
 
         let method = cls
-            .borrow()
+            .to_ref()
             .class_file()
             .methods
             .locate("main".to_string(), "([Ljava/lang/String;)V".to_string())
@@ -263,7 +263,7 @@ fn main() {
 
         let code = method
             .attributes
-            .known_attribute::<CodeAttribute>(&cls.borrow().class_file().constant_pool)
+            .known_attribute::<CodeAttribute>(&cls.to_ref().class_file().constant_pool)
             .unwrap();
 
         let ctx = Context {
