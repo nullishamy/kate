@@ -140,9 +140,6 @@ impl Instruction for StoreLocal {
         let value = ctx.operands.pop().context("no operand to pop")?.clone();
 
         // Fill enough slots to be able to store at an arbitrary index
-        // FIXME: We should probably keep a track of which locals are filled with "real"
-        // values and which are just sentinels so we can provide more accurate diagnostics
-        // for invalid store / get ops
         while locals.len() <= target_index {
             locals.push(RuntimeValue::null_ref());
         }
@@ -409,7 +406,9 @@ impl Instruction for GetStatic {
 
         // The value of the class or interface field is fetched and pushed onto the operand stack.
 
-        // HACK: Hacking in inherited statics, not sure how those are actually supposed to be implemented yet
+        // HACK: Hacking in inherited statics
+        // This should be handled by the field resolution algorithm, as suggested above.
+        // This algorithm is similar to the method resolution algorithms already implemented for the invoke* instructions
         let mut cls = class.clone();
         loop {
             let statics = cls.unwrap_ref().statics();

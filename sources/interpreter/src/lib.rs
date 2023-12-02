@@ -153,7 +153,6 @@ impl VM {
                 locals: vec![],
             };
 
-            // TODO: Handle this properly, as clinit errors should be caught
             self.run(ctx).map_err(|e| e.0)?;
             debug!("Finished initialising {}", class_name);
         } else {

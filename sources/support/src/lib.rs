@@ -1,8 +1,6 @@
 pub mod bytes_ext;
 pub mod descriptor;
 pub mod encoding;
-// FIXME: get the system lib for this in CI.. somehow
-// pub mod unwind;
 
 #[cfg(test)]
 mod tests {
