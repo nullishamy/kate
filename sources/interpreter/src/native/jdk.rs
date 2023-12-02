@@ -176,6 +176,65 @@ impl NativeModule for JdkReflection {
     }
 }
 
+/**
+ * See: https://github.com/openjdk/jdk/blob/7d4b77ad9ee803d89eab5632f5c65ac843a68b3c/src/java.base/share/classes/jdk/internal/util/SystemProps.java#L217
+ *
+ * See: https://github.com/openjdk/jdk/blob/7d4b77ad9ee803d89eab5632f5c65ac843a68b3c/src/java.base/share/native/libjava/System.c#L107
+ */
+mod fields {
+    pub const DISPLAY_COUNTRY_NDX: usize = 0;
+    pub const DISPLAY_LANGUAGE_NDX: usize = 1 + DISPLAY_COUNTRY_NDX;
+    pub const DISPLAY_SCRIPT_NDX: usize = 1 + DISPLAY_LANGUAGE_NDX;
+    pub const DISPLAY_VARIANT_NDX: usize = 1 + DISPLAY_SCRIPT_NDX;
+
+    pub const FILE_ENCODING_NDX: usize = 1 + DISPLAY_VARIANT_NDX;
+    pub const FILE_SEPARATOR_NDX: usize = 1 + FILE_ENCODING_NDX;
+
+    pub const FORMAT_COUNTRY_NDX: usize = 1 + FILE_SEPARATOR_NDX;
+    pub const FORMAT_LANGUAGE_NDX: usize = 1 + FORMAT_COUNTRY_NDX;
+    pub const FORMAT_SCRIPT_NDX: usize = 1 + FORMAT_LANGUAGE_NDX;
+    pub const FORMAT_VARIANT_NDX: usize = 1 + FORMAT_SCRIPT_NDX;
+
+    pub const FTP_NON_PROXY_HOSTS_NDX: usize = 1 + FORMAT_VARIANT_NDX;
+    pub const FTP_PROXY_HOST_NDX: usize = 1 + FTP_NON_PROXY_HOSTS_NDX;
+    pub const FTP_PROXY_PORT_NDX: usize = 1 + FTP_PROXY_HOST_NDX;
+
+    pub const HTTP_NON_PROXY_HOSTS_NDX: usize = 1 + FTP_PROXY_PORT_NDX;
+    pub const HTTP_PROXY_HOST_NDX: usize = 1 + HTTP_NON_PROXY_HOSTS_NDX;
+    pub const HTTP_PROXY_PORT_NDX: usize = 1 + HTTP_PROXY_HOST_NDX;
+    pub const HTTPS_PROXY_HOST_NDX: usize = 1 + HTTP_PROXY_PORT_NDX;
+    pub const HTTPS_PROXY_PORT_NDX: usize = 1 + HTTPS_PROXY_HOST_NDX;
+
+    pub const JAVA_IO_TMPDIR_NDX: usize = 1 + HTTPS_PROXY_PORT_NDX;
+    pub const LINE_SEPARATOR_NDX: usize = 1 + JAVA_IO_TMPDIR_NDX;
+
+    pub const OS_ARCH_NDX: usize = 1 + LINE_SEPARATOR_NDX;
+    pub const OS_NAME_NDX: usize = 1 + OS_ARCH_NDX;
+    pub const OS_VERSION_NDX: usize = 1 + OS_NAME_NDX;
+
+    pub const PATH_SEPARATOR_NDX: usize = 1 + OS_VERSION_NDX;
+
+    pub const SOCKS_NON_PROXY_HOSTS_NDX: usize = 1 + PATH_SEPARATOR_NDX;
+    pub const SOCKS_PROXY_HOST_NDX: usize = 1 + SOCKS_NON_PROXY_HOSTS_NDX;
+    pub const SOCKS_PROXY_PORT_NDX: usize = 1 + SOCKS_PROXY_HOST_NDX;
+
+    pub const SUN_ARCH_ABI_NDX: usize = 1 + SOCKS_PROXY_PORT_NDX;
+    pub const SUN_ARCH_DATA_MODEL_NDX: usize = 1 + SUN_ARCH_ABI_NDX;
+    pub const SUN_CPU_ENDIAN_NDX: usize = 1 + SUN_ARCH_DATA_MODEL_NDX;
+    pub const SUN_CPU_ISALIST_NDX: usize = 1 + SUN_CPU_ENDIAN_NDX;
+    pub const SUN_IO_UNICODE_ENCODING_NDX: usize = 1 + SUN_CPU_ISALIST_NDX;
+    pub const SUN_JNU_ENCODING_NDX: usize = 1 + SUN_IO_UNICODE_ENCODING_NDX;
+    pub const SUN_OS_PATCH_LEVEL_NDX: usize = 1 + SUN_JNU_ENCODING_NDX;
+    pub const SUN_STDERR_ENCODING_NDX: usize = 1 + SUN_OS_PATCH_LEVEL_NDX;
+    pub const SUN_STDOUT_ENCODING_NDX: usize = 1 + SUN_STDERR_ENCODING_NDX;
+
+    pub const USER_DIR_NDX: usize = 1 + SUN_STDOUT_ENCODING_NDX;
+    pub const USER_HOME_NDX: usize = 1 + USER_DIR_NDX;
+    pub const USER_NAME_NDX: usize = 1 + USER_HOME_NDX;
+
+    pub const FIXED_LENGTH: usize = 1 + USER_NAME_NDX;
+}
+
 module_base!(JdkSystemPropsRaw);
 impl NativeModule for JdkSystemPropsRaw {
     fn classname(&self) -> &'static str {
@@ -203,22 +262,9 @@ impl NativeModule for JdkSystemPropsRaw {
                 "Ljava/lang/String;".to_string(),
                 vec![
                     intern_string("java.home".to_string())?,
-                    intern_string("nil".to_string())?,
+                    intern_string("unknown".to_string())?,
+
                     intern_string("native.encoding".to_string())?,
-                    intern_string("UTF-8".to_string())?,
-                    // FIXME: Should be set by the JDK, from the platform properties
-                    intern_string("user.home".to_string())?,
-                    intern_string("nil".to_string())?,
-                    intern_string("user.dir".to_string())?,
-                    intern_string("nil".to_string())?,
-                    intern_string("user.name".to_string())?,
-                    intern_string("amy b)".to_string())?,
-                    intern_string("java.io.tmpdir".to_string())?,
-                    intern_string("nil".to_string())?,
-                    // FIXME: Not sure where these come from but they need set
-                    intern_string("sun.stdout.encoding".to_string())?,
-                    intern_string("UTF-8".to_string())?,
-                    intern_string("sun.stderr.encoding".to_string())?,
                     intern_string("UTF-8".to_string())?,
                     RefTo::null(),
                 ],
@@ -238,15 +284,30 @@ impl NativeModule for JdkSystemPropsRaw {
             _: Vec<RuntimeValue>,
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
-            // TODO: Populate these properly
+            let mut arr = Vec::with_capacity(fields::FIXED_LENGTH);
+            arr.resize(fields::FIXED_LENGTH, RefTo::null());
 
-            let mut data = Vec::with_capacity(100);
-            data.resize(100, RefTo::null());
+            // TODO: Ask OS for temp file
+            arr[fields::JAVA_IO_TMPDIR_NDX] = intern_string("/tmp/javaio.tmp".to_string())?;
+
+            // TODO: Make this platform specific
+            arr[fields::LINE_SEPARATOR_NDX] = intern_string("\n".to_string())?;
+            arr[fields::PATH_SEPARATOR_NDX] = intern_string(":".to_string())?;
+            arr[fields::FILE_SEPARATOR_NDX] = intern_string("/".to_string())?;
+
+            // TODO: Resolve these
+            arr[fields::USER_HOME_NDX] = intern_string("~".to_string())?;
+            arr[fields::USER_DIR_NDX] = intern_string("~".to_string())?;
+
+            // TODO: Actual username
+            arr[fields::USER_NAME_NDX] = intern_string("admin".to_string())?;
+
+            arr[fields::FILE_ENCODING_NDX] = intern_string("UTF-8".to_string())?;
 
             let array: RefTo<Array<RefTo<BuiltinString>>> = Array::from_vec(
                 ArrayType::Object(interner_meta_class()),
                 "Ljava/lang/String;".to_string(),
-                data,
+                arr,
             );
 
             Ok(Some(RuntimeValue::Object(array.erase())))
@@ -687,11 +748,7 @@ impl NativeModule for JdkSignal {
             Ok(Some(RuntimeValue::Integral(0_i64.into())))
         }
 
-        self.set_method(
-            "handle0",
-            "(IJ)J",
-            static_method!(handle0),
-        );
+        self.set_method("handle0", "(IJ)J", static_method!(handle0));
 
         fn find_signal0(
             _: RefTo<Class>,
