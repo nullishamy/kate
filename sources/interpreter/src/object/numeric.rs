@@ -22,6 +22,16 @@ pub struct Floating {
     pub ty: FloatingType,
 }
 
+pub const TRUE: Integral = Integral {
+    value: 1,
+    ty: IntegralType::Int,
+};
+
+pub const FALSE: Integral = Integral {
+    value: 0,
+    ty: IntegralType::Int,
+};
+
 macro_rules! from_num {
     ($b: ty > $a: ty, $( $x:ty => $y: expr ),* ) => {
         $(

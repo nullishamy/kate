@@ -4,7 +4,7 @@ use std::{
     fmt,
     marker::PhantomData,
     mem::{offset_of, size_of},
-    sync::atomic::{AtomicU64, Ordering},
+    sync::atomic::{AtomicU64, Ordering}, cell::RefCell,
 };
 
 use parking_lot::RwLock;
@@ -17,7 +17,7 @@ use support::encoding::{decode_string, CompactEncoding};
 use crate::{
     error::Throwable,
     internal,
-    native::{NameAndDescriptor, NativeFunction},
+    native::{NameAndDescriptor, NativeFunction, NativeModule},
 };
 
 use super::{
@@ -48,7 +48,7 @@ impl Object {
         self.inc_count();
 
         let class = self.class();
-        let layout = &class.borrow().layout_for_instances_of_this_class;
+        let layout = &class.borrow().instance_layout;
         let field_info = layout.field_info(&field.0)?;
 
         let location = field_info.location;
@@ -135,10 +135,10 @@ pub struct Class {
     // Our extra fields
     name: String,
     component_type: Option<ArrayType>,
-    native_methods: HashMap<NameAndDescriptor, NativeFunction>,
+    native_module: Option<Box<RefCell<dyn NativeModule>>>,
     classfile: Option<ClassFile>,
     is_initialised: bool,
-    layout_for_instances_of_this_class: ClassFileLayout,
+    instance_layout: ClassFileLayout,
 }
 
 impl Class {
@@ -169,10 +169,10 @@ impl Class {
 
             component_type: None,
             name,
-            native_methods: HashMap::new(),
+            native_module: None,
             classfile: Some(class_file),
             is_initialised: false,
-            layout_for_instances_of_this_class: layout,
+            instance_layout: layout,
         }
     }
 
@@ -198,10 +198,10 @@ impl Class {
 
             component_type: None,
             name,
-            native_methods: HashMap::new(),
+            native_module: None,
             classfile: None,
             is_initialised: false,
-            layout_for_instances_of_this_class: layout,
+            instance_layout: layout,
         }
     }
 
@@ -232,27 +232,27 @@ impl Class {
 
             component_type: Some(ty),
             name: ty_name,
-            native_methods: HashMap::new(),
+            native_module: None,
             classfile: None,
             is_initialised: false,
-            layout_for_instances_of_this_class: layout,
+            instance_layout: layout,
         }
     }
 
     pub fn instance_layout(&self) -> &ClassFileLayout {
-        &self.layout_for_instances_of_this_class
+        &self.instance_layout
     }
 
     pub fn statics(&self) -> &RwLock<HashMap<String, FieldInfo>> {
-        self.layout_for_instances_of_this_class.statics()
+        self.instance_layout.statics()
     }
 
-    pub fn native_methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
-        &self.native_methods
+    pub fn native_module(&self) -> &Option<Box<RefCell<dyn NativeModule>>> {
+        &self.native_module
     }
 
-    pub fn native_methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
-        &mut self.native_methods
+    pub fn set_native_module(&mut self, module: Box<RefCell<dyn NativeModule>>) {
+        self.native_module = Some(module);
     }
 
     pub fn class_file(&self) -> &ClassFile {

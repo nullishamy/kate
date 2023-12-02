@@ -685,7 +685,7 @@ impl Instruction for New {
         // garbage-collected heap, and the instance variables of the new
         // object are initialized to their default initial values (§2.3, §2.4).
 
-        let layout = object_ty.borrow().instance_layout().clone();
+        let layout = object_ty.borrow().instance_layout();
         let ptr = layout.alloc();
 
         // NOTE: layout.fields() contains the all inherited fields too.
@@ -793,14 +793,17 @@ fn to_method_info(
                 MethodLocation::Interface,
             ))
         }
-        e => Err(internal!("expected interface method / method, got {:#?}", e)),
+        e => Err(internal!(
+            "expected interface method / method, got {:#?}",
+            e
+        )),
     }
 }
 
 fn clone_args_from_operands(
     descriptor: MethodType,
     ctx: &mut Context,
-) -> Result<Vec<RuntimeValue>, Throwable>{
+) -> Result<Vec<RuntimeValue>, Throwable> {
     let mut reversed_descriptor = descriptor.clone();
     reversed_descriptor.parameters.reverse();
     let mut args = Vec::new();
@@ -895,10 +898,17 @@ fn do_call(
         let method_name = method.name.resolve().string();
         let method_descriptor = method.descriptor.resolve().string();
 
-        let lookup = class
-            .borrow()
-            .native_methods()
-            .get(&(method_name.clone(), method_descriptor.clone()))
+        let module = class.borrow().native_module().as_ref().ok_or(internal!(
+            "no native module on {} (when calling {:?} {} / {})",
+            class.borrow().name(),
+            method.flags.flags,
+            method_name,
+            method_descriptor
+        ))?;
+
+        let mut module = module.borrow_mut();
+        let lookup = module
+            .get_method((method_name.clone(), method_descriptor.clone()))
             .ok_or(internal!(
                 "no native method {} {:?} {} / {}",
                 class.borrow().name(),

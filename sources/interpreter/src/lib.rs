@@ -1,6 +1,8 @@
 #![feature(pointer_byte_offsets)]
 #![feature(offset_of)]
 
+use std::cell::RefCell;
+
 use bytecode::decode_instruction;
 use bytes::BytesMut;
 
@@ -184,29 +186,48 @@ impl VM {
     pub fn bootstrap(&mut self) -> Result<(), Throwable> {
         // Load native modules
         use native::*;
-        lang::LangClass::register(self)?;
-        lang::Throwable::register(self)?;
-        lang::StringUTF16::register(self)?;
-        lang::Float::register(self)?;
-        lang::LangDouble::register(self)?;
-        lang::System::register(self)?;
-        lang::LangObject::register(self)?;
-        lang::Runtime::register(self)?;
-        lang::LangThread::register(self)?;
 
-        jdk::Cds::register(self)?;
-        jdk::Reflection::register(self)?;
-        jdk::SystemPropsRaw::register(self)?;
-        jdk::Unsafe::register(self)?;
-        jdk::JdkVm::register(self)?;
-        jdk::ScopedMemoryAccess::register(self)?;
-        jdk::Signal::register(self)?;
+        fn load_module(vm: &mut VM, mut m: impl NativeModule + 'static) {
+            // Setup all the methods
+            m.init();
 
-        io::FileDescriptor::register(self)?;
-        io::FileOutputStream::register(self)?;
+            // Load the class specified by this module
+            let cls = m.get_class(vm).unwrap();
+            let cls = cls.borrow_mut();
 
-        let jls = self.class_loader.for_name("java/lang/String".to_string())?;
+            // Just to stop us making errors with registration.
+            if cls.native_module().is_some() {
+                panic!("attempted to re-register module {}", m.classname());
+            }
+
+            // Apply the module to the class
+            cls.set_native_module(Box::new(RefCell::new(m)));
+        }
+
+        load_module(self, lang::LangClass::new());
+        load_module(self, lang::LangSystem::new());
+        load_module(self, lang::LangObject::new());
+        load_module(self, lang::LangShutdown::new());
+        load_module(self, lang::LangStringUtf16::new());
+        load_module(self, lang::LangRuntime::new());
+        load_module(self, lang::LangDouble::new());
+        load_module(self, lang::LangFloat::new());
+        load_module(self, lang::LangThrowable::new());
+        load_module(self, lang::LangThread::new());
+
+        load_module(self, jdk::JdkVM::new());
+        load_module(self, jdk::JdkReflection::new());
+        load_module(self, jdk::JdkCDS::new());
+        load_module(self, jdk::JdkSystemPropsRaw::new());
+        load_module(self, jdk::JdkUnsafe::new());
+        load_module(self, jdk::JdkSignal::new());
+        load_module(self, jdk::JdkScopedMemoryAccess::new());
+
+        load_module(self, io::IOFileDescriptor::new());
+        load_module(self, io::IOFileOutputStream::new());
+
         // Init String so that we can set the static after it's done. The clinit sets it to a default.
+        let jls = self.class_loader.for_name("java/lang/String".to_string())?;
         self.initialise_class(jls.clone())?;
 
         {

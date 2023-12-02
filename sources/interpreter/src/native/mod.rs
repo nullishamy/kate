@@ -1,87 +1,125 @@
+use std::collections::HashMap;
+
 use crate::{
     error::Throwable,
-    VM, object::{mem::RefTo, builtins::{Class, Object}, runtime::RuntimeValue},
+    object::{
+        builtins::{Class, Object},
+        mem::RefTo,
+        runtime::RuntimeValue,
+    },
+    VM,
 };
 
+pub mod io;
 pub mod jdk;
 pub mod lang;
-pub mod io;
 
 pub type NameAndDescriptor = (String, String);
 
-pub type NativeStaticFunction = fn(
-    class: RefTo<Class>,
-    args: Vec<RuntimeValue>,
-    vm: &mut VM,
-) -> Result<Option<RuntimeValue>, Throwable>;
+pub type NativeStaticFunction = Box<
+    dyn FnMut(
+        // this-class
+        RefTo<Class>,
+        // args
+        Vec<RuntimeValue>,
+        // VM
+        &mut VM,
+    ) -> Result<Option<RuntimeValue>, Throwable>,
+>;
 
-pub type NativeInstanceFunction = fn(
-    this: RefTo<Object>,
-    args: Vec<RuntimeValue>,
-    vm: &mut VM,
-) -> Result<Option<RuntimeValue>, Throwable>;
+pub type NativeInstanceFunction = Box<
+    dyn FnMut(
+        // this
+        RefTo<Object>,
+        // args
+        Vec<RuntimeValue>,
+        // VM
+        &mut VM,
+    ) -> Result<Option<RuntimeValue>, Throwable>,
+>;
 
-#[derive(Clone, Debug)]
 pub enum NativeFunction {
     Static(NativeStaticFunction),
     Instance(NativeInstanceFunction),
 }
 
 pub trait NativeModule {
-    fn classname() -> &'static str;
+    fn classname(&self) -> &'static str;
+    fn init(&mut self);
 
-    fn methods() -> Vec<(NameAndDescriptor, NativeFunction)> {
-        vec![]
+    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction>;
+    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction>;
+
+    fn get_method(&mut self, method: NameAndDescriptor) -> Option<&mut NativeFunction> {
+        self.methods_mut().get_mut(&method)
     }
 
-    fn static_fields() -> Vec<(NameAndDescriptor, RuntimeValue)> {
-        vec![]
+    fn set_method(&mut self, name: &str, descriptor: &str, func: NativeFunction) {
+        self.methods_mut()
+            .insert((name.to_string(), descriptor.to_string()), func);
     }
 
-    fn register(vm: &mut VM) -> Result<(), Throwable> {
-        let class = vm
-            .class_loader
-            .for_name(Self::classname().to_string())?;
+    fn get_class(&self, vm: &mut VM) -> Result<RefTo<Class>, Throwable> {
+        vm.class_loader.for_name(self.classname().to_string())
+    }
+}
 
-        let class = class.borrow_mut();
+pub struct DefaultNativeModule {
+    methods: HashMap<NameAndDescriptor, NativeFunction>,
+    class_name: &'static str
+}
 
-        for (name, method) in Self::methods() {
-            class.native_methods_mut().insert(name, method);
-        }
+impl NativeModule for DefaultNativeModule {
+    fn classname(&self) -> &'static str {
+        self.class_name
+    }
 
-        Ok(())
+    fn init(&mut self) {
+        
+    }
+
+    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+        &self.methods
+    }
+
+    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+        &mut self.methods
+    }
+}
+
+impl DefaultNativeModule {
+    pub fn new(class_name: &'static str) -> Self {
+        Self { methods: HashMap::new(), class_name }
     }
 }
 
 #[macro_export]
 macro_rules! static_method {
-    (name: $name: expr, descriptor: $descriptor: expr => $method: expr) => {
-        (
-            ($name.to_string(), $descriptor.to_string()),
-            NativeFunction::Static($method),
-        )
+    ($method: expr) => {
+        NativeFunction::Static(Box::new($method))
     };
 }
 
 #[macro_export]
 macro_rules! instance_method {
-    (name: $name: expr, descriptor: $descriptor: expr => $method: expr) => {
-        (
-            ($name.to_string(), $descriptor.to_string()),
-            NativeFunction::Instance($method),
-        )
+    ($method: expr) => {
+        NativeFunction::Instance(Box::new($method))
     };
 }
 
 #[macro_export]
-macro_rules! field {
-    (name: $name: expr, descriptor: $descriptor: expr => $value: expr) => {
-        (
-            $crate::runtime::object::NameAndDescriptor {
-                name: $name.to_string(),
-                descriptor: $descriptor.to_string(),
-            },
-            $value,
-        )
+macro_rules! module_base {
+    ($ty: ident) => {
+        pub struct $ty {
+            methods: HashMap<NameAndDescriptor, NativeFunction>,
+        }
+
+        impl $ty {
+            pub fn new() -> Self {
+                Self {
+                    methods: HashMap::new(),
+                }
+            }
+        }
     };
 }

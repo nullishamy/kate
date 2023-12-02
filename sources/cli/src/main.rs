@@ -1,10 +1,10 @@
-use std::process::exit;
+use std::{cell::RefCell, process::exit};
 
 use args::Cli;
 use clap::Parser;
 use interpreter::{
     error::{Frame, Throwable},
-    native::NativeFunction,
+    native::{DefaultNativeModule, NativeFunction},
     object::{
         builtins::{Array, Class},
         interner::{set_interner, StringInterner},
@@ -25,19 +25,22 @@ mod args;
 fn test_init(cls: RefTo<Class>) {
     let cls = cls.borrow_mut();
     macro_rules! printer {
-                ($desc: expr, $printer: expr) => {
-                    static_method!(name: "print", descriptor: $desc => |_, args, _| {
-                        let printer = $printer;
-                        printer(args[0].clone());
-                        Ok(None)
-                    })
-                };
-                ($desc: expr) => {
-                    printer!($desc, |a| {
-                        println!("{}", a);
-                    })
-                };
-            }
+        ($desc: expr, $printer: expr) => {
+            (
+                $desc,
+                static_method!(|_, args, _| {
+                    let printer = $printer;
+                    printer(args[0].clone());
+                    Ok(None)
+                }),
+            )
+        };
+        ($desc: expr) => {
+            printer!($desc, |a| {
+                println!("{}", a);
+            })
+        };
+    }
 
     for printer in [
         printer!("(I)V"),
@@ -97,7 +100,16 @@ fn test_init(cls: RefTo<Class>) {
             );
         }),
     ] {
-        cls.native_methods_mut().insert(printer.0, printer.1);
+        if cls.native_module().is_none() {
+            cls.set_native_module(Box::new(RefCell::new(DefaultNativeModule::new(
+                // Leaking is fine. The class that spawned the test will live for the whole test.
+                cls.name().clone().leak(),
+            ))));
+        }
+
+        let module = cls.native_module().as_ref().unwrap();
+        let mut module = module.borrow_mut();
+        module.set_method("print", printer.0, printer.1);
     }
 }
 
@@ -153,7 +165,7 @@ fn main() {
     let mut vm = VM {
         class_loader,
         frames: Vec::new(),
-        main_thread: RefTo::null()
+        main_thread: RefTo::null(),
     };
 
     vm.bootstrap().unwrap();
@@ -166,20 +178,25 @@ fn main() {
             test_init(cls.clone());
         }
 
-        cls.borrow_mut().native_methods_mut().insert(
-            ("getValue".to_string(), "(Ljava/lang/String;)[B".to_string()),
-            NativeFunction::Static(|_, args, _| {
-                let str = args.get(0).unwrap().clone();
-                let str = str.as_object().unwrap();
-                let value: FieldRef<RefTo<Array<u8>>> = str
-                    .borrow()
-                    .field(("value".to_string(), "[B".to_string()))
-                    .unwrap();
+        {
+            let module = cls.borrow().native_module().as_ref().unwrap();
+            let mut module = module.borrow_mut();
+            module.set_method(
+                "getValue",
+                "(Ljava/lang/String;)[B",
+                NativeFunction::Static(Box::new(|_, args, _| {
+                    let str = args.get(0).unwrap().clone();
+                    let str = str.as_object().unwrap();
+                    let value: FieldRef<RefTo<Array<u8>>> = str
+                        .borrow()
+                        .field(("value".to_string(), "[B".to_string()))
+                        .unwrap();
 
-                let value = value.borrow().clone();
-                Ok(Some(RuntimeValue::Object(value.erase())))
-            }),
-        );
+                    let value = value.borrow().clone();
+                    Ok(Some(RuntimeValue::Object(value.erase())))
+                })),
+            );
+        }
 
         if args.boot_system {
             info!("Booting system");
