@@ -352,9 +352,9 @@ impl NativeModule for JdkUnsafe {
                 unsafe { val.cast::<BuiltinString>() }
             };
 
-            let layout = cls.to_ref().instance_layout();
+            let layout = cls.unwrap_ref().instance_layout();
             let info = layout
-                .field_info(&field.to_ref().string()?)
+                .field_info(&field.unwrap_ref().string()?)
                 .expect("TODO: internal error");
             let offset = info.location.offset as i64;
 
@@ -412,7 +412,7 @@ impl NativeModule for JdkUnsafe {
                 val.as_integral().unwrap().value as i32
             };
 
-            let raw_ptr = object.borrow_mut() as *mut Object;
+            let raw_ptr = object.unwrap_mut() as *mut Object;
             let raw_ptr = unsafe { raw_ptr.byte_add(offset as usize) };
             let raw_ptr = raw_ptr.cast::<i32>();
 
@@ -461,7 +461,7 @@ impl NativeModule for JdkUnsafe {
                 val.as_object().unwrap()
             };
 
-            let raw_ptr = object.borrow_mut() as *mut Object;
+            let raw_ptr = object.unwrap_mut() as *mut Object;
             let raw_ptr = unsafe { raw_ptr.byte_add(offset as usize) };
             let raw_ptr = raw_ptr.cast::<RefTo<Object>>();
 
@@ -511,7 +511,7 @@ impl NativeModule for JdkUnsafe {
                 val.as_integral().unwrap().value
             };
 
-            let raw_ptr = object.borrow_mut() as *mut Object;
+            let raw_ptr = object.unwrap_mut() as *mut Object;
             let raw_ptr = unsafe { raw_ptr.byte_add(offset as usize) };
             let raw_ptr = raw_ptr.cast::<i64>();
 
@@ -550,7 +550,7 @@ impl NativeModule for JdkUnsafe {
                 val.as_integral().unwrap().value
             };
 
-            let raw_ptr = object.borrow_mut() as *mut Object;
+            let raw_ptr = object.unwrap_mut() as *mut Object;
             let raw_ptr = unsafe { raw_ptr.byte_add(offset as usize) };
             let raw_ptr = raw_ptr.cast::<RefTo<Object>>();
             let val = unsafe { raw_ptr.as_ref().unwrap() }.clone();
@@ -579,7 +579,7 @@ impl NativeModule for JdkUnsafe {
                 val.as_integral().unwrap().value
             };
 
-            let raw_ptr = object.borrow_mut() as *mut Object;
+            let raw_ptr = object.unwrap_mut() as *mut Object;
             let raw_ptr = unsafe { raw_ptr.byte_add(offset as usize) };
             let raw_ptr = raw_ptr.cast::<types::Int>();
             let val = unsafe { raw_ptr.read() };
@@ -613,7 +613,7 @@ impl NativeModule for JdkUnsafe {
                 val.as_object().unwrap()
             };
 
-            let raw_ptr = object.borrow_mut() as *mut Object;
+            let raw_ptr = object.unwrap_mut() as *mut Object;
             let raw_ptr = unsafe { raw_ptr.byte_add(offset as usize) };
             let raw_ptr = raw_ptr.cast::<RefTo<Object>>();
             unsafe { raw_ptr.write(value.clone()) };
@@ -637,7 +637,7 @@ impl NativeModule for JdkUnsafe {
             let cls = cls.as_object().unwrap();
             let cls = unsafe { cls.cast::<Class>() };
 
-            let component = cls.to_ref().component_type().unwrap();
+            let component = cls.unwrap_ref().component_type().unwrap();
             let res = match component {
                 ArrayType::Object(_) => Array::<RefTo<Object>>::element_scale(),
                 ArrayType::Primitive(ty) => match ty {
@@ -671,7 +671,7 @@ impl NativeModule for JdkUnsafe {
             let cls = cls.as_object().unwrap();
             let cls = unsafe { cls.cast::<Class>() };
 
-            let component = cls.to_ref().component_type().unwrap();
+            let component = cls.unwrap_ref().component_type().unwrap();
             let res = match component {
                 ArrayType::Object(_) => Array::<RefTo<Object>>::elements_offset(),
                 ArrayType::Primitive(ty) => match ty {
@@ -758,7 +758,7 @@ impl NativeModule for JdkSignal {
             let sig = args.get(0).unwrap();
             let sig = sig.as_object().unwrap();
             let sig = unsafe { sig.cast::<BuiltinString>() };
-            let sig = sig.to_ref().string()?;
+            let sig = sig.unwrap_ref().string()?;
 
             // TODO: Get actual signals
             let code: i32 = match sig.as_str() {

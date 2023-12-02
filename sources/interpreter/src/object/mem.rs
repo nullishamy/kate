@@ -60,7 +60,7 @@ impl<T> Drop for FieldRef<T> {
     fn drop(&mut self) {
         let object = self.object().unwrap();
         let binding = ManuallyDrop::new(object.class());
-        let layout = ManuallyDrop::new(binding.to_ref().instance_layout());
+        let layout = ManuallyDrop::new(binding.unwrap_ref().instance_layout());
 
         // We are the last ref, deallocate the entire object we refer to
         if object.ref_count() == 1 {
@@ -106,7 +106,7 @@ pub trait HasObjectHeader<T> {
 
 impl<T: HasObjectHeader<T> + Copy> RefTo<T> {
     pub fn copy_out(&self) -> T {
-        *self.to_ref()
+        *self.unwrap_ref()
     }
 }
 
@@ -137,15 +137,21 @@ impl<T: HasObjectHeader<T>> RefTo<T> {
     }
 
     #[track_caller]
-    pub fn borrow_mut(&self) -> &mut T {
-        assert!(!self.object.is_null(), "ref was null");
-        unsafe { self.object.cast::<T>().as_mut().unwrap() }
+    pub fn unwrap_mut(&self) -> &mut T {
+        self.to_mut().expect("attempted to dereference null")
     }
 
     #[track_caller]
-    pub fn to_ref(&self) -> &T {
-        assert!(!self.object.is_null(), "ref was null");
-        unsafe { self.object.cast::<T>().as_ref().unwrap() }
+    pub fn unwrap_ref(&self) -> &T {
+        self.to_ref().expect("attempted to dereference null")
+    }
+
+    pub fn to_ref(&self) -> Option<&T> {
+        unsafe { self.object.cast::<T>().as_ref() }
+    }
+
+    pub fn to_mut(&self) -> Option<&mut T> {
+        unsafe { self.object.cast::<T>().as_mut() }
     }
 
     pub fn as_ptr(&self) -> *const Object {
@@ -184,7 +190,7 @@ impl<T: HasObjectHeader<T>> RefTo<T> {
         if self.is_null() {
             None
         } else {
-            Some(self.to_ref())
+            Some(self.unwrap_ref())
         }
     }
 }

@@ -144,7 +144,7 @@ impl Instruction for ArrayLength {
         let array = arg!(ctx, "array" => Array<()>);
 
         // The length of the array it references is determined.
-        let len = array.to_ref().len() as i32;
+        let len = array.unwrap_ref().len() as i32;
 
         // That length is pushed onto the operand stack as an int.
         ctx.operands.push(RuntimeValue::Integral(len.into()));
@@ -167,7 +167,7 @@ impl Instruction for ANewArray {
         // named class, array, or interface type is resolved (§5.4.3.1).
         let ty: ConstantEntry = ctx
             .class
-            .to_ref()
+            .unwrap_ref()
             .class_file()
             .constant_pool
             .address(self.type_index)
@@ -177,7 +177,7 @@ impl Instruction for ANewArray {
             ConstantEntry::Class(data) => {
                 let class_name = data.name.resolve().string();
                 let cls = vm.class_loader.for_name(class_name)?;
-                let name = cls.to_ref().name().clone();
+                let name = cls.unwrap_ref().name().clone();
 
                 (ArrayType::Object(cls), name)
             }
@@ -288,7 +288,7 @@ impl Instruction for ArrayStore {
         match &self.ty {
             ArrayType::Object(_) => {
                 let array = arg!(ctx, "array" => Array<RefTo<Object>>);
-                let array = array.borrow_mut().slice_mut();
+                let array = array.unwrap_mut().slice_mut();
                 let value = value.as_object().expect("array store exception").clone();
                 array[index.value as usize] = value;
             }
@@ -302,31 +302,31 @@ impl Instruction for ArrayStore {
                 // ArrayPrimitive::Int => todo!(),
                 ArrayPrimitive::Long => {
                     let array = arg!(ctx, "array" => Array<Long>);
-                    let array = array.borrow_mut().slice_mut();
+                    let array = array.unwrap_mut().slice_mut();
                     let value = value.as_integral().expect("array store exception").value;
                     array[index.value as usize] = value
                 }
                 ArrayPrimitive::Double => {
                     let array = arg!(ctx, "array" => Array<Double>);
-                    let array = array.borrow_mut().slice_mut();
+                    let array = array.unwrap_mut().slice_mut();
                     let value = value.as_floating().expect("array store exception").value;
                     array[index.value as usize] = value
                 }
                 ArrayPrimitive::Byte => {
                     let array = arg!(ctx, "array" => Array<Byte>);
-                    let array = array.borrow_mut().slice_mut();
+                    let array = array.unwrap_mut().slice_mut();
                     let value = value.as_integral().expect("array store exception").value;
                     array[index.value as usize] = value as Byte
                 }
                 ArrayPrimitive::Char => {
                     let array = arg!(ctx, "array" => Array<Char>);
-                    let array = array.borrow_mut().slice_mut();
+                    let array = array.unwrap_mut().slice_mut();
                     let value = value.as_integral().expect("array store exception").value;
                     array[index.value as usize] = value as Char
                 }
                 ArrayPrimitive::Int => {
                     let array = arg!(ctx, "array" => Array<Int>);
-                    let array = array.borrow_mut().slice_mut();
+                    let array = array.unwrap_mut().slice_mut();
                     let value = value.as_integral().expect("array store exception").value;
                     array[index.value as usize] = value as Int
                 }
@@ -350,7 +350,7 @@ impl Instruction for ArrayLoad {
         let value = match &self.ty {
             ArrayType::Object(_) => {
                 let array = arg!(ctx, "array" => Array<RefTo<Object>>);
-                let array = array.to_ref().slice();
+                let array = array.unwrap_ref().slice();
                 let value = array[index.value as usize].clone();
                 RuntimeValue::Object(value)
             }
@@ -358,11 +358,11 @@ impl Instruction for ArrayLoad {
                 // ArrayPrimitive::Bool => todo!(),
                 ArrayPrimitive::Char => {
                     let array = arg!(ctx, "array" => Array<Char>);
-                    let array = array.to_ref().slice();
+                    let array = array.unwrap_ref().slice();
 
                     if index.value >= array.len() as i64 {
                         return Ok(Progression::Throw(
-                            vm.make_error(VMError::ArrayIndexOutOfBounds { at: index.value })?,
+                            vm.try_make_error(VMError::ArrayIndexOutOfBounds { at: index.value })?,
                         ));
                     }
 
@@ -374,14 +374,14 @@ impl Instruction for ArrayLoad {
                 // ArrayPrimitive::Float => todo!(),
                 ArrayPrimitive::Double => {
                     let array = arg!(ctx, "array" => Array<Double>);
-                    let array = array.to_ref().slice();
+                    let array = array.unwrap_ref().slice();
                     let value = array[index.value as usize];
 
                     RuntimeValue::Floating(value.into())
                 }
                 ArrayPrimitive::Byte => {
                     let array = arg!(ctx, "array" => Array<Byte>);
-                    let array = array.to_ref().slice();
+                    let array = array.unwrap_ref().slice();
                     let value = array[index.value as usize];
 
                     // TODO: Sign extension here
@@ -389,7 +389,7 @@ impl Instruction for ArrayLoad {
                 }
                 ArrayPrimitive::Long => {
                     let array = arg!(ctx, "array" => Array<Long>);
-                    let array = array.to_ref().slice();
+                    let array = array.unwrap_ref().slice();
                     let value = array[index.value as usize];
 
                     RuntimeValue::Integral(value.into())

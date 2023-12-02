@@ -48,7 +48,7 @@ impl Object {
         self.inc_count();
 
         let class = self.class();
-        let layout = &class.to_ref().instance_layout;
+        let layout = &class.unwrap_ref().instance_layout;
         let field_info = layout.field_info(&field.0)?;
 
         let location = field_info.location;
@@ -326,7 +326,7 @@ pub struct BuiltinString {
 impl BuiltinString {
     pub fn string(&self) -> Result<String, Throwable> {
         let encoding = CompactEncoding::from_coder(self.coder);
-        let bytes = self.value.to_ref().slice().to_vec();
+        let bytes = self.value.unwrap_ref().slice().to_vec();
 
         decode_string((encoding, bytes)).map_err(|f| internal!(f))
     }

@@ -41,7 +41,7 @@ impl Instruction for Ldc2W {
     fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         let value = ctx
             .class
-            .to_ref()
+            .unwrap_ref()
             .class_file()
             .constant_pool
             .address(self.index)
@@ -72,7 +72,7 @@ impl Instruction for Ldc {
     fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         let value = ctx
             .class
-            .to_ref()
+            .unwrap_ref()
             .class_file()
             .constant_pool
             .address(self.index)
@@ -168,7 +168,7 @@ impl Instruction for GetField {
         // field is to be found.
         let field: ConstantField = ctx
             .class
-            .to_ref()
+            .unwrap_ref()
             .class_file()
             .constant_pool
             .address(self.index)
@@ -194,12 +194,12 @@ impl Instruction for GetField {
             FieldType::Base(ty) => match ty {
                 BaseType::Boolean => {
                     let field: FieldRef<Bool> =
-                        objectref.to_ref().field((name, descriptor)).unwrap();
+                        objectref.unwrap_ref().field((name, descriptor)).unwrap();
                     RuntimeValue::Integral(field.copy_out().into())
                 }
                 BaseType::Char => {
                     let field: FieldRef<Char> =
-                        objectref.to_ref().field((name, descriptor)).unwrap();
+                        objectref.unwrap_ref().field((name, descriptor)).unwrap();
 
                     // TODO: Not entirely sure what the behaviour is supposed to be here wrt extension
                     let val = field.copy_out();
@@ -207,17 +207,17 @@ impl Instruction for GetField {
                 }
                 BaseType::Float => {
                     let field: FieldRef<Float> =
-                        objectref.to_ref().field((name, descriptor)).unwrap();
+                        objectref.unwrap_ref().field((name, descriptor)).unwrap();
                     RuntimeValue::Floating(field.copy_out().into())
                 }
                 BaseType::Double => {
                     let field: FieldRef<Double> =
-                        objectref.to_ref().field((name, descriptor)).unwrap();
+                        objectref.unwrap_ref().field((name, descriptor)).unwrap();
                     RuntimeValue::Floating(field.copy_out().into())
                 }
                 BaseType::Byte => {
                     let field: FieldRef<Byte> =
-                        objectref.to_ref().field((name, descriptor)).unwrap();
+                        objectref.unwrap_ref().field((name, descriptor)).unwrap();
 
                     // TODO: Not entirely sure what the behaviour is supposed to be here wrt extension
                     let val = field.copy_out();
@@ -225,7 +225,7 @@ impl Instruction for GetField {
                 }
                 BaseType::Short => {
                     let field: FieldRef<Short> =
-                        objectref.to_ref().field((name, descriptor)).unwrap();
+                        objectref.unwrap_ref().field((name, descriptor)).unwrap();
 
                     // TODO: Not entirely sure what the behaviour is supposed to be here wrt extension
                     let val = field.copy_out();
@@ -233,25 +233,25 @@ impl Instruction for GetField {
                 }
                 BaseType::Int => {
                     let field: FieldRef<Int> =
-                        objectref.to_ref().field((name, descriptor)).unwrap();
+                        objectref.unwrap_ref().field((name, descriptor)).unwrap();
 
                     RuntimeValue::Integral(field.copy_out().into())
                 }
                 BaseType::Long => {
                     let field: FieldRef<Long> =
-                        objectref.to_ref().field((name, descriptor)).unwrap();
+                        objectref.unwrap_ref().field((name, descriptor)).unwrap();
                     RuntimeValue::Integral(field.copy_out().into())
                 }
                 BaseType::Void => panic!("cannot read void field"),
             },
             FieldType::Object(_) => {
                 let field: FieldRef<RefTo<Object>> =
-                    objectref.to_ref().field((name, descriptor)).unwrap();
+                    objectref.unwrap_ref().field((name, descriptor)).unwrap();
                 RuntimeValue::Object(field.to_ref().clone())
             }
             FieldType::Array(_) => {
                 let field: FieldRef<RefTo<Object>> =
-                    objectref.to_ref().field((name, descriptor)).unwrap();
+                    objectref.unwrap_ref().field((name, descriptor)).unwrap();
                 let value = field.to_ref();
                 RuntimeValue::Object(value.clone())
             }
@@ -276,7 +276,7 @@ impl Instruction for PutField {
         // field is to be found.
         let field: ConstantField = ctx
             .class
-            .to_ref()
+            .unwrap_ref()
             .class_file()
             .constant_pool
             .address(self.index)
@@ -308,7 +308,7 @@ impl Instruction for PutField {
             }};
         }
 
-        let o = objectref.to_ref();
+        let o = objectref.unwrap_ref();
         let name = name.clone();
 
         match descriptor {
@@ -385,7 +385,7 @@ impl Instruction for GetStatic {
         // field is to be found.
         let field: ConstantField = ctx
             .class
-            .to_ref()
+            .unwrap_ref()
             .class_file()
             .constant_pool
             .address(self.index)
@@ -405,14 +405,14 @@ impl Instruction for GetStatic {
         let name_and_type = field.name_and_type.resolve();
         let name = name_and_type.name.resolve().string();
 
-        let _class_name = class.to_ref().name();
+        let _class_name = class.unwrap_ref().name();
 
         // The value of the class or interface field is fetched and pushed onto the operand stack.
 
         // HACK: Hacking in inherited statics, not sure how those are actually supposed to be implemented yet
         let mut cls = class.clone();
         loop {
-            let statics = cls.to_ref().statics();
+            let statics = cls.unwrap_ref().statics();
             let statics = statics.read();
             let field = statics.get(&name);
 
@@ -421,7 +421,7 @@ impl Instruction for GetStatic {
                 ctx.operands.push(value);
                 break;
             } else {
-                let sup = cls.to_ref().super_class();
+                let sup = cls.unwrap_ref().super_class();
                 // We searched every class and could not find the static
                 if sup.is_null() {
                     panic!("could not locate static field in class or super class(es)");
@@ -452,7 +452,7 @@ impl Instruction for PutStatic {
         // field is to be found.
         let field: ConstantField = ctx
             .class
-            .to_ref()
+            .unwrap_ref()
             .class_file()
             .constant_pool
             .address(self.index)
@@ -473,7 +473,7 @@ impl Instruction for PutStatic {
 
         // TODO: Type check & convert as needed
         let value = pop!(ctx);
-        let statics = class.to_ref().statics();
+        let statics = class.unwrap_ref().statics();
         let mut statics = statics.write();
 
         statics.get_mut(&name).unwrap().value = Some(value);

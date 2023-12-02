@@ -25,7 +25,7 @@ use crate::args::opts;
 mod args;
 
 fn test_init(cls: RefTo<Class>) {
-    let cls = cls.borrow_mut();
+    let cls = cls.unwrap_mut();
     macro_rules! printer {
         ($desc: expr, $printer: expr) => {
             (
@@ -75,12 +75,12 @@ fn test_init(cls: RefTo<Class>) {
                 return;
             }
 
-            let string = string.to_ref();
+            let string = string.unwrap_ref();
             let bytes: FieldRef<RefTo<Array<u8>>> = string
                 .field(("value".to_string(), "[B".to_string()))
                 .expect("could not locate value field");
 
-            let bytes = bytes.to_ref().to_ref().slice().to_vec();
+            let bytes = bytes.to_ref().unwrap_ref().slice().to_vec();
 
             let str =
                 decode_string((CompactEncoding::Utf16, bytes)).expect("could not decode string");
@@ -93,7 +93,7 @@ fn test_init(cls: RefTo<Class>) {
 
             println!(
                 "[{}]",
-                arr.to_ref()
+                arr.unwrap_ref()
                     .slice()
                     .iter()
                     .map(|f| f.to_string())
@@ -126,7 +126,7 @@ fn boot_system(vm: &mut VM, cls: RefTo<Class>) {
         .unwrap();
 
     let init_phase_1 = java_lang_system
-        .to_ref()
+        .unwrap_ref()
         .class_file()
         .methods
         .locate("initPhase1".to_string(), "()V".to_string())
@@ -135,7 +135,7 @@ fn boot_system(vm: &mut VM, cls: RefTo<Class>) {
 
     let code = init_phase_1
         .attributes
-        .known_attribute::<CodeAttribute>(&cls.to_ref().class_file().constant_pool)
+        .known_attribute::<CodeAttribute>(&cls.unwrap_ref().class_file().constant_pool)
         .unwrap();
 
     let ctx = Context {
@@ -243,7 +243,7 @@ fn main() {
         }
 
         let method = cls
-            .to_ref()
+            .unwrap_ref()
             .class_file()
             .methods
             .locate("main".to_string(), "([Ljava/lang/String;)V".to_string())
@@ -251,7 +251,7 @@ fn main() {
 
         let code = method
             .attributes
-            .known_attribute::<CodeAttribute>(&cls.to_ref().class_file().constant_pool)
+            .known_attribute::<CodeAttribute>(&cls.unwrap_ref().class_file().constant_pool)
             .unwrap();
 
         let ctx = Context {

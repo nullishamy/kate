@@ -49,9 +49,9 @@ impl NativeModule for LangClass {
 
             let prim_name = unsafe { prim_name.cast::<BuiltinString>() };
 
-            let bytes = prim_name.to_ref().value.to_ref().slice().to_vec();
+            let bytes = prim_name.unwrap_ref().value.unwrap_ref().slice().to_vec();
             let prim_str =
-                decode_string((CompactEncoding::from_coder(prim_name.to_ref().coder), bytes))?;
+                decode_string((CompactEncoding::from_coder(prim_name.unwrap_ref().coder), bytes))?;
             let jlc = vm.class_loader.for_name("java/lang/Class".to_string())?;
             let jlo = vm.class_loader.for_name("java/lang/Object".to_string())?;
 
@@ -111,7 +111,7 @@ impl NativeModule for LangClass {
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
             let class = unsafe { this.cast::<Class>() };
-            let result = if class.to_ref().is_array() {
+            let result = if class.unwrap_ref().is_array() {
                 1_i32
             } else {
                 0_i32
@@ -128,7 +128,7 @@ impl NativeModule for LangClass {
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
             let class = unsafe { this.cast::<Class>() };
-            let result = if class.to_ref().is_interface() {
+            let result = if class.unwrap_ref().is_interface() {
                 1_i32
             } else {
                 0_i32
@@ -145,7 +145,7 @@ impl NativeModule for LangClass {
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
             let class = unsafe { this.cast::<Class>() };
-            let result = if class.to_ref().is_primitive() {
+            let result = if class.unwrap_ref().is_primitive() {
                 1_i32
             } else {
                 0_i32
@@ -163,7 +163,7 @@ impl NativeModule for LangClass {
         ) -> Result<Option<RuntimeValue>, Throwable> {
             let class = unsafe { this.cast::<Class>() };
 
-            let name = class.to_ref().name();
+            let name = class.unwrap_ref().name();
 
             Ok(Some(RuntimeValue::Object(
                 intern_string(name.clone())?.erase(),
@@ -243,7 +243,7 @@ impl NativeModule for LangSystem {
             let stream = args.get(0).unwrap();
             let stream = stream.as_object().unwrap();
 
-            let statics = cls.to_ref().statics();
+            let statics = cls.unwrap_ref().statics();
             let mut statics = statics.write();
             let field = statics.get_mut("in").unwrap();
 
@@ -266,7 +266,7 @@ impl NativeModule for LangSystem {
             let stream = args.get(0).unwrap();
             let stream = stream.as_object().unwrap();
 
-            let statics = cls.to_ref().statics();
+            let statics = cls.unwrap_ref().statics();
             let mut statics = statics.write();
             let field = statics.get_mut("out").unwrap();
 
@@ -289,7 +289,7 @@ impl NativeModule for LangSystem {
             let stream = args.get(0).unwrap();
             let stream = stream.as_object().unwrap();
 
-            let statics = cls.to_ref().statics();
+            let statics = cls.unwrap_ref().statics();
             let mut statics = statics.write();
             let field = statics.get_mut("err").unwrap();
 
@@ -342,11 +342,11 @@ impl NativeModule for LangSystem {
             let dest_pos = dest_pos.value;
             let len = len.value;
 
-            let src_class = src.to_ref().class();
-            let src_ty = src_class.to_ref();
+            let src_class = src.unwrap_ref().class();
+            let src_ty = src_class.unwrap_ref();
 
-            let dest_class = dest.to_ref().class();
-            let dest_ty = dest_class.to_ref();
+            let dest_class = dest.unwrap_ref().class();
+            let dest_ty = dest_class.unwrap_ref();
 
             let src_component = src_ty.component_type().unwrap();
             let dest_component = dest_ty.component_type().unwrap();
@@ -376,38 +376,38 @@ impl NativeModule for LangSystem {
                 ArrayType::Primitive(ty) => match ty {
                     ArrayPrimitive::Bool => {
                         let src = unsafe { src.cast::<Array<Bool>>() };
-                        let src_slice = src.borrow_mut().slice_mut();
+                        let src_slice = src.unwrap_mut().slice_mut();
 
                         let dest = unsafe { dest.cast::<Array<Bool>>() };
-                        let dest_slice = dest.borrow_mut().slice_mut();
+                        let dest_slice = dest.unwrap_mut().slice_mut();
                         dest_slice[dest_pos..dest_pos + len]
                             .copy_from_slice(&src_slice[src_pos..src_pos + len]);
                     }
                     ArrayPrimitive::Char => {
                         let src = unsafe { src.cast::<Array<Char>>() };
-                        let src_slice = src.borrow_mut().slice_mut();
+                        let src_slice = src.unwrap_mut().slice_mut();
 
                         let dest = unsafe { dest.cast::<Array<Char>>() };
-                        let dest_slice = dest.borrow_mut().slice_mut();
+                        let dest_slice = dest.unwrap_mut().slice_mut();
                         dest_slice[dest_pos..dest_pos + len]
                             .copy_from_slice(&src_slice[src_pos..src_pos + len]);
                     }
                     ArrayPrimitive::Float => todo!(),
                     ArrayPrimitive::Double => {
                         let src = unsafe { src.cast::<Array<Double>>() };
-                        let src_slice = src.borrow_mut().slice_mut();
+                        let src_slice = src.unwrap_mut().slice_mut();
 
                         let dest = unsafe { dest.cast::<Array<Double>>() };
-                        let dest_slice = dest.borrow_mut().slice_mut();
+                        let dest_slice = dest.unwrap_mut().slice_mut();
                         dest_slice[dest_pos..dest_pos + len]
                             .copy_from_slice(&src_slice[src_pos..src_pos + len]);
                     }
                     ArrayPrimitive::Byte => {
                         let src = unsafe { src.cast::<Array<Byte>>() };
-                        let src_slice = src.borrow_mut().slice_mut();
+                        let src_slice = src.unwrap_mut().slice_mut();
 
                         let dest = unsafe { dest.cast::<Array<Byte>>() };
-                        let dest_slice = dest.borrow_mut().slice_mut();
+                        let dest_slice = dest.unwrap_mut().slice_mut();
                         dest_slice[dest_pos..dest_pos + len]
                             .copy_from_slice(&src_slice[src_pos..src_pos + len]);
                     }
@@ -513,7 +513,7 @@ impl NativeModule for LangObject {
             _: Vec<RuntimeValue>,
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
-            Ok(Some(RuntimeValue::Object(this.to_ref().class().erase())))
+            Ok(Some(RuntimeValue::Object(this.unwrap_ref().class().erase())))
         }
 
         self.set_method(

@@ -117,9 +117,9 @@ impl VM {
     }
 
     pub fn initialise_class(&mut self, class: RefTo<Class>) -> Result<(), Throwable> {
-        let class_name = class.to_ref().name().clone();
+        let class_name = class.unwrap_ref().name().clone();
 
-        if class.to_ref().is_initialised() {
+        if class.unwrap_ref().is_initialised() {
             debug!(
                 "Not initialising {}, class is already initialised",
                 class_name
@@ -129,7 +129,7 @@ impl VM {
         }
 
         let clinit = class
-            .to_ref()
+            .unwrap_ref()
             .class_file()
             .methods
             .locate("<clinit>".to_string(), "()V".to_string())
@@ -140,10 +140,10 @@ impl VM {
 
             // Need to drop our lock on the class object before running the class initialiser
             // as it could call instructions which access class data
-            class.borrow_mut().set_initialised(true);
+            class.unwrap_mut().set_initialised(true);
             let code = clinit
                 .attributes
-                .known_attribute(&class.to_ref().class_file().constant_pool)?;
+                .known_attribute(&class.unwrap_ref().class_file().constant_pool)?;
 
             let ctx = Context {
                 code,
@@ -160,7 +160,7 @@ impl VM {
             debug!("No clinit in {}", class_name);
             // Might as well mark this as initialised to avoid future
             // needless method lookups
-            class.borrow_mut().set_initialised(true);
+            class.unwrap_mut().set_initialised(true);
         }
 
         Ok(())
@@ -170,7 +170,8 @@ impl VM {
         self.main_thread.clone()
     }
 
-    pub fn make_error(&mut self, ty: VMError) -> Result<Throwable, Throwable> {
+    /// Try and make the error. This may fail if a class fails to resolve, or object creation fails
+    pub fn try_make_error(&mut self, ty: VMError) -> Result<Throwable, Throwable> {
         match ty {
             VMError::ArrayIndexOutOfBounds { .. } => {
                 let cls = self.class_loader.for_name(ty.class_name().to_string())?;
@@ -181,6 +182,15 @@ impl VM {
                     sources: self.frames.clone(),
                 }))
             }
+            VMError::NullPointerException => {
+                let cls = self.class_loader.for_name(ty.class_name().to_string())?;
+                Ok(Throwable::Runtime(error::RuntimeException {
+                    message: ty.message(),
+                    ty: cls,
+                    obj: RuntimeValue::null_ref(),
+                    sources: self.frames.clone(),
+                }))
+            },
         }
     }
 
@@ -194,7 +204,7 @@ impl VM {
 
             // Load the class specified by this module
             let cls = m.get_class(vm).unwrap();
-            let cls = cls.borrow_mut();
+            let cls = cls.unwrap_mut();
 
             // Just to stop us making errors with registration.
             if cls.native_module().is_some() {
@@ -232,7 +242,7 @@ impl VM {
         self.initialise_class(jls.clone())?;
 
         {
-            let statics = jls.to_ref().statics();
+            let statics = jls.unwrap_ref().statics();
             let mut statics = statics.write();
             let field = statics.get_mut(&"COMPACT_STRINGS".to_string()).unwrap();
 
@@ -249,7 +259,7 @@ impl VM {
         // self.initialise_class(thread_class.clone())?;
 
         let thread = BuiltinThread {
-            object: Object::new(thread_class.clone(), thread_class.to_ref().super_class()),
+            object: Object::new(thread_class.clone(), thread_class.unwrap_ref().super_class()),
             name: intern_string("main".to_string())?,
             priority: 0,
             daemon: 0,
@@ -260,7 +270,7 @@ impl VM {
             thread_group: RefTo::new(BuiltinThreadGroup {
                 object: Object::new(
                     thread_group_class.clone(),
-                    thread_group_class.to_ref().super_class(),
+                    thread_group_class.unwrap_ref().super_class(),
                 ),
                 parent: RefTo::null(),
                 name: intern_string("main".to_string())?,

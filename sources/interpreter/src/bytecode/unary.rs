@@ -241,7 +241,7 @@ impl Instruction for InstanceOf {
         //  The run-time constant pool entry at the index must be a symbolic reference to a class, array, or interface type
         let ty: ConstantClass = ctx
             .class
-            .to_ref()
+            .unwrap_ref()
             .class_file()
             .constant_pool
             .address(self.type_index)
@@ -253,7 +253,7 @@ impl Instruction for InstanceOf {
             .class_loader
             .for_name(ty_class_name.clone())?;
 
-        let class_name = val.to_ref().class.to_ref().name().clone();
+        let class_name = val.unwrap_ref().class.unwrap_ref().name().clone();
 
         if ty_class_name == class_name {
             ctx.operands.push(RuntimeValue::Integral(1_i32.into()))
@@ -285,7 +285,7 @@ impl Instruction for CheckCast {
         //  The run-time constant pool entry at the index must be a symbolic reference to a class, array, or interface type
         let other: ConstantClass = ctx
             .class
-            .to_ref()
+            .unwrap_ref()
             .class_file()
             .constant_pool
             .address(self.type_index)
@@ -300,10 +300,10 @@ impl Instruction for CheckCast {
         // TODO: Support interface type checking etc
 
         let val_class = {
-            val.to_ref().class.to_ref()
+            val.unwrap_ref().class.unwrap_ref()
         };
 
-        if val_class.is_assignable_to(other_class.to_ref()) {
+        if val_class.is_assignable_to(other_class.unwrap_ref()) {
             ctx.operands.push(RuntimeValue::Object(val.clone()));
         } else {
             // TODO: Throw class cast exception

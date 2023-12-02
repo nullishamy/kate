@@ -7,19 +7,22 @@ use crate::object::{mem::RefTo, builtins::Class, runtime::RuntimeValue};
 pub enum VMError {
     ArrayIndexOutOfBounds {
         at: i64
-    }
+    },
+    NullPointerException
 }
 
 impl VMError {
     pub fn class_name(&self) -> &'static str {
         match self {
             VMError::ArrayIndexOutOfBounds { .. } => "java/lang/ArrayIndexOutOfBoundsException",
+            VMError::NullPointerException => "java/lang/NullPointerException",
         }
     }
 
     pub fn message(&self) -> String {
         let ctx = match self {
             VMError::ArrayIndexOutOfBounds { at } => format!("OOB @ {}", at),
+            VMError::NullPointerException => format!("NPE"),
         };
 
         format!("{}: {}", self.class_name(), ctx)
