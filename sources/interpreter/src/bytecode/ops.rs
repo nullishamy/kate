@@ -330,7 +330,7 @@ impl Instruction for ArrayStore {
                     let value = value.as_integral().expect("array store exception").value;
                     array[index.value as usize] = value as Int
                 }
-                ty => panic!("cannot encode {:#?}", ty),
+                ty => return Err(internal!("cannot encode {:#?}", ty))
             },
         };
 
@@ -397,7 +397,7 @@ impl Instruction for ArrayLoad {
                 // ArrayPrimitive::Short => todo!(),
                 // ArrayPrimitive::Int => todo!(),
                 // ArrayPrimitive::Long => todo!(),
-                ty => panic!("cannot encode {:#?}", ty),
+                ty => return Err(internal!("cannot encode {:#?}", ty))
             },
         };
 

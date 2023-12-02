@@ -27,6 +27,7 @@ impl FromStr for VmOption {
 pub mod opts {
     pub const TEST_INIT: &str = "test.init";
     pub const TEST_BOOT: &str = "test.boot";
+    pub const TEST_THROW_INTERNAL: &str = "test.throwinternal";
 }
 
 #[derive(Parser)]

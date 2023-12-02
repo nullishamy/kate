@@ -242,7 +242,7 @@ impl Instruction for GetField {
                         objectref.unwrap_ref().field((name, descriptor)).unwrap();
                     RuntimeValue::Integral(field.copy_out().into())
                 }
-                BaseType::Void => panic!("cannot read void field"),
+                BaseType::Void => return Err(internal!("cannot read void field")),
             },
             FieldType::Object(_) => {
                 let field: FieldRef<RefTo<Object>> =
@@ -422,9 +422,10 @@ impl Instruction for GetStatic {
                 break;
             } else {
                 let sup = cls.unwrap_ref().super_class();
-                // We searched every class and could not find the static
+                // We searched every class and could not find the static, this is a fault with the classfile
+                // or our parser / layout mechanisms
                 if sup.is_null() {
-                    panic!("could not locate static field in class or super class(es)");
+                    return Err(internal!("could not locate static field in class or super class(es)"));
                 }
 
                 vm.initialise_class(sup.clone())?;

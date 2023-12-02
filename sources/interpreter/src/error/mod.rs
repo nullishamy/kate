@@ -22,7 +22,7 @@ impl VMError {
     pub fn message(&self) -> String {
         let ctx = match self {
             VMError::ArrayIndexOutOfBounds { at } => format!("OOB @ {}", at),
-            VMError::NullPointerException => format!("NPE"),
+            VMError::NullPointerException => "NPE".to_string(),
         };
 
         format!("{}: {}", self.class_name(), ctx)

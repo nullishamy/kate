@@ -118,12 +118,13 @@ pub fn expected() -> Execution {
 }
 
 pub fn state() -> State {
-    State { init_std: false }
+    State { init_std: false, opts: vec![] }
 }
 
 #[derive(Debug)]
 pub struct State {
     init_std: bool,
+    opts: Vec<(&'static str, &'static str)>
 }
 
 impl State {
@@ -133,6 +134,11 @@ impl State {
 
     pub fn init_std(mut self) -> Self {
         self.init_std = true;
+        self
+    }
+
+    pub fn opt(mut self, key: &'static str, value: &'static str) -> Self {
+        self.opts.push((key, value));
         self
     }
 }
@@ -151,6 +157,10 @@ pub fn execute(state: State, class_name: String) -> Result<Execution, Error> {
 
     if state.init_std {
         exec.arg("-Dtest.boot=true");
+    }
+
+    for (key, value) in state.opts {
+        exec.arg(format!("-D{}={}", key, value));
     }
 
     let output = exec.output()?;

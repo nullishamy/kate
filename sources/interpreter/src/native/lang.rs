@@ -63,7 +63,7 @@ impl NativeModule for LangClass {
                 "char" => ClassFileLayout::from_java_type(types::CHAR),
                 "long" => ClassFileLayout::from_java_type(types::LONG),
                 "boolean" => ClassFileLayout::from_java_type(types::BOOL),
-                p => panic!("unknown primitive {}", p),
+                p => return Err(internal!("unknown primitive {}", p)),
             };
 
             let cls = RefTo::new(Class::new_primitive(

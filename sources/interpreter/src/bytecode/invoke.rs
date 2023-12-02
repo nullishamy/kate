@@ -738,7 +738,7 @@ impl Instruction for New {
                     BaseType::Long => unsafe {
                         field_start.cast::<Long>().write(0);
                     },
-                    BaseType::Void => panic!("cannot write default for void"),
+                    BaseType::Void => return Err(internal!("cannot read void field")),
                 },
                 FieldType::Object(_) => {
                     unsafe { field_start.cast::<RefTo<Object>>().write(RefTo::null()) };

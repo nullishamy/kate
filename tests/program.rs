@@ -81,3 +81,28 @@ pub fn exit_arbitrary() -> TestResult {
 
     Ok(())
 }
+
+#[test]
+pub fn internal_error() -> TestResult {
+    let state = state().init().opt("test.throwinternal", "true");
+
+    let source = using_main(
+        "InternalError",
+        r#"
+        assertNotReached();
+        "#,
+    );
+
+    let got = execute(state, inline(source)?)?;
+    let expected = expected()
+        .with_exit(1)
+        .with_output("/----------------------------------------------------------\\")
+        .with_output("|The VM encountered an unrecoverable error and had to abort.|")
+        .with_output("\\----------------------------------------------------------/")
+        .with_output("Uncaught exception in main: testing, internal errors")
+        .with_output("  at InternalError.main");
+
+    compare(got, expected);
+
+    Ok(())
+}

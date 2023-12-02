@@ -1,5 +1,6 @@
 use std::{cell::RefCell, process::exit};
 
+use anyhow::anyhow;
 use args::Cli;
 use clap::Parser;
 use interpreter::{
@@ -13,7 +14,7 @@ use interpreter::{
         mem::{FieldRef, RefTo},
         runtime::RuntimeValue,
     },
-    static_method, Context, VM,
+    static_method, Context, VM, ThrownState,
 };
 use parse::attributes::CodeAttribute;
 use support::encoding::{decode_string, CompactEncoding};
@@ -263,9 +264,19 @@ fn main() {
         };
 
         info!("Entering main");
-        let res = vm.run(ctx);
+        let res = if args.has_option(opts::TEST_THROW_INTERNAL) {
+            Err((Throwable::Internal(anyhow!("testing, internal errors")), ThrownState { pc: -1 }))
+        } else {
+            vm.run(ctx)
+        };
 
         if let Err((e, _)) = res {
+            if let Throwable::Internal(_) = e {
+                println!("/----------------------------------------------------------\\");
+                println!("|The VM encountered an unrecoverable error and had to abort.|");
+                println!("\\----------------------------------------------------------/");
+            }
+
             println!("Uncaught exception in main: {}", e);
 
             if let Throwable::Runtime(err) = e {

@@ -5,13 +5,13 @@ use crate::{
     arg,
     error::Throwable,
     object::{
-        numeric::{Floating, FloatingType, Integral, IntegralType}, runtime::RuntimeValue,
+        numeric::{Floating, FloatingType, Integral, IntegralType},
+        runtime::RuntimeValue,
     },
-    pop, Context, VM,
+    pop, Context, VM, internal,
 };
 use anyhow::Context as AnyhowContext;
 use parse::{classfile::Resolvable, pool::ConstantClass};
-
 
 macro_rules! unop {
     // Generic value transformation
@@ -249,9 +249,7 @@ impl Instruction for InstanceOf {
 
         // TODO: Properly check the types
         let ty_class_name = ty.name.resolve().string();
-        let _ty_class = vm
-            .class_loader
-            .for_name(ty_class_name.clone())?;
+        let _ty_class = vm.class_loader.for_name(ty_class_name.clone())?;
 
         let class_name = val.unwrap_ref().class.unwrap_ref().name().clone();
 
@@ -293,25 +291,21 @@ impl Instruction for CheckCast {
 
         // TODO: Properly check the types
         let other_class_name = other.name.resolve().string();
-        let other_class = vm
-            .class_loader
-            .for_name(other_class_name.clone())?;
+        let other_class = vm.class_loader.for_name(other_class_name.clone())?;
 
         // TODO: Support interface type checking etc
 
-        let val_class = {
-            val.unwrap_ref().class.unwrap_ref()
-        };
+        let val_class = { val.unwrap_ref().class.unwrap_ref() };
 
         if val_class.is_assignable_to(other_class.unwrap_ref()) {
             ctx.operands.push(RuntimeValue::Object(val.clone()));
         } else {
             // TODO: Throw class cast exception
-            panic!(
+            return Err(internal!(
                 "invalid cast from {} to {}",
                 val_class.name(),
                 other_class_name
-            );
+            ));
         }
 
         Ok(Progression::Next)
