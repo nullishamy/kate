@@ -1,7 +1,5 @@
-
-
 use std::{
-    fs::{File},
+    fs::File,
     io::{Error, Write},
     path::PathBuf,
     process::Command,
@@ -120,14 +118,12 @@ pub fn expected() -> Execution {
 }
 
 pub fn state() -> State {
-    State {
-        init_std: false
-    }
+    State { init_std: false }
 }
 
 #[derive(Debug)]
 pub struct State {
-    init_std: bool
+    init_std: bool,
 }
 
 impl State {
@@ -150,11 +146,11 @@ pub fn execute(state: State, class_name: String) -> Result<Execution, Error> {
         .arg("--")
         .arg("--cp")
         .arg(TMP_DIR)
-        .arg("--test")
+        .arg("-Dtest.init=true")
         .arg(class_name);
 
     if state.init_std {
-        exec.arg("--boot-system");
+        exec.arg("-Dtest.boot=true");
     }
 
     let output = exec.output()?;

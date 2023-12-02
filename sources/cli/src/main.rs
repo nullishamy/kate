@@ -20,6 +20,8 @@ use support::encoding::{decode_string, CompactEncoding};
 use tracing::{error, info, Level};
 use tracing_subscriber::fmt;
 
+use crate::args::opts;
+
 mod args;
 
 fn test_init(cls: RefTo<Class>) {
@@ -103,6 +105,8 @@ fn test_init(cls: RefTo<Class>) {
         if cls.native_module().is_none() {
             cls.set_native_module(Box::new(RefCell::new(DefaultNativeModule::new(
                 // Leaking is fine. The class that spawned the test will live for the whole test.
+                // We need this because the class name is required to be a &'static str, just so we can use
+                // string literals without worrying about lifetimes
                 cls.name().clone().leak(),
             ))));
         }
@@ -110,6 +114,62 @@ fn test_init(cls: RefTo<Class>) {
         let module = cls.native_module().as_ref().unwrap();
         let mut module = module.borrow_mut();
         module.set_method("print", printer.0, printer.1);
+    }
+}
+
+fn boot_system(vm: &mut VM, cls: RefTo<Class>) {
+    info!("Booting system");
+
+    let java_lang_system = vm
+        .class_loader
+        .for_name("java/lang/System".to_string())
+        .unwrap();
+
+    let init_phase_1 = java_lang_system
+        .to_ref()
+        .class_file()
+        .methods
+        .locate("initPhase1".to_string(), "()V".to_string())
+        .cloned()
+        .unwrap();
+
+    let code = init_phase_1
+        .attributes
+        .known_attribute::<CodeAttribute>(&cls.to_ref().class_file().constant_pool)
+        .unwrap();
+
+    let ctx = Context {
+        class: java_lang_system,
+        code,
+        operands: vec![],
+        locals: vec![],
+        pc: 0,
+    };
+
+    let res = vm.run(ctx);
+    if let Err((e, _)) = res {
+        println!("Uncaught exception when booting system: {}", e);
+
+        if let Throwable::Runtime(err) = e {
+            for source in err.sources.iter().rev() {
+                println!("  {}", source);
+            }
+        } else if let Throwable::Internal(_) = e {
+            for source in vm.frames.iter().rev() {
+                println!("  {}", source);
+            }
+        }
+
+        println!(
+            "  {}",
+            Frame {
+                class_name: "java/lang/System".to_string(),
+                method_name: "initPhase1".to_string()
+            }
+        );
+        exit(1);
+    } else {
+        info!("Booted system")
     }
 }
 
@@ -125,7 +185,7 @@ fn main() {
         .with_source_location(true)
         .compact();
 
-    if args.test {
+    if args.has_option(opts::TEST_INIT) {
         format = format.with_ansi(false).with_source_location(false);
     }
 
@@ -149,7 +209,7 @@ fn main() {
         .add_path(format!("{source_root}/../../std/java.base"))
         .add_path(format!("{source_root}/../../samples"));
 
-    for cp in args.classpath {
+    for cp in &args.classpath {
         class_loader.add_path(cp);
     }
 
@@ -172,86 +232,14 @@ fn main() {
 
     info!("Bootstrap complete");
 
-    for class_name in args.classes {
+    for class_name in &args.classes {
         let cls = vm.class_loader.for_name(class_name.clone()).unwrap();
-        if args.test {
+        if args.has_option(opts::TEST_INIT) {
             test_init(cls.clone());
         }
 
-        {
-            let module = cls.to_ref().native_module().as_ref().unwrap();
-            let mut module = module.borrow_mut();
-            module.set_method(
-                "getValue",
-                "(Ljava/lang/String;)[B",
-                NativeFunction::Static(Box::new(|_, args, _| {
-                    let str = args.get(0).unwrap().clone();
-                    let str = str.as_object().unwrap();
-                    let value: FieldRef<RefTo<Array<u8>>> = str
-                        .to_ref()
-                        .field(("value".to_string(), "[B".to_string()))
-                        .unwrap();
-
-                    let value = value.to_ref().clone();
-                    Ok(Some(RuntimeValue::Object(value.erase())))
-                })),
-            );
-        }
-
-        if args.boot_system {
-            info!("Booting system");
-
-            let java_lang_system = vm
-                .class_loader
-                .for_name("java/lang/System".to_string())
-                .unwrap();
-
-            let init_phase_1 = java_lang_system
-                .to_ref()
-                .class_file()
-                .methods
-                .locate("initPhase1".to_string(), "()V".to_string())
-                .cloned()
-                .unwrap();
-
-            let code = init_phase_1
-                .attributes
-                .known_attribute::<CodeAttribute>(&cls.to_ref().class_file().constant_pool)
-                .unwrap();
-
-            let ctx = Context {
-                class: java_lang_system,
-                code,
-                operands: vec![],
-                locals: vec![],
-                pc: 0,
-            };
-
-            let res = vm.run(ctx);
-            if let Err((e, _)) = res {
-                println!("Uncaught exception when booting system: {}", e);
-
-                if let Throwable::Runtime(err) = e {
-                    for source in err.sources.iter().rev() {
-                        println!("  {}", source);
-                    }
-                } else if let Throwable::Internal(_) = e {
-                    for source in vm.frames.iter().rev() {
-                        println!("  {}", source);
-                    }
-                }
-
-                println!(
-                    "  {}",
-                    Frame {
-                        class_name: "java/lang/System".to_string(),
-                        method_name: "initPhase1".to_string()
-                    }
-                );
-                exit(1);
-            } else {
-                info!("Booted system")
-            }
+        if args.has_option(opts::TEST_BOOT) {
+            boot_system(&mut vm, cls.clone());
         }
 
         let method = cls
@@ -289,7 +277,7 @@ fn main() {
             println!(
                 "  {}",
                 Frame {
-                    class_name,
+                    class_name: class_name.to_string(),
                     method_name: "main".to_string()
                 }
             );

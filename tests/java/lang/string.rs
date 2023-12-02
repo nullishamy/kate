@@ -1,4 +1,4 @@
-use crate::util::{TestResult, state, builder::{using_relative}, execute, expected, compare, compile_abs};
+use crate::util::{TestResult, state, builder::using_relative, execute, expected, compare, compile_abs};
 
 #[test]
 pub fn is_empty() -> TestResult {
