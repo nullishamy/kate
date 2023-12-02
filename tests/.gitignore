@@ -1,0 +1,3 @@
+# Ignore the locally cloned openjdk repo
+# This will be removed eventually, when the suite has been copied over.
+openjdk/
