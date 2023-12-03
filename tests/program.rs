@@ -24,6 +24,27 @@ pub fn hello_world() -> TestResult {
     Ok(())
 }
 
+// Previously, we had to use `print` because the newline prop hadn't been set.
+// This should be operational now, so test it separately.
+#[test]
+pub fn hello_world_println() -> TestResult {
+    let state = state().init().init_std();
+
+    let source = using_main(
+        "HelloWorldLN",
+        r#"
+        System.out.println("Hello, World!");
+        "#,
+    );
+
+    let got = execute(state, inline(source)?)?;
+    let expected = expected().has_success().with_output("Hello, World!");
+
+    compare(got, expected);
+
+    Ok(())
+}
+
 #[test]
 pub fn exit_success() -> TestResult {
     let state = state().init();
