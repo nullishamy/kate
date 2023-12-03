@@ -117,12 +117,12 @@ macro_rules! address {
 
                 match value {
                     ConstantEntry::$enum(data) => Ok(data.clone()),
-                    _ => panic!(
+                    _ => return Err(anyhow::anyhow!(
                         "expected {} got type {:#?} @ {}",
                         stringify!($enum),
                         value,
                         self.index
-                    ),
+                    )),
                 }
             }
         }

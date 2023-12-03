@@ -126,7 +126,7 @@ fn boot_system(vm: &mut VM, cls: RefTo<Class>) {
         .for_name("java/lang/System".to_string())
         .unwrap();
 
-    let init_phase_1 = java_lang_system
+    let ip1 = java_lang_system
         .unwrap_ref()
         .class_file()
         .methods
@@ -134,7 +134,7 @@ fn boot_system(vm: &mut VM, cls: RefTo<Class>) {
         .cloned()
         .unwrap();
 
-    let code = init_phase_1
+    let code = ip1
         .attributes
         .known_attribute::<CodeAttribute>(&cls.unwrap_ref().class_file().constant_pool)
         .unwrap();

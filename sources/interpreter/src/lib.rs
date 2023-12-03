@@ -9,7 +9,7 @@ use bytes::BytesMut;
 
 use error::{Frame, Throwable, VMError};
 use object::{
-    builtins::{BuiltinString, Class, Object},
+    builtins::{Class, Object},
     loader::ClassLoader,
     mem::RefTo,
     runtime::RuntimeValue,
@@ -19,10 +19,8 @@ use parse::attributes::CodeAttribute;
 use tracing::{debug, info, trace};
 
 use crate::object::{
-    builtins::Array,
+    builtins::{BuiltinThread, BuiltinThreadGroup},
     interner::intern_string,
-    layout::types::{Bool, Int, Long},
-    mem::HasObjectHeader,
 };
 
 pub mod bytecode;
@@ -250,12 +248,12 @@ impl VM {
 
         // Init thread
         let thread_class = self.class_loader.for_name("java/lang/Thread".to_string())?;
-        // self.initialise_class(thread_class.clone())?;
+        self.initialise_class(thread_class.clone())?;
 
         let thread_group_class = self
             .class_loader
             .for_name("java/lang/ThreadGroup".to_string())?;
-        // self.initialise_class(thread_class.clone())?;
+        self.initialise_class(thread_class.clone())?;
 
         let thread = BuiltinThread {
             object: Object::new(thread_class.clone(), thread_class.unwrap_ref().super_class()),
@@ -299,72 +297,6 @@ impl VM {
         self.main_thread = thread_ref.erase();
 
         Ok(())
-    }
-}
-
-#[repr(C)]
-#[derive(Debug)]
-struct BuiltinThread {
-    object: Object,
-
-    name: RefTo<BuiltinString>,
-    priority: Int,
-    daemon: Bool,
-    interrupted: Bool,
-    stillborn: Bool,
-    eetop: Long,
-    target: RefTo<Object>,
-    thread_group: RefTo<BuiltinThreadGroup>,
-    context_class_loader: RefTo<Object>,
-    inherited_access_control_context: RefTo<Object>,
-    thread_locals: RefTo<Object>,
-    inheritable_thread_locals: RefTo<Object>,
-    stack_size: Long,
-    tid: Long,
-    status: Int,
-    park_blocker: RefTo<Object>,
-    uncaught_exception_handler: RefTo<Object>,
-
-    thread_local_random_seed: Int,
-    thread_local_random_probe: Int,
-    thread_local_random_secondary_seed: Int,
-}
-
-impl HasObjectHeader<BuiltinThread> for BuiltinThread {
-    fn header(&self) -> &Object {
-        &self.object
-    }
-
-    fn header_mut(&mut self) -> &mut Object {
-        &mut self.object
-    }
-}
-#[repr(C)]
-#[derive(Debug)]
-struct BuiltinThreadGroup {
-    object: Object,
-
-    parent: RefTo<BuiltinThreadGroup>,
-    name: RefTo<BuiltinString>,
-    max_priority: Int,
-    destroyed: Bool,
-    daemon: Bool,
-    n_unstarted_threads: Int,
-
-    n_threads: Int,
-    threads: RefTo<Array<RefTo<Object>>>,
-
-    n_groups: Int,
-    groups: RefTo<Array<RefTo<Object>>>,
-}
-
-impl HasObjectHeader<BuiltinThreadGroup> for BuiltinThreadGroup {
-    fn header(&self) -> &Object {
-        &self.object
-    }
-
-    fn header_mut(&mut self) -> &mut Object {
-        &mut self.object
     }
 }
 

@@ -40,7 +40,7 @@ pub struct Cli {
     /// The classes to execute
     pub classes: Vec<String>,
 
-    #[arg(short('D'))]
+    #[arg(short('X'))]
     pub options: Vec<VmOption>,
 
     // TODO: Make this a short("cp") once we can: https://github.com/clap-rs/clap/issues/2468

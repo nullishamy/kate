@@ -152,15 +152,15 @@ pub fn execute(state: State, class_name: String) -> Result<Execution, Error> {
         .arg("--")
         .arg("--cp")
         .arg(TMP_DIR)
-        .arg("-Dtest.init=true")
+        .arg("-Xtest.init=true")
         .arg(class_name);
 
     if state.init_std {
-        exec.arg("-Dtest.boot=true");
+        exec.arg("-Xtest.boot=true");
     }
 
     for (key, value) in state.opts {
-        exec.arg(format!("-D{}={}", key, value));
+        exec.arg(format!("-X{}={}", key, value));
     }
 
     let output = exec.output()?;

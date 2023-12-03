@@ -1,10 +1,11 @@
 use std::{
     alloc::Layout,
+    cell::RefCell,
     collections::HashMap,
     fmt,
     marker::PhantomData,
     mem::{offset_of, size_of},
-    sync::atomic::{AtomicU64, Ordering}, cell::RefCell,
+    sync::atomic::{AtomicU64, Ordering},
 };
 
 use parking_lot::RwLock;
@@ -518,5 +519,71 @@ impl HasObjectHeader<Object> for Object {
 
     fn header(&self) -> &Object {
         self
+    }
+}
+
+#[repr(C)]
+#[derive(Debug)]
+pub struct BuiltinThread {
+    pub object: Object,
+
+    pub name: RefTo<BuiltinString>,
+    pub priority: types::Int,
+    pub daemon: types::Bool,
+    pub interrupted: types::Bool,
+    pub stillborn: types::Bool,
+    pub eetop: types::Long,
+    pub target: RefTo<Object>,
+    pub thread_group: RefTo<BuiltinThreadGroup>,
+    pub context_class_loader: RefTo<Object>,
+    pub inherited_access_control_context: RefTo<Object>,
+    pub thread_locals: RefTo<Object>,
+    pub inheritable_thread_locals: RefTo<Object>,
+    pub stack_size: types::Long,
+    pub tid: types::Long,
+    pub status: types::Int,
+    pub park_blocker: RefTo<Object>,
+    pub uncaught_exception_handler: RefTo<Object>,
+
+    pub thread_local_random_seed: types::Int,
+    pub thread_local_random_probe: types::Int,
+    pub thread_local_random_secondary_seed: types::Int,
+}
+
+impl HasObjectHeader<BuiltinThread> for BuiltinThread {
+    fn header(&self) -> &Object {
+        &self.object
+    }
+
+    fn header_mut(&mut self) -> &mut Object {
+        &mut self.object
+    }
+}
+#[repr(C)]
+#[derive(Debug)]
+pub struct BuiltinThreadGroup {
+    pub object: Object,
+
+    pub parent: RefTo<BuiltinThreadGroup>,
+    pub name: RefTo<BuiltinString>,
+    pub max_priority: types::Int,
+    pub destroyed: types::Bool,
+    pub daemon: types::Bool,
+    pub n_unstarted_threads: types::Int,
+
+    pub n_threads: types::Int,
+    pub threads: RefTo<Array<RefTo<Object>>>,
+
+    pub n_groups: types::Int,
+    pub groups: RefTo<Array<RefTo<Object>>>,
+}
+
+impl HasObjectHeader<BuiltinThreadGroup> for BuiltinThreadGroup {
+    fn header(&self) -> &Object {
+        &self.object
+    }
+
+    fn header_mut(&mut self) -> &mut Object {
+        &mut self.object
     }
 }
