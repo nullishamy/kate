@@ -634,7 +634,7 @@ mod instruction {
 #[cfg(test)]
 mod exceptions {
     use crate::util::{
-        builder::{using_main},
+        builder::using_main,
         compare, execute, expected, inline, state, TestResult,
     };
 

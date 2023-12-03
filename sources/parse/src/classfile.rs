@@ -6,7 +6,7 @@ use crate::{
         ConstantUtf8,
     },
 };
-use anyhow::{Result};
+use anyhow::Result;
 use parking_lot::RwLock;
 use std::{
     fmt,

@@ -1,7 +1,7 @@
 mod util;
 
 use crate::util::{
-    builder::{direct, using_main},
+    builder::using_main,
     compare, execute, expected, inline, state, TestResult,
 };
 
