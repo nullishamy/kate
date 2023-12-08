@@ -230,20 +230,35 @@ impl VM {
         load_module(self, jdk::JdkUnsafe::new());
         load_module(self, jdk::JdkSignal::new());
         load_module(self, jdk::JdkScopedMemoryAccess::new());
+        load_module(self, jdk::JdkBootLoader::new());
 
         load_module(self, io::IOFileDescriptor::new());
         load_module(self, io::IOFileOutputStream::new());
+        load_module(self, security::SecurityAccessController::new());
 
         // Init String so that we can set the static after it's done. The clinit sets it to a default.
-        let jls = self.class_loader.for_name("java/lang/String".to_string())?;
-        self.initialise_class(jls.clone())?;
+        let jlstr = self.class_loader.for_name("java/lang/String".to_string())?;
+        self.initialise_class(jlstr.clone())?;
+
+        // Load up System so that we can set up the statics
+        let jlsys = self.class_loader.for_name("java/lang/System".to_string())?;
 
         {
-            let statics = jls.unwrap_ref().statics();
+            let statics = jlstr.unwrap_ref().statics();
             let mut statics = statics.write();
-            let field = statics.get_mut(&"COMPACT_STRINGS".to_string()).unwrap();
+            let field = statics.get_mut("COMPACT_STRINGS").unwrap();
 
             field.value = Some(RuntimeValue::Integral(0_i32.into()));
+        }
+
+        {
+            let statics = jlsys.unwrap_ref().statics();
+            let mut statics = statics.write();
+            // indicates if a security manager is possible
+            // private static final int NEVER = 1;
+            let field = statics.get_mut(&"allowSecurityManager".to_string()).unwrap();
+
+            field.value = Some(RuntimeValue::Integral(1_i32.into()));
         }
 
         // Init thread
@@ -258,7 +273,7 @@ impl VM {
         let thread = BuiltinThread {
             object: Object::new(thread_class.clone(), thread_class.unwrap_ref().super_class()),
             name: intern_string("main".to_string())?,
-            priority: 0,
+            priority: 1,
             daemon: 0,
             interrupted: 0,
             stillborn: 0,
