@@ -263,7 +263,6 @@ impl NativeModule for JdkSystemPropsRaw {
                 vec![
                     intern_string("java.home".to_string())?,
                     intern_string("unknown".to_string())?,
-
                     intern_string("native.encoding".to_string())?,
                     intern_string("UTF-8".to_string())?,
                     RefTo::null(),
@@ -296,13 +295,14 @@ impl NativeModule for JdkSystemPropsRaw {
             arr[fields::FILE_SEPARATOR_NDX] = intern_string("/".to_string())?;
 
             // TODO: Resolve these
-            arr[fields::USER_HOME_NDX] = intern_string("~".to_string())?;
-            arr[fields::USER_DIR_NDX] = intern_string("~".to_string())?;
+            arr[fields::USER_HOME_NDX] = intern_string("/GARBAGE".to_string())?;
+            arr[fields::USER_DIR_NDX] = intern_string("/GARABAGE".to_string())?;
 
             // TODO: Actual username
             arr[fields::USER_NAME_NDX] = intern_string("admin".to_string())?;
 
             arr[fields::FILE_ENCODING_NDX] = intern_string("UTF-8".to_string())?;
+            arr[fields::SUN_JNU_ENCODING_NDX] = intern_string("UTF-8".to_string())?;
 
             let array: RefTo<Array<RefTo<BuiltinString>>> = Array::from_vec(
                 ArrayType::Object(interner_meta_class()),
@@ -783,16 +783,33 @@ impl NativeModule for JdkSignal {
     }
 }
 
-/*
-
-impl NativeModule for Signal {
-    fn methods() -> Vec<(super::NameAndDescriptor, NativeFunction)> {
-        vec![
-        ]
+module_base!(JdkBootLoader);
+impl NativeModule for JdkBootLoader {
+    fn classname(&self) -> &'static str {
+        "jdk/internal/loader/BootLoader"
     }
 
-    fn classname() -> &'static str {
-        "jdk/internal/misc/Signal"
+    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+        &self.methods
+    }
+
+    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+        &mut self.methods
+    }
+
+    fn init(&mut self) {
+        fn set_boot_loader_unnamed_module0(
+            _: RefTo<Class>,
+            _: Vec<RuntimeValue>,
+            _: &mut VM,
+        ) -> Result<Option<RuntimeValue>, Throwable> {
+            Ok(None)
+        }
+
+        self.set_method(
+            "setBootLoaderUnnamedModule0",
+            "(Ljava/lang/Module;)V",
+            static_method!(set_boot_loader_unnamed_module0),
+        );
     }
 }
-*/
