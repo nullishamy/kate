@@ -1,19 +1,20 @@
 use std::{collections::HashMap, process::exit, time::SystemTime};
 
 use support::encoding::{decode_string, CompactEncoding};
+use tracing::warn;
 
 use crate::{
     error::Throwable,
     instance_method, internal, module_base,
     object::{
-        builtins::{BuiltinString, Class, Object, ArrayType, ArrayPrimitive, Array},
+        builtins::{Array, ArrayPrimitive, ArrayType, BuiltinString, Class, Object},
         interner::intern_string,
         layout::{
             types::{self},
             ClassFileLayout,
         },
         mem::RefTo,
-        numeric::TRUE,
+        numeric::{TRUE, FALSE},
         runtime::RuntimeValue,
     },
     static_method, VM,
@@ -50,8 +51,10 @@ impl NativeModule for LangClass {
             let prim_name = unsafe { prim_name.cast::<BuiltinString>() };
 
             let bytes = prim_name.unwrap_ref().value.unwrap_ref().slice().to_vec();
-            let prim_str =
-                decode_string((CompactEncoding::from_coder(prim_name.unwrap_ref().coder), bytes))?;
+            let prim_str = decode_string((
+                CompactEncoding::from_coder(prim_name.unwrap_ref().coder),
+                bytes,
+            ))?;
             let jlc = vm.class_loader.for_name("java/lang/Class".to_string())?;
             let jlo = vm.class_loader.for_name("java/lang/Object".to_string())?;
 
@@ -316,22 +319,18 @@ impl NativeModule for LangSystem {
                     .expect("no arg 0 (src)")
                     .as_object()
                     .expect("not an object"),
-
                 args.get(1)
                     .expect("no arg 1 (src_pos)")
                     .as_integral()
                     .expect("not an integral"),
-
                 args.get(2)
                     .expect("no arg 2 (dest)")
                     .as_object()
                     .expect("not an object"),
-
                 args.get(3)
                     .expect("no arg 3 (dest_pos)")
                     .as_integral()
                     .expect("not an integral"),
-
                 args.get(4)
                     .expect("no arg 4 (len)")
                     .as_integral()
@@ -351,8 +350,9 @@ impl NativeModule for LangSystem {
             let src_component = src_ty.component_type().unwrap();
             let dest_component = dest_ty.component_type().unwrap();
 
+            // FIXME: Check these properly
             if src_component != dest_component {
-                panic!("array store exception")
+                warn!("maybe array store exception")
             }
 
             if src_pos < 0 {
@@ -372,7 +372,15 @@ impl NativeModule for LangSystem {
             let len = len as usize;
 
             match src_component {
-                ArrayType::Object(_) => todo!(),
+                ArrayType::Object(_) => {
+                    let src = unsafe { src.cast::<Array<RefTo<Object>>>() };
+                    let src_slice = src.unwrap_mut().slice_mut();
+
+                    let dest = unsafe { dest.cast::<Array<RefTo<Object>>>() };
+                    let dest_slice = dest.unwrap_mut().slice_mut();
+                    dest_slice[dest_pos..dest_pos + len]
+                        .clone_from_slice(&src_slice[src_pos..src_pos + len]);
+                }
                 ArrayType::Primitive(ty) => match ty {
                     ArrayPrimitive::Bool => {
                         let src = unsafe { src.cast::<Array<Bool>>() };
@@ -513,7 +521,9 @@ impl NativeModule for LangObject {
             _: Vec<RuntimeValue>,
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
-            Ok(Some(RuntimeValue::Object(this.unwrap_ref().class().erase())))
+            Ok(Some(RuntimeValue::Object(
+                this.unwrap_ref().class().erase(),
+            )))
         }
 
         self.set_method(
@@ -755,6 +765,39 @@ impl NativeModule for LangThread {
         }
 
         self.set_method("registerNatives", "()V", static_method!(register_natives));
+
+        fn is_alive(
+            _: RefTo<Object>,
+            _: Vec<RuntimeValue>,
+            _: &mut VM,
+        ) -> Result<Option<RuntimeValue>, Throwable> {
+            // TODO: Would check in a real thread.
+            Ok(Some(RuntimeValue::Integral(FALSE)))
+        }
+
+        self.set_method("isAlive", "()Z", instance_method!(is_alive));
+
+        fn start0(
+            _: RefTo<Object>,
+            _: Vec<RuntimeValue>,
+            _: &mut VM,
+        ) -> Result<Option<RuntimeValue>, Throwable> {
+            // TODO: Start a thread here
+            Ok(None)
+        }
+
+        self.set_method("start0", "()V", instance_method!(start0));
+
+        fn set_priority0(
+            _: RefTo<Object>,
+            _: Vec<RuntimeValue>,
+            _: &mut VM,
+        ) -> Result<Option<RuntimeValue>, Throwable> {
+            // TODO: Would set the actual priority on a thread
+            Ok(None)
+        }
+
+        self.set_method("setPriority0", "(I)V", instance_method!(set_priority0));
 
         fn current_thread(
             _: RefTo<Class>,
