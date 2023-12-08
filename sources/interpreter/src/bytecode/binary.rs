@@ -176,19 +176,19 @@ binop!(Ine (int cond) => |lhs: Integral, rhs: Integral| {
 });
 
 binop!(Ile (int cond) => |lhs: Integral, rhs: Integral| {
-    lhs.value <= rhs.value
+    (lhs.value as i32) <= (rhs.value as i32)
 });
 
 binop!(Ige (int cond) => |lhs: Integral, rhs: Integral| {
-    lhs.value >= rhs.value
+    (lhs.value as i32) >= (rhs.value as i32)
 });
 
 binop!(Igt (int cond) => |lhs: Integral, rhs: Integral| {
-    lhs.value > rhs.value
+    (lhs.value as i32) > (rhs.value as i32)
 });
 
 binop!(Ilt (int cond) => |lhs: Integral, rhs: Integral| {
-    lhs.value < rhs.value
+    (lhs.value as i32) < (rhs.value as i32)
 });
 
 // Bitwise
