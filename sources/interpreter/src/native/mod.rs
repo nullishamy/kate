@@ -13,6 +13,7 @@ use crate::{
 pub mod io;
 pub mod jdk;
 pub mod lang;
+pub mod security;
 
 pub type NameAndDescriptor = (String, String);
 
