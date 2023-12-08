@@ -4,7 +4,7 @@ use crate::{
     error::Throwable,
     module_base,
     object::{
-        builtins::{Array, ArrayPrimitive, BuiltinString, Class, Object},
+        builtins::{Array, BuiltinString, Class, Object},
         interner::{intern_string, interner_meta_class},
         layout::types,
         mem::RefTo,

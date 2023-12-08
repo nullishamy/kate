@@ -342,7 +342,7 @@ impl Instruction for ArrayLoad {
         let ty = self.ty.unwrap_ref();
         let value = if ty.is_primitive() {
             match ty.name() {
-                n if { n == &types::CHAR.name } => {
+                n if { n == types::CHAR.name } => {
                     let array = arg!(ctx, "array" => Array<Char>);
                     let array = array.unwrap_ref().slice();
 
@@ -357,14 +357,14 @@ impl Instruction for ArrayLoad {
                     // TODO: Sign extension here?
                     RuntimeValue::Integral((value as i32).into())
                 }
-                n if { n == &types::DOUBLE.name } => {
+                n if { n == types::DOUBLE.name } => {
                     let array = arg!(ctx, "array" => Array<Double>);
                     let array = array.unwrap_ref().slice();
                     let value = array[index.value as usize];
 
                     RuntimeValue::Floating(value.into())
                 }
-                n if { n == &types::BYTE.name } => {
+                n if { n == types::BYTE.name } => {
                     let array = arg!(ctx, "array" => Array<Byte>);
                     let array = array.unwrap_ref().slice();
                     let value = array[index.value as usize];
@@ -372,7 +372,7 @@ impl Instruction for ArrayLoad {
                     // TODO: Sign extension here
                     RuntimeValue::Integral((value as i32).into())
                 }
-                n if { n == &types::LONG.name } => {
+                n if { n == types::LONG.name } => {
                     let array = arg!(ctx, "array" => Array<Long>);
                     let array = array.unwrap_ref().slice();
                     let value = array[index.value as usize];

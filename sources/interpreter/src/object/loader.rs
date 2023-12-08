@@ -1,6 +1,6 @@
 use std::{alloc::Layout, collections::HashMap, fs, path::PathBuf};
 
-use crate::{error::Throwable, internal, internalise, object::builtins::ArrayPrimitive};
+use crate::{error::Throwable, internal, internalise};
 
 use super::{
     builtins::{Class, Object},
@@ -8,7 +8,7 @@ use super::{
     mem::{HasObjectHeader, RefTo},
 };
 use parse::{classfile::Resolvable, parser::Parser};
-use support::descriptor::{BaseType, FieldType};
+use support::descriptor::FieldType;
 use tracing::debug;
 
 pub fn base_layout() -> Layout {

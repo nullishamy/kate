@@ -83,7 +83,7 @@ impl ClassFileLayout {
 }
 
 pub mod types {
-    use std::{alloc::Layout, ops::Deref, any::type_name};
+    use std::{alloc::Layout, ops::Deref};
 
     use support::descriptor::{BaseType, FieldType};
 

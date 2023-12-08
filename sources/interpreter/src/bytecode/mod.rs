@@ -4,8 +4,6 @@ use crate::{
     error::Throwable,
     internal,
     object::{
-        builtins::ArrayPrimitive,
-        mem::RefTo,
         runtime::RuntimeValue, layout::types,
     },
     Context, VM,

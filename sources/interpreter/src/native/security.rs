@@ -1,13 +1,10 @@
 use std::collections::HashMap;
 
 use crate::{
-    error::Throwable,
-    instance_method, module_base,
+    error::Throwable, module_base,
     object::{
-        builtins::{Array, BuiltinString, Class, Object},
-        layout::types::Int,
-        mem::{FieldRef, RefTo},
-        numeric::FALSE,
+        builtins::{Class},
+        mem::{RefTo},
         runtime::RuntimeValue,
     },
     static_method, VM,

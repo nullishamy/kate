@@ -1,6 +1,5 @@
 use std::{
     alloc::Layout,
-    borrow::BorrowMut,
     cell::RefCell,
     collections::HashMap,
     fmt,
