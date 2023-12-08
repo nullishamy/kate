@@ -7,8 +7,8 @@ use std::{
 
 pub mod builder;
 
-const TMP_DIR: &str = env!("CARGO_TARGET_TMPDIR");
-const SOURCE_DIR: &str = env!("CARGO_MANIFEST_DIR");
+pub const TMP_DIR: &str = env!("CARGO_TARGET_TMPDIR");
+pub const SOURCE_DIR: &str = env!("CARGO_MANIFEST_DIR");
 
 pub type TestResult = Result<(), Error>;
 
@@ -183,7 +183,7 @@ pub fn execute(state: State, class_name: String) -> Result<Execution, Error> {
     })
 }
 
-const ERR_LIMIT: usize = 25;
+const ERR_LIMIT: usize = 45;
 pub fn compare(got: Execution, expected: Execution) {
     // Execution of the JVM failed, log the error.
     // This includes assertion failures
