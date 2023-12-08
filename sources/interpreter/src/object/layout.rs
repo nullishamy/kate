@@ -83,7 +83,7 @@ impl ClassFileLayout {
 }
 
 pub mod types {
-    use std::{alloc::Layout, ops::Deref};
+    use std::{alloc::Layout, ops::Deref, any::type_name};
 
     use support::descriptor::{BaseType, FieldType};
 
@@ -101,6 +101,7 @@ pub mod types {
         pub alignment: Alignment,
         pub size: Size,
         pub layout: Layout,
+        pub name: &'static str
     }
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -124,28 +125,38 @@ pub mod types {
     }
 
     impl JavaType {
-        pub const fn new(layout: Layout) -> Self {
+        pub const fn new<T>(name: &'static str) -> Self {
+            let layout = Layout::new::<T>();
             Self {
                 alignment: Alignment(layout.align()),
                 size: Size(layout.size()),
+                name,
+                layout,
+            }
+        }
+
+        pub const fn from_layout(layout: Layout, name: &'static str) -> Self {
+            Self {
+                alignment: Alignment(layout.align()),
+                size: Size(layout.size()),
+                name,
                 layout,
             }
         }
     }
 
-    // Bools are described as ints
-    pub const BOOL: JavaType = INT;
+    pub const BOOL: JavaType = JavaType::new::<Bool>("Z");
 
-    pub const CHAR: JavaType = JavaType::new(Layout::new::<Char>());
-    pub const FLOAT: JavaType = JavaType::new(Layout::new::<Float>());
-    pub const DOUBLE: JavaType = JavaType::new(Layout::new::<Double>());
-    pub const BYTE: JavaType = JavaType::new(Layout::new::<Byte>());
-    pub const SHORT: JavaType = JavaType::new(Layout::new::<Short>());
-    pub const LONG: JavaType = JavaType::new(Layout::new::<Long>());
-    pub const INT: JavaType = JavaType::new(Layout::new::<Int>());
+    pub const CHAR: JavaType = JavaType::new::<Char>("C");
+    pub const FLOAT: JavaType = JavaType::new::<Float>("F");
+    pub const DOUBLE: JavaType = JavaType::new::<Double>("D");
+    pub const BYTE: JavaType = JavaType::new::<Byte>("B");
+    pub const SHORT: JavaType = JavaType::new::<Short>("S");
+    pub const LONG: JavaType = JavaType::new::<Long>("J");
+    pub const INT: JavaType = JavaType::new::<Int>("I");
 
-    pub const OBJECT: JavaType = JavaType::new(Layout::new::<RefTo<Object>>());
-    pub const ARRAY_BASE: JavaType = JavaType::new(Layout::new::<RefTo<Array<()>>>());
+    pub const OBJECT: JavaType = JavaType::new::<RefTo<Object>>("Object");
+    pub const ARRAY_BASE: JavaType = JavaType::new::<RefTo<Array<()>>>("Array");
 
     pub type Bool = Int;
     pub type Char = u16;
@@ -169,8 +180,8 @@ pub mod types {
                 BaseType::Long => LONG,
                 BaseType::Void => return Err(internal!("void is not supported")),
             },
-            FieldType::Array(ty) => {
-                let component = match *ty.field_type {
+            FieldType::Array(array_ty) => {
+                let component = match *array_ty.field_type {
                     FieldType::Base(ty) => for_field_type(FieldType::Base(ty))?,
                     FieldType::Object(_) => OBJECT,
                     FieldType::Array(_) => todo!(
@@ -190,7 +201,7 @@ pub mod types {
                 )
                 .map_err(internalise!())?;
 
-                JavaType::new(layout)
+                JavaType::from_layout(layout, "Runtime evaluated type")
             }
             FieldType::Object(_) => OBJECT,
         })

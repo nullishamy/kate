@@ -58,7 +58,7 @@ impl Instruction for InvokeVirtual {
         let (method_name, method_descriptor, class_name, _) = to_method_info(pool_entry)?;
 
         // The named method is resolved (§5.4.3.3, §5.4.3.4).
-        let loaded_class = vm.class_loader.for_name(class_name.clone())?;
+        let loaded_class = vm.class_loader.for_name(format!("L{};", class_name).into())?;
 
         let loaded_method = resolve_class_method(
             vm,
@@ -146,7 +146,7 @@ impl Instruction for InvokeSpecial {
         let (method_name, method_descriptor, class_name, _) = to_method_info(pool_entry)?;
 
         // The named method is resolved (§5.4.3.3, §5.4.3.4).
-        let loaded_class = vm.class_loader.for_name(class_name.clone())?;
+        let loaded_class = vm.class_loader.for_name(format!("L{};", class_name).into())?;
         let loaded_method = resolve_class_method(
             vm,
             loaded_class.clone(),
@@ -222,7 +222,7 @@ impl Instruction for InvokeStatic {
         let (method_name, method_descriptor, class_name, location) = to_method_info(pool_entry)?;
 
         // The named method is resolved (§5.4.3.3, §5.4.3.4).
-        let loaded_class = vm.class_loader.for_name(class_name.clone())?;
+        let loaded_class = vm.class_loader.for_name(format!("L{};", class_name).into())?;
         let loaded_method = match location {
             MethodLocation::Interface => resolve_interface_method(
                 vm,
@@ -320,7 +320,7 @@ impl Instruction for InvokeInterface {
         let (method_name, method_descriptor, class_name, _) = to_method_info(pool_entry)?;
 
         // The named method is resolved (§5.4.3.3, §5.4.3.4).
-        let loaded_class = vm.class_loader.for_name(class_name.clone())?;
+        let loaded_class = vm.class_loader.for_name(format!("L{};", class_name).into())?;
         let loaded_method = resolve_interface_method(
             vm,
             loaded_class.clone(),
@@ -418,7 +418,7 @@ fn resolve_class_method(
     // invoked on the direct superclass of C.
     if let Some(super_class) = class.unwrap_ref().super_class().into_option() {
         let class_name = super_class.name();
-        let super_class = vm.class_loader.for_name(class_name.to_string())?;
+        let super_class = vm.class_loader.for_name(format!("L{};", class_name).into())?;
 
         return resolve_class_method(vm, super_class, method_name, method_descriptor);
     }
@@ -480,7 +480,7 @@ fn resolve_interface_method(
     // TODO: Respect the flags
     if let Some(super_class) = class.unwrap_ref().super_class().into_option() {
         let class_name = super_class.name();
-        let super_class = vm.class_loader.for_name(class_name.to_string())?;
+        let super_class = vm.class_loader.for_name(format!("L{};", class_name).into())?;
 
         return resolve_interface_method(vm, super_class, method_name, method_descriptor);
     }
@@ -543,9 +543,8 @@ fn select_special_method(
     // method to be invoked.
     if let Some(super_class) = class.unwrap_ref().super_class().into_option() {
         let class_name = super_class.name();
-        let _super_class = vm.class_loader.for_name(class_name.to_string())?;
+        let super_class = vm.class_loader.for_name(format!("L{};", class_name).into())?;
 
-        let super_class = vm.class_loader.for_name(class_name.to_string())?;
         return select_method(vm, super_class, declared_class, method);
     }
 
@@ -615,9 +614,8 @@ fn select_method(
     // is the selected method.
     if let Some(super_class) = class.unwrap_ref().super_class().into_option() {
         let class_name = super_class.name();
-        let _super_class = vm.class_loader.for_name(class_name.to_string())?;
+        let super_class = vm.class_loader.for_name(format!("L{};", class_name).into())?;
 
-        let super_class = vm.class_loader.for_name(class_name.to_string())?;
         return select_method(vm, super_class, declared_class, method);
     }
 
@@ -690,7 +688,9 @@ impl Instruction for New {
         let object_ty = match entry {
             ConstantEntry::Class(data) => {
                 let class_name = data.name.resolve().string();
-                vm.class_loader.for_name(class_name)?
+                vm
+                    .class_loader
+                    .for_name(format!("L{};", class_name).into())?
             }
             e => return Err(internal!("{:#?} cannot be used to create a new object", e)),
         };
@@ -879,7 +879,7 @@ fn do_call(
             for entry in &code.exception_table {
                 let entry_ty = {
                     let name = entry.catch_type.resolve().name.resolve().string();
-                    vm.class_loader.for_name(name)
+                    vm.class_loader.for_name(format!("L{};", name).into())
                 }?;
 
                 // The handler supports the type of the exception

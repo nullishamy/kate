@@ -4,7 +4,7 @@ use anyhow::{anyhow, Result};
 use enum_as_inner::EnumAsInner;
 
 /// <BaseType> ::= 'B' | 'C' | 'D' | 'F' | 'I' | 'J' | 'S' | 'Z'
-#[derive(EnumAsInner, Debug, PartialEq, Clone)]
+#[derive(EnumAsInner, Debug, PartialEq, Clone, Eq, Hash)]
 pub enum BaseType {
     Boolean, // Z
     Char,    // C
@@ -35,7 +35,7 @@ impl ToString for BaseType {
 }
 
 /// <ObjectType> ::= 'L' <ClassName> ';'
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Hash, Eq)]
 pub struct ObjectType {
     pub class_name: String,
 }
@@ -47,7 +47,7 @@ impl ToString for ObjectType {
 }
 
 /// <ArrayType> ::= '[' <FieldType>
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Hash, Eq)]
 pub struct ArrayType {
     pub field_type: Box<FieldType>,
 }
@@ -58,11 +58,44 @@ impl ToString for ArrayType {
     }
 }
 
-#[derive(EnumAsInner, Debug, PartialEq, Clone)]
+#[derive(EnumAsInner, Debug, PartialEq, Clone, Eq, Hash)]
 pub enum FieldType {
     Base(BaseType),
     Object(ObjectType),
     Array(ArrayType),
+}
+
+impl From<&'static str> for FieldType {
+    fn from(value: &'static str) -> Self {
+        Self::parse(value.to_string()).unwrap()
+    }
+}
+
+impl From<String> for FieldType {
+    fn from(value: String) -> Self {
+        Self::parse(value).unwrap()
+    }
+}
+
+impl FieldType {
+    pub fn name(&self) -> String {
+        match self {
+            FieldType::Base(ty) => (match ty {
+                BaseType::Boolean => "Z",
+                BaseType::Char => "C",
+                BaseType::Float => "F",
+                BaseType::Double => "D",
+                BaseType::Byte => "B",
+                BaseType::Short => "S",
+                BaseType::Int => "I",
+                BaseType::Long => "J",
+                BaseType::Void => unreachable!(),
+            })
+            .to_string(),
+            FieldType::Object(ty) => ty.class_name.to_string(),
+            FieldType::Array(ty) => ty.field_type.name(),
+        }
+    }
 }
 
 /// <MethodType> ::= '(' { <FieldType> } ')' <FieldType>

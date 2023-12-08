@@ -4,7 +4,7 @@ use crate::{
     error::Throwable,
     module_base,
     object::{
-        builtins::{Array, ArrayPrimitive, ArrayType, BuiltinString, Class, Object},
+        builtins::{Array, ArrayPrimitive, BuiltinString, Class, Object},
         interner::{intern_string, interner_meta_class},
         layout::types,
         mem::RefTo,
@@ -159,7 +159,7 @@ impl NativeModule for JdkReflection {
 
             let cls = if let Some(frame) = first_frame_that_isnt_ours {
                 Some(RuntimeValue::Object(
-                    vm.class_loader.for_name(frame.class_name)?.erase(),
+                    vm.class_loader.for_name(format!("L{};", frame.class_name).into())?.erase(),
                 ))
             } else {
                 None
@@ -258,8 +258,7 @@ impl NativeModule for JdkSystemPropsRaw {
             // TODO: Populate these properly
 
             let array: RefTo<Array<RefTo<BuiltinString>>> = Array::from_vec(
-                ArrayType::Object(interner_meta_class()),
-                "Ljava/lang/String;".to_string(),
+                interner_meta_class(),
                 vec![
                     intern_string("java.home".to_string())?,
                     intern_string("unknown".to_string())?,
@@ -281,7 +280,7 @@ impl NativeModule for JdkSystemPropsRaw {
         fn platform_properties(
             _: RefTo<Class>,
             _: Vec<RuntimeValue>,
-            _: &mut VM,
+            vm: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
             let mut arr = Vec::with_capacity(fields::FIXED_LENGTH);
             arr.resize(fields::FIXED_LENGTH, RefTo::null());
@@ -304,11 +303,8 @@ impl NativeModule for JdkSystemPropsRaw {
             arr[fields::FILE_ENCODING_NDX] = intern_string("UTF-8".to_string())?;
             arr[fields::SUN_JNU_ENCODING_NDX] = intern_string("UTF-8".to_string())?;
 
-            let array: RefTo<Array<RefTo<BuiltinString>>> = Array::from_vec(
-                ArrayType::Object(interner_meta_class()),
-                "Ljava/lang/String;".to_string(),
-                arr,
-            );
+            let array: RefTo<Array<RefTo<BuiltinString>>> =
+                Array::from_vec(vm.class_loader.for_name("[Ljava/lang/String;".into())?, arr);
 
             Ok(Some(RuntimeValue::Object(array.erase())))
         }
@@ -637,19 +633,23 @@ impl NativeModule for JdkUnsafe {
             let cls = cls.as_object().unwrap();
             let cls = unsafe { cls.cast::<Class>() };
 
-            let component = cls.unwrap_ref().component_type().unwrap();
-            let res = match component {
-                ArrayType::Object(_) => Array::<RefTo<Object>>::element_scale(),
-                ArrayType::Primitive(ty) => match ty {
-                    ArrayPrimitive::Bool => Array::<Bool>::element_scale(),
-                    ArrayPrimitive::Char => Array::<Char>::element_scale(),
-                    ArrayPrimitive::Float => Array::<Float>::element_scale(),
-                    ArrayPrimitive::Double => Array::<Double>::element_scale(),
-                    ArrayPrimitive::Byte => Array::<Byte>::element_scale(),
-                    ArrayPrimitive::Short => Array::<Short>::element_scale(),
-                    ArrayPrimitive::Int => Array::<Int>::element_scale(),
-                    ArrayPrimitive::Long => Array::<Long>::element_scale(),
-                },
+            let component = cls.unwrap_ref().component_type();
+            let component = component.unwrap_ref();
+
+            let res = if !component.is_primitive() {
+                Array::<RefTo<Object>>::element_scale()
+            } else {
+                match component.name() {
+                    n if { n == types::BOOL.name } => Array::<Bool>::element_scale(),
+                    n if { n == types::BYTE.name } => Array::<Byte>::element_scale(),
+                    n if { n == types::SHORT.name } => Array::<Short>::element_scale(),
+                    n if { n == types::CHAR.name } => Array::<Char>::element_scale(),
+                    n if { n == types::INT.name } => Array::<Int>::element_scale(),
+                    n if { n == types::LONG.name } => Array::<Long>::element_scale(),
+                    n if { n == types::DOUBLE.name } => Array::<Double>::element_scale(),
+                    n if { n == types::FLOAT.name } => Array::<Float>::element_scale(),
+                    n => todo!("implement {n}"),
+                }
             };
 
             Ok(Some(RuntimeValue::Integral((res as i32).into())))
@@ -671,19 +671,23 @@ impl NativeModule for JdkUnsafe {
             let cls = cls.as_object().unwrap();
             let cls = unsafe { cls.cast::<Class>() };
 
-            let component = cls.unwrap_ref().component_type().unwrap();
-            let res = match component {
-                ArrayType::Object(_) => Array::<RefTo<Object>>::elements_offset(),
-                ArrayType::Primitive(ty) => match ty {
-                    ArrayPrimitive::Bool => Array::<Bool>::elements_offset(),
-                    ArrayPrimitive::Char => Array::<Char>::elements_offset(),
-                    ArrayPrimitive::Float => Array::<Float>::elements_offset(),
-                    ArrayPrimitive::Double => Array::<Double>::elements_offset(),
-                    ArrayPrimitive::Byte => Array::<Byte>::elements_offset(),
-                    ArrayPrimitive::Short => Array::<Short>::elements_offset(),
-                    ArrayPrimitive::Int => Array::<Int>::elements_offset(),
-                    ArrayPrimitive::Long => Array::<Long>::elements_offset(),
-                },
+            let component = cls.unwrap_ref().component_type();
+            let component = component.unwrap_ref();
+
+            let res = if !component.is_primitive() {
+                Array::<RefTo<Object>>::elements_offset()
+            } else {
+                match component.name() {
+                    n if { n == types::BOOL.name } => Array::<Bool>::elements_offset(),
+                    n if { n == types::BYTE.name } => Array::<Byte>::elements_offset(),
+                    n if { n == types::SHORT.name } => Array::<Short>::elements_offset(),
+                    n if { n == types::CHAR.name } => Array::<Char>::elements_offset(),
+                    n if { n == types::INT.name } => Array::<Int>::elements_offset(),
+                    n if { n == types::LONG.name } => Array::<Long>::elements_offset(),
+                    n if { n == types::DOUBLE.name } => Array::<Double>::elements_offset(),
+                    n if { n == types::FLOAT.name } => Array::<Float>::elements_offset(),
+                    n => todo!("implement {n}"),
+                }
             };
 
             Ok(Some(RuntimeValue::Integral((res as i32).into())))

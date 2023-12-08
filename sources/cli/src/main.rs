@@ -123,7 +123,7 @@ fn boot_system(vm: &mut VM, cls: RefTo<Class>) {
 
     let java_lang_system = vm
         .class_loader
-        .for_name("java/lang/System".to_string())
+        .for_name("Ljava/lang/System;".into())
         .unwrap();
 
     let ip1 = java_lang_system
@@ -219,6 +219,7 @@ fn main() {
     let interner = StringInterner::new(
         bootstrapped_classes.java_lang_string.clone(),
         bootstrapped_classes.java_lang_object.clone(),
+        bootstrapped_classes.byte_array_ty.clone()
     );
 
     set_interner(interner);
@@ -234,7 +235,7 @@ fn main() {
     info!("Bootstrap complete");
 
     for class_name in &args.classes {
-        let cls = vm.class_loader.for_name(class_name.clone()).unwrap();
+        let cls = vm.class_loader.for_name(format!("L{};", class_name).into()).unwrap();
         if args.has_option(opts::TEST_INIT) {
             test_init(cls.clone());
         }

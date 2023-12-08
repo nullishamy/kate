@@ -4,14 +4,16 @@ use super::{Instruction, Progression};
 use crate::{
     arg,
     error::Throwable,
+    internal,
     object::{
         numeric::{Floating, FloatingType, Integral, IntegralType},
         runtime::RuntimeValue,
     },
-    pop, Context, VM, internal,
+    pop, Context, VM,
 };
 use anyhow::Context as AnyhowContext;
 use parse::{classfile::Resolvable, pool::ConstantClass};
+use support::descriptor::FieldType;
 
 macro_rules! unop {
     // Generic value transformation
@@ -249,7 +251,9 @@ impl Instruction for InstanceOf {
 
         // TODO: Properly check the types
         let ty_class_name = ty.name.resolve().string();
-        let _ty_class = vm.class_loader.for_name(ty_class_name.clone())?;
+        let _ty_class = vm
+            .class_loader
+            .for_name(format!("L{};", ty_class_name).into())?;
 
         let class_name = val.unwrap_ref().class.unwrap_ref().name().clone();
 
@@ -291,7 +295,13 @@ impl Instruction for CheckCast {
 
         // TODO: Properly check the types
         let other_class_name = other.name.resolve().string();
-        let other_class = vm.class_loader.for_name(other_class_name.clone())?;
+
+        let other_class_name = FieldType::parse(other_class_name.clone())
+            .or_else(|_| FieldType::parse(format!("L{};", other_class_name)))?;
+
+        let other_class = vm
+            .class_loader
+            .for_name(other_class_name.clone())?;
 
         // TODO: Support interface type checking etc
 
@@ -304,7 +314,7 @@ impl Instruction for CheckCast {
             return Err(internal!(
                 "invalid cast from {} to {}",
                 val_class.name(),
-                other_class_name
+                other_class_name.to_string()
             ));
         }
 

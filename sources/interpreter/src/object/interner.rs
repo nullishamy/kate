@@ -7,7 +7,7 @@ use support::encoding::encode_string;
 use crate::error::Throwable;
 
 use super::{
-    builtins::{Array, ArrayPrimitive, ArrayType, BuiltinString, Class, Object},
+    builtins::{Array, BuiltinString, Class, Object},
     mem::RefTo,
 };
 
@@ -42,15 +42,17 @@ pub fn interner_meta_class() -> RefTo<Class> {
 pub struct StringInterner {
     string_class: RefTo<Class>,
     super_class: RefTo<Class>,
+    byte_array_ty: RefTo<Class>,
 
     strings: HashMap<String, RefTo<BuiltinString>>,
 }
 
 impl StringInterner {
-    pub fn new(string_class: RefTo<Class>, super_class: RefTo<Class>) -> Self {
+    pub fn new(string_class: RefTo<Class>, super_class: RefTo<Class>, byte_array_ty: RefTo<Class>) -> Self {
         Self {
             string_class,
             super_class,
+            byte_array_ty,
             strings: HashMap::new(),
         }
     }
@@ -62,8 +64,7 @@ impl StringInterner {
 
         let (encoding, bytes) = encode_string(value.clone())?;
         let array = Array::<u8>::from_vec(
-            ArrayType::Primitive(ArrayPrimitive::Byte),
-            "[B".to_string(),
+            self.byte_array_ty.clone(),
             bytes,
         );
 

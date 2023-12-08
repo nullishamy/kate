@@ -31,6 +31,17 @@ mod tests {
     }
 
     #[test]
+    fn it_parses_class_descriptors() -> Result<()> {
+        let descriptor = FieldType::parse("Ljava/lang/Object;".to_string())?;
+        let descriptor = descriptor.into_object().unwrap();
+
+        let class_name = descriptor.class_name;
+        assert_eq!(class_name, "java/lang/Object");
+
+        Ok(())
+    }
+
+    #[test]
     fn it_parses_method_descriptors() -> Result<()> {
         let descriptor = MethodType::parse("(IDLjava/lang/Thread;)Ljava/lang/Object;".to_string())?;
         assert_eq!(

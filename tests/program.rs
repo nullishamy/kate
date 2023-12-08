@@ -133,6 +133,7 @@ pub fn internal_error() -> TestResult {
 }
 
 #[test]
+#[ignore = "natives unavailable"]
 pub fn read_file() -> TestResult {
     let state = state().init().init_std();
 

@@ -1,7 +1,7 @@
 use super::{Instruction, Progression};
 use crate::error::{Throwable, VMError};
-use crate::object::builtins::{Array, ArrayPrimitive, ArrayType, Object};
-use crate::object::layout::types::{Bool, Byte, Char, Double, Float, Int, Long, Short};
+use crate::object::builtins::{Array, ArrayPrimitive, Class, Object};
+use crate::object::layout::types::{self, Bool, Byte, Char, Double, Float, Int, Long, Short};
 use crate::object::mem::RefTo;
 use crate::object::numeric::IntegralType;
 use crate::object::runtime::RuntimeValue;
@@ -173,13 +173,13 @@ impl Instruction for ANewArray {
             .address(self.type_index)
             .resolve();
 
-        let (array_ty, array_ty_name) = match ty {
+        let array_ty = match ty {
             ConstantEntry::Class(data) => {
                 let class_name = data.name.resolve().string();
-                let cls = vm.class_loader.for_name(class_name)?;
-                let name = cls.unwrap_ref().name().clone();
-
-                (ArrayType::Object(cls), name)
+                
+                vm
+                    .class_loader
+                    .for_name(format!("L{};", class_name).into())?
             }
             e => return Err(internal!("{:#?} cannot be used as an array type", e)),
         };
@@ -190,7 +190,7 @@ impl Instruction for ANewArray {
 
         // A new array with components of that type, of length count, is allocated
         // from the garbage-collected heap.
-        let array = Array::<RefTo<Object>>::from_vec(array_ty, array_ty_name.to_string(), values);
+        let array = Array::<RefTo<Object>>::from_vec(array_ty, values);
 
         //  and a arrayref to this new array object is pushed onto the operand stack.
         ctx.operands.push(RuntimeValue::Object(array.erase()));
@@ -205,68 +205,67 @@ pub struct NewArray {
 }
 
 impl Instruction for NewArray {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
+    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         // The count must be of type int. It is popped off the operand stack.
         let count = arg!(ctx, "count" => i32);
 
         // The atype is a code that indicates the type of array to create.
         let atype = ArrayPrimitive::from_tag(self.type_tag)?;
-        let array_ty = ArrayType::Primitive(atype);
 
         // A new array whose components are of type atype and of length
         // count is allocated from the garbage-collected heap.
-        let array = match &array_ty {
-            ArrayType::Primitive(ty) => match ty {
-                ArrayPrimitive::Bool => {
-                    let values: Vec<Bool> = vec![0; count.value as usize];
-                    RuntimeValue::Object(
-                        Array::<Bool>::from_vec(array_ty, "[Z".to_string(), values).erase(),
-                    )
-                }
-                ArrayPrimitive::Char => {
-                    let values: Vec<Char> = vec![0; count.value as usize];
-                    RuntimeValue::Object(
-                        Array::<Char>::from_vec(array_ty, "[C".to_string(), values).erase(),
-                    )
-                }
-                ArrayPrimitive::Float => {
-                    let values: Vec<Float> = vec![0.0; count.value as usize];
-                    RuntimeValue::Object(
-                        Array::<Float>::from_vec(array_ty, "[F".to_string(), values).erase(),
-                    )
-                }
-                ArrayPrimitive::Double => {
-                    let values: Vec<Double> = vec![0.0; count.value as usize];
-                    RuntimeValue::Object(
-                        Array::<Double>::from_vec(array_ty, "[D".to_string(), values).erase(),
-                    )
-                }
-                ArrayPrimitive::Byte => {
-                    let values: Vec<Byte> = vec![0; count.value as usize];
-                    RuntimeValue::Object(
-                        Array::<Byte>::from_vec(array_ty, "[B".to_string(), values).erase(),
-                    )
-                }
-                ArrayPrimitive::Short => {
-                    let values: Vec<Short> = vec![0; count.value as usize];
-                    RuntimeValue::Object(
-                        Array::<Short>::from_vec(array_ty, "[S".to_string(), values).erase(),
-                    )
-                }
-                ArrayPrimitive::Int => {
-                    let values: Vec<Int> = vec![0; count.value as usize];
-                    RuntimeValue::Object(
-                        Array::<Int>::from_vec(array_ty, "[I".to_string(), values).erase(),
-                    )
-                }
-                ArrayPrimitive::Long => {
-                    let values: Vec<Long> = vec![0; count.value as usize];
-                    RuntimeValue::Object(
-                        Array::<Long>::from_vec(array_ty, "[J".to_string(), values).erase(),
-                    )
-                }
-            },
-            _ => unreachable!(),
+        let array = match &atype {
+            ArrayPrimitive::Bool => {
+                let values: Vec<Bool> = vec![0; count.value as usize];
+                RuntimeValue::Object(
+                    Array::<Bool>::from_vec(vm.class_loader.for_name("[Z".into())?, values).erase(),
+                )
+            }
+            ArrayPrimitive::Char => {
+                let values: Vec<Char> = vec![0; count.value as usize];
+                RuntimeValue::Object(
+                    Array::<Char>::from_vec(vm.class_loader.for_name("[C".into())?, values).erase(),
+                )
+            }
+            ArrayPrimitive::Float => {
+                let values: Vec<Float> = vec![0.0; count.value as usize];
+                RuntimeValue::Object(
+                    Array::<Float>::from_vec(vm.class_loader.for_name("[F".into())?, values)
+                        .erase(),
+                )
+            }
+            ArrayPrimitive::Double => {
+                let values: Vec<Double> = vec![0.0; count.value as usize];
+                RuntimeValue::Object(
+                    Array::<Double>::from_vec(vm.class_loader.for_name("[D".into())?, values)
+                        .erase(),
+                )
+            }
+            ArrayPrimitive::Byte => {
+                let values: Vec<Byte> = vec![0; count.value as usize];
+                RuntimeValue::Object(
+                    Array::<Byte>::from_vec(vm.class_loader.for_name("[B".into())?, values).erase(),
+                )
+            }
+            ArrayPrimitive::Short => {
+                let values: Vec<Short> = vec![0; count.value as usize];
+                RuntimeValue::Object(
+                    Array::<Short>::from_vec(vm.class_loader.for_name("[S".into())?, values)
+                        .erase(),
+                )
+            }
+            ArrayPrimitive::Int => {
+                let values: Vec<Int> = vec![0; count.value as usize];
+                RuntimeValue::Object(
+                    Array::<Int>::from_vec(vm.class_loader.for_name("[I".into())?, values).erase(),
+                )
+            }
+            ArrayPrimitive::Long => {
+                let values: Vec<Long> = vec![0; count.value as usize];
+                RuntimeValue::Object(
+                    Array::<Long>::from_vec(vm.class_loader.for_name("[J".into())?, values).erase(),
+                )
+            }
         };
 
         // and an arrayref to this new array object is pushed onto the operand stack.
@@ -278,61 +277,55 @@ impl Instruction for NewArray {
 
 #[derive(Debug)]
 pub struct ArrayStore {
-    pub(crate) ty: ArrayType,
+    pub(crate) ty: RefTo<Class>,
 }
 
 impl Instruction for ArrayStore {
     fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         let value = pop!(ctx);
         let index = arg!(ctx, "index" => i32);
-        match &self.ty {
-            ArrayType::Object(_) => {
-                let array = arg!(ctx, "array" => Array<RefTo<Object>>);
-                let array = array.unwrap_mut().slice_mut();
-                let value = value.as_object().expect("array store exception").clone();
-                array[index.value as usize] = value;
-            }
-            ArrayType::Primitive(ty) => match ty {
-                // ArrayPrimitive::Bool => todo!(),
-                // ArrayPrimitive::Char => todo!(),
-                // ArrayPrimitive::Float => todo!(),
-                // ArrayPrimitive::Double => todo!(),
-                // ArrayPrimitive::Byte => todo!(),
-                // ArrayPrimitive::Short => todo!(),
-                // ArrayPrimitive::Int => todo!(),
-                ArrayPrimitive::Long => {
+
+        let ty = self.ty.unwrap_ref();
+        if ty.is_primitive() {
+            match ty.name() {
+                n if { n == types::LONG.name } => {
                     let array = arg!(ctx, "array" => Array<Long>);
                     let array = array.unwrap_mut().slice_mut();
                     let value = value.as_integral().expect("array store exception").value;
                     array[index.value as usize] = value
                 }
-                ArrayPrimitive::Double => {
+                n if { n == types::DOUBLE.name } => {
                     let array = arg!(ctx, "array" => Array<Double>);
                     let array = array.unwrap_mut().slice_mut();
                     let value = value.as_floating().expect("array store exception").value;
                     array[index.value as usize] = value
                 }
-                ArrayPrimitive::Byte => {
+                n if { n == types::BYTE.name } => {
                     let array = arg!(ctx, "array" => Array<Byte>);
                     let array = array.unwrap_mut().slice_mut();
                     let value = value.as_integral().expect("array store exception").value;
                     array[index.value as usize] = value as Byte
                 }
-                ArrayPrimitive::Char => {
+                n if { n == types::CHAR.name } => {
                     let array = arg!(ctx, "array" => Array<Char>);
                     let array = array.unwrap_mut().slice_mut();
                     let value = value.as_integral().expect("array store exception").value;
                     array[index.value as usize] = value as Char
                 }
-                ArrayPrimitive::Int => {
+                n if { n == types::INT.name } => {
                     let array = arg!(ctx, "array" => Array<Int>);
                     let array = array.unwrap_mut().slice_mut();
                     let value = value.as_integral().expect("array store exception").value;
                     array[index.value as usize] = value as Int
                 }
-                ty => return Err(internal!("cannot encode {:#?}", ty))
-            },
-        };
+                ty => return Err(internal!("cannot encode {:#?}", ty)),
+            }
+        } else {
+            let array = arg!(ctx, "array" => Array<RefTo<Object>>);
+            let array = array.unwrap_mut().slice_mut();
+            let value = value.as_object().expect("array store exception").clone();
+            array[index.value as usize] = value;
+        }
 
         Ok(Progression::Next)
     }
@@ -340,30 +333,23 @@ impl Instruction for ArrayStore {
 
 #[derive(Debug)]
 pub struct ArrayLoad {
-    pub(crate) ty: ArrayType,
+    pub(crate) ty: RefTo<Class>,
 }
 
 impl Instruction for ArrayLoad {
     fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
         let index = arg!(ctx, "index" => i32);
-
-        let value = match &self.ty {
-            ArrayType::Object(_) => {
-                let array = arg!(ctx, "array" => Array<RefTo<Object>>);
-                let array = array.unwrap_ref().slice();
-                let value = array[index.value as usize].clone();
-                RuntimeValue::Object(value)
-            }
-            ArrayType::Primitive(ty) => match ty {
-                // ArrayPrimitive::Bool => todo!(),
-                ArrayPrimitive::Char => {
+        let ty = self.ty.unwrap_ref();
+        let value = if ty.is_primitive() {
+            match ty.name() {
+                n if { n == &types::CHAR.name } => {
                     let array = arg!(ctx, "array" => Array<Char>);
                     let array = array.unwrap_ref().slice();
 
                     if index.value >= array.len() as i64 {
-                        return Ok(Progression::Throw(
-                            vm.try_make_error(VMError::ArrayIndexOutOfBounds { at: index.value })?,
-                        ));
+                        return Ok(Progression::Throw(vm.try_make_error(
+                            VMError::ArrayIndexOutOfBounds { at: index.value },
+                        )?));
                     }
 
                     let value = array[index.value as usize];
@@ -371,15 +357,14 @@ impl Instruction for ArrayLoad {
                     // TODO: Sign extension here?
                     RuntimeValue::Integral((value as i32).into())
                 }
-                // ArrayPrimitive::Float => todo!(),
-                ArrayPrimitive::Double => {
+                n if { n == &types::DOUBLE.name } => {
                     let array = arg!(ctx, "array" => Array<Double>);
                     let array = array.unwrap_ref().slice();
                     let value = array[index.value as usize];
 
                     RuntimeValue::Floating(value.into())
                 }
-                ArrayPrimitive::Byte => {
+                n if { n == &types::BYTE.name } => {
                     let array = arg!(ctx, "array" => Array<Byte>);
                     let array = array.unwrap_ref().slice();
                     let value = array[index.value as usize];
@@ -387,18 +372,20 @@ impl Instruction for ArrayLoad {
                     // TODO: Sign extension here
                     RuntimeValue::Integral((value as i32).into())
                 }
-                ArrayPrimitive::Long => {
+                n if { n == &types::LONG.name } => {
                     let array = arg!(ctx, "array" => Array<Long>);
                     let array = array.unwrap_ref().slice();
                     let value = array[index.value as usize];
 
                     RuntimeValue::Integral(value.into())
                 }
-                // ArrayPrimitive::Short => todo!(),
-                // ArrayPrimitive::Int => todo!(),
-                // ArrayPrimitive::Long => todo!(),
-                ty => return Err(internal!("cannot encode {:#?}", ty))
-            },
+                ty => return Err(internal!("cannot encode {:#?}", ty)),
+            }
+        } else {
+            let array = arg!(ctx, "array" => Array<RefTo<Object>>);
+            let array = array.unwrap_ref().slice();
+            let value = array[index.value as usize].clone();
+            RuntimeValue::Object(value)
         };
 
         ctx.operands.push(value);

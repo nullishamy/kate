@@ -162,6 +162,10 @@ impl<T: HasObjectHeader<T>> RefTo<T> {
         self.object.is_null()
     }
 
+    pub fn is_not_null(&self) -> bool {
+        !self.is_null()
+    }
+
     /// ## Safety
     /// 
     /// Caller must ensure object is of this type

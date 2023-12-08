@@ -169,9 +169,10 @@ impl VM {
 
     /// Try and make the error. This may fail if a class fails to resolve, or object creation fails
     pub fn try_make_error(&mut self, ty: VMError) -> Result<Throwable, Throwable> {
+        let cls = self.class_loader.for_name(format!("L{};", ty.class_name()).into())?;
+
         match ty {
             VMError::ArrayIndexOutOfBounds { .. } => {
-                let cls = self.class_loader.for_name(ty.class_name().to_string())?;
                 Ok(Throwable::Runtime(error::RuntimeException {
                     message: ty.message(),
                     ty: cls,
@@ -180,7 +181,6 @@ impl VM {
                 }))
             }
             VMError::NullPointerException => {
-                let cls = self.class_loader.for_name(ty.class_name().to_string())?;
                 Ok(Throwable::Runtime(error::RuntimeException {
                     message: ty.message(),
                     ty: cls,
@@ -237,11 +237,11 @@ impl VM {
         load_module(self, security::SecurityAccessController::new());
 
         // Init String so that we can set the static after it's done. The clinit sets it to a default.
-        let jlstr = self.class_loader.for_name("java/lang/String".to_string())?;
+        let jlstr = self.class_loader.for_name("Ljava/lang/String;".into())?;
         self.initialise_class(jlstr.clone())?;
 
         // Load up System so that we can set up the statics
-        let jlsys = self.class_loader.for_name("java/lang/System".to_string())?;
+        let jlsys = self.class_loader.for_name("Ljava/lang/System;".into())?;
 
         {
             let statics = jlstr.unwrap_ref().statics();
@@ -262,12 +262,12 @@ impl VM {
         }
 
         // Init thread
-        let thread_class = self.class_loader.for_name("java/lang/Thread".to_string())?;
+        let thread_class = self.class_loader.for_name("Ljava/lang/Thread;".into())?;
         self.initialise_class(thread_class.clone())?;
 
         let thread_group_class = self
             .class_loader
-            .for_name("java/lang/ThreadGroup".to_string())?;
+            .for_name("Ljava/lang/ThreadGroup;".into())?;
         self.initialise_class(thread_class.clone())?;
 
         let thread = BuiltinThread {

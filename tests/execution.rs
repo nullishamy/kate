@@ -133,6 +133,32 @@ mod instruction {
         Ok(())
     }
 
+    #[ignore = "not implemented"]
+    #[test]
+    fn two_d_arrays() -> TestResult {
+        let state = state().init();
+
+        let source = using_main(
+            "TwoDArrays",
+            r#"
+            int[][] arr = new int[10][10];
+
+            assertEqual(arr[0][0], 0);
+            assertEqual(arr[9][0], 0);
+            assertEqual(arr[9][9], 0);
+            assertEqual(arr.length, 10);
+            assertEqual(arr[0].length, 10);
+            "#,
+        );
+
+        let got = execute(state, inline(source)?)?;
+        let expected = expected().has_success();
+
+        compare(got, expected);
+
+        Ok(())
+    }
+
     #[test]
     fn areturn() -> TestResult {
         let state = state().init();

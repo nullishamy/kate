@@ -7,14 +7,14 @@ use crate::{
     error::Throwable,
     instance_method, internal, module_base,
     object::{
-        builtins::{Array, ArrayPrimitive, ArrayType, BuiltinString, Class, Object},
+        builtins::{Array, ArrayPrimitive, BuiltinString, Class, Object, ClassType},
         interner::intern_string,
         layout::{
             types::{self},
             ClassFileLayout,
         },
         mem::RefTo,
-        numeric::{TRUE, FALSE},
+        numeric::{FALSE, TRUE},
         runtime::RuntimeValue,
     },
     static_method, VM,
@@ -55,25 +55,19 @@ impl NativeModule for LangClass {
                 CompactEncoding::from_coder(prim_name.unwrap_ref().coder),
                 bytes,
             ))?;
-            let jlc = vm.class_loader.for_name("java/lang/Class".to_string())?;
-            let jlo = vm.class_loader.for_name("java/lang/Object".to_string())?;
 
-            let layout = match prim_str.as_str() {
-                "byte" => ClassFileLayout::from_java_type(types::BYTE),
-                "float" => ClassFileLayout::from_java_type(types::FLOAT),
-                "double" => ClassFileLayout::from_java_type(types::DOUBLE),
-                "int" => ClassFileLayout::from_java_type(types::INT),
-                "char" => ClassFileLayout::from_java_type(types::CHAR),
-                "long" => ClassFileLayout::from_java_type(types::LONG),
-                "boolean" => ClassFileLayout::from_java_type(types::BOOL),
+            let prim_ty = match prim_str.as_str() {
+                "byte" => types::BYTE,
+                "float" => types::FLOAT,
+                "double" => types::DOUBLE,
+                "int" => types::INT,
+                "char" => types::CHAR,
+                "long" => types::LONG,
+                "boolean" => types::BOOL,
                 p => return Err(internal!("unknown primitive {}", p)),
             };
 
-            let cls = RefTo::new(Class::new_primitive(
-                Object::new(jlc, jlo),
-                prim_str,
-                layout,
-            ));
+            let cls = vm.class_loader.for_name(prim_ty.name.into())?;
 
             Ok(Some(RuntimeValue::Object(cls.erase())))
         }
@@ -347,13 +341,15 @@ impl NativeModule for LangSystem {
             let dest_class = dest.unwrap_ref().class();
             let dest_ty = dest_class.unwrap_ref();
 
-            let src_component = src_ty.component_type().unwrap();
-            let dest_component = dest_ty.component_type().unwrap();
+            assert_eq!(src_ty.ty(), ClassType::Array);
+            assert_eq!(dest_ty.ty(), ClassType::Array);
 
-            // FIXME: Check these properly
-            if src_component != dest_component {
-                warn!("maybe array store exception")
-            }
+            let src_component = src_ty.component_type();
+            let src_component = src_component.unwrap_ref();
+
+            let dest_component = dest_ty.component_type();
+            let dest_component = dest_component.unwrap_ref();
+
 
             if src_pos < 0 {
                 panic!("out of bounds")
@@ -371,18 +367,9 @@ impl NativeModule for LangSystem {
             let dest_pos = dest_pos as usize;
             let len = len as usize;
 
-            match src_component {
-                ArrayType::Object(_) => {
-                    let src = unsafe { src.cast::<Array<RefTo<Object>>>() };
-                    let src_slice = src.unwrap_mut().slice_mut();
-
-                    let dest = unsafe { dest.cast::<Array<RefTo<Object>>>() };
-                    let dest_slice = dest.unwrap_mut().slice_mut();
-                    dest_slice[dest_pos..dest_pos + len]
-                        .clone_from_slice(&src_slice[src_pos..src_pos + len]);
-                }
-                ArrayType::Primitive(ty) => match ty {
-                    ArrayPrimitive::Bool => {
+            if src_component.is_primitive() {
+                match src_component.name() {
+                    n if { n == types::BOOL.name } => {
                         let src = unsafe { src.cast::<Array<Bool>>() };
                         let src_slice = src.unwrap_mut().slice_mut();
 
@@ -391,26 +378,7 @@ impl NativeModule for LangSystem {
                         dest_slice[dest_pos..dest_pos + len]
                             .copy_from_slice(&src_slice[src_pos..src_pos + len]);
                     }
-                    ArrayPrimitive::Char => {
-                        let src = unsafe { src.cast::<Array<Char>>() };
-                        let src_slice = src.unwrap_mut().slice_mut();
-
-                        let dest = unsafe { dest.cast::<Array<Char>>() };
-                        let dest_slice = dest.unwrap_mut().slice_mut();
-                        dest_slice[dest_pos..dest_pos + len]
-                            .copy_from_slice(&src_slice[src_pos..src_pos + len]);
-                    }
-                    ArrayPrimitive::Float => todo!(),
-                    ArrayPrimitive::Double => {
-                        let src = unsafe { src.cast::<Array<Double>>() };
-                        let src_slice = src.unwrap_mut().slice_mut();
-
-                        let dest = unsafe { dest.cast::<Array<Double>>() };
-                        let dest_slice = dest.unwrap_mut().slice_mut();
-                        dest_slice[dest_pos..dest_pos + len]
-                            .copy_from_slice(&src_slice[src_pos..src_pos + len]);
-                    }
-                    ArrayPrimitive::Byte => {
+                    n if { n == types::BYTE.name } => {
                         let src = unsafe { src.cast::<Array<Byte>>() };
                         let src_slice = src.unwrap_mut().slice_mut();
 
@@ -419,10 +387,20 @@ impl NativeModule for LangSystem {
                         dest_slice[dest_pos..dest_pos + len]
                             .copy_from_slice(&src_slice[src_pos..src_pos + len]);
                     }
-                    ArrayPrimitive::Short => todo!(),
-                    ArrayPrimitive::Int => todo!(),
-                    ArrayPrimitive::Long => todo!(),
-                },
+                    n => todo!("implement {n}"),
+                }
+            } else {
+                if !src_component.is_assignable_to(dest_component) {
+                    panic!("array store exception")
+                }
+
+                let src = unsafe { src.cast::<Array<RefTo<Object>>>() };
+                let src_slice = src.unwrap_mut().slice_mut();
+
+                let dest = unsafe { dest.cast::<Array<RefTo<Object>>>() };
+                let dest_slice = dest.unwrap_mut().slice_mut();
+                dest_slice[dest_pos..dest_pos + len]
+                    .clone_from_slice(&src_slice[src_pos..src_pos + len]);
             }
 
             Ok(None)

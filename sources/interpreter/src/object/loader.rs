@@ -1,6 +1,6 @@
 use std::{alloc::Layout, collections::HashMap, fs, path::PathBuf};
 
-use crate::{object::builtins::{ArrayPrimitive, ArrayType}, error::Throwable, internal, internalise};
+use crate::{error::Throwable, internal, internalise, object::builtins::ArrayPrimitive};
 
 use super::{
     builtins::{Class, Object},
@@ -8,6 +8,7 @@ use super::{
     mem::{HasObjectHeader, RefTo},
 };
 use parse::{classfile::Resolvable, parser::Parser};
+use support::descriptor::{BaseType, FieldType};
 use tracing::debug;
 
 pub fn base_layout() -> Layout {
@@ -16,7 +17,7 @@ pub fn base_layout() -> Layout {
 
 pub struct ClassLoader {
     class_path: Vec<PathBuf>,
-    classes: HashMap<String, RefTo<Class>>,
+    classes: HashMap<FieldType, RefTo<Class>>,
     meta_class: RefTo<Class>,
 }
 
@@ -24,6 +25,7 @@ pub struct BootstrappedClasses {
     pub java_lang_class: RefTo<Class>,
     pub java_lang_object: RefTo<Class>,
     pub java_lang_string: RefTo<Class>,
+    pub byte_array_ty: RefTo<Class>
 }
 
 impl ClassLoader {
@@ -35,13 +37,18 @@ impl ClassLoader {
         }
     }
 
-    pub fn for_bytes(&mut self, name_key: String, bytes: &[u8]) -> Result<RefTo<Class>, Throwable> {
+    pub fn for_bytes(
+        &mut self,
+        field_type: FieldType,
+        bytes: &[u8],
+    ) -> Result<RefTo<Class>, Throwable> {
         let mut parser = Parser::new(bytes);
         let class_file = parser.parse()?;
 
         let mut super_class: Option<RefTo<Class>> = None;
         if let Some(ref cls) = class_file.super_class {
             let super_class_name = cls.resolve().name.resolve().string();
+            let super_class_name = FieldType::parse(format!("L{};", super_class_name))?;
             super_class = Some(self.for_name(super_class_name)?);
         }
 
@@ -60,8 +67,10 @@ impl ClassLoader {
                 let mut super_layout = full_layout(super_classfile, Layout::new::<()>())?;
 
                 // Extend our layout based on it
-                let (mut our_new_layout, offset_from_base) =
-                    layout.layout().extend(super_layout.layout()).map_err(internalise!())?;
+                let (mut our_new_layout, offset_from_base) = layout
+                    .layout()
+                    .extend(super_layout.layout())
+                    .map_err(internalise!())?;
 
                 // Align the new layout
                 our_new_layout = our_new_layout.pad_to_align();
@@ -86,37 +95,54 @@ impl ClassLoader {
             }
         }
 
+        let name = field_type.name();
+
         let cls = Class::new(
-            Object::new(self.meta_class.clone(), super_class.unwrap_or(RefTo::null())),
-            name_key.clone(),
+            Object::new(
+                self.meta_class.clone(),
+                super_class.unwrap_or(RefTo::null()),
+            ),
+            name,
             class_file,
             layout,
         );
 
         let object = RefTo::new(cls);
 
-        self.classes.insert(name_key, object.clone());
+        self.classes.insert(field_type, object.clone());
 
         Ok(object)
     }
 
-    pub fn for_name(&mut self, name: String) -> Result<RefTo<Class>, Throwable> {
-        let formatted_name = format!("{}.class", name);
-
-        if let Some(object) = self.classes.get(&name) {
-            debug!("Fast path: {} ({})", name, formatted_name);
+    pub fn for_name(&mut self, field_type: FieldType) -> Result<RefTo<Class>, Throwable> {
+        if let Some(object) = self.classes.get(&field_type) {
+            debug!("Fast path: {}", field_type.name());
             return Ok(object.clone());
         }
 
-        debug!("Slow path: {} ({})", &name, &formatted_name);
+        if let Some(array) = field_type.as_array() {
+            let component_ty = self.for_name(*array.field_type.clone())?;
+            let cls = Class::new_array(
+                Object::new(RefTo::null(), RefTo::null()),
+                component_ty,
+                ClassFileLayout::from_java_type(types::ARRAY_BASE),
+            );
+
+            let cls = RefTo::new(cls);
+            self.classes.insert(field_type, cls.clone());
+            return Ok(cls);
+        }
+
+        let formatted_name = format!("{}.class", field_type.name());
+        debug!("Slow path: {}", &formatted_name);
 
         let found_path = self.resolve_name(formatted_name.clone());
         if let Some(path) = found_path {
             let bytes = fs::read(path).map_err(internalise!())?;
-            return self.for_bytes(name, &bytes);
+            return self.for_bytes(field_type, &bytes);
         }
 
-        Err(internal!("Could not locate classfile {}", formatted_name))
+        Err(internal!("Could not locate classfile {} ({:#?})", formatted_name, field_type))
     }
 
     fn resolve_name(&self, name: String) -> Option<PathBuf> {
@@ -133,7 +159,7 @@ impl ClassLoader {
         found_path
     }
 
-    pub fn classes(&self) -> &HashMap<String, RefTo<Class>> {
+    pub fn classes(&self) -> &HashMap<FieldType, RefTo<Class>> {
         &self.classes
     }
 
@@ -143,24 +169,24 @@ impl ClassLoader {
     }
 
     pub fn bootstrap(&mut self) -> Result<BootstrappedClasses, Throwable> {
-        let jlc = self.for_name("java/lang/Class".to_string())?;
+        let jlc = self.for_name("Ljava/lang/Class;".into())?;
         self.meta_class = jlc.clone();
 
-        let jlo = self.for_name("java/lang/Object".to_string())?;
-        let jls = self.for_name("java/lang/String".to_string())?;
+        let jlo = self.for_name("Ljava/lang/Object;".into())?;
+        let jls = self.for_name("Ljava/lang/String;".into())?;
 
         macro_rules! primitive {
-            ($layout_ty: ident, $array_ty: ident,  $name: expr) => {{
+            ($layout_ty: ident, $name: expr) => {{
                 let prim = RefTo::new(Class::new_primitive(
                     Object::new(jlc.clone(), jlo.clone()),
                     $name.to_string(),
-                    ClassFileLayout::from_java_type(types::$layout_ty)
+                    ClassFileLayout::from_java_type(types::$layout_ty),
                 ));
+
                 let array = RefTo::new(Class::new_array(
-                    Object::new(prim.clone(), RefTo::null()),
-                    format!("[{}", $name.to_string()),
-                    ArrayType::Primitive(ArrayPrimitive::$array_ty),
-                    ClassFileLayout::from_java_type(types::$layout_ty)
+                    Object::new(jlc.clone(), jlo.clone()),
+                    prim.clone(),
+                    ClassFileLayout::from_java_type(types::ARRAY_BASE),
                 ));
 
                 (prim, array)
@@ -168,90 +194,26 @@ impl ClassLoader {
         }
 
         macro_rules! insert {
-            ($self: expr, $tup: expr, $ty: expr) => {
-                self.classes.insert($ty.to_string(), $tup.0);
-                self.classes.insert(format!("[{}", $ty.to_string()), $tup.1);
+            ($tup: expr) => {
+                self.classes
+                    .insert($tup.0.unwrap_ref().name().clone().into(), $tup.0);
+                self.classes
+                    .insert($tup.1.unwrap_ref().name().clone().into(), $tup.1);
             };
         }
 
+
         // Primitives
-        let bool = primitive!(BOOL, Bool, "Z");
-        insert!(self, bool, "Z");
-
-        let byte = primitive!(BYTE, Byte, "B");
-        insert!(self, byte, "B");
-
-        let short = primitive!(SHORT, Short, "S");
-        insert!(self, short, "S");
-
-        let char = primitive!(CHAR, Char, "C");
-        insert!(self, char.clone(), "C");
-        let char_2d_array = RefTo::new(Class::new_array(
-            Object::new(char.0.clone(), RefTo::null()),
-            "[[C".to_string(),
-            ArrayType::Primitive(ArrayPrimitive::Char),
-            ClassFileLayout::from_java_type(types::CHAR)
-        ));
-
-        self.classes.insert("[[C".to_string(), char_2d_array);
-
-        let int = primitive!(INT, Int, "I");
-        insert!(self, int, "I");
-
-        let long = primitive!(LONG, Long, "J");
-        insert!(self, long, "J");
-
-        let float = primitive!(FLOAT, Float, "F");
-        insert!(self, float, "F");
-
-        let double = primitive!(DOUBLE, Double, "D");
-        insert!(self, double, "D");
-
-        let jlo_array = RefTo::new(Class::new_array(
-            Object::new(jlo.clone(), RefTo::null()),
-            "[Ljava/lang/Object;".to_string(),
-            ArrayType::Object(jlo.clone()),
-            ClassFileLayout::from_java_type(types::ARRAY_BASE)
-        ));
-
-        self.classes.insert("[Ljava/lang/Object;".to_string(), jlo_array);
+        let byte = primitive!(BYTE, "B");
+        insert!(byte.clone());
         
-        {
-            let cls = self.for_name("java/util/concurrent/ConcurrentHashMap$Segment".to_string())?;
-            let arr = RefTo::new(Class::new_array(
-                Object::new(cls.clone(), cls.unwrap_ref().super_class()),
-                "[Ljava/util/concurrent/ConcurrentHashMap$Segment;".to_string(),
-                ArrayType::Object(jlo.clone()),
-                ClassFileLayout::from_java_type(types::ARRAY_BASE)
-            ));
-    
-            self.classes.insert("[Ljava/util/concurrent/ConcurrentHashMap$Segment;".to_string(), arr);
-        }
-
-        {
-            let cls = self.for_name("java/util/concurrent/ConcurrentHashMap$Node".to_string())?;
-            let arr = RefTo::new(Class::new_array(
-                Object::new(cls.clone(), cls.unwrap_ref().super_class()),
-                "[Ljava/util/concurrent/ConcurrentHashMap$Node;".to_string(),
-                ArrayType::Object(jlo.clone()),
-                ClassFileLayout::from_java_type(types::ARRAY_BASE)
-            ));
-    
-            self.classes.insert("[Ljava/util/concurrent/ConcurrentHashMap$Node;".to_string(), arr);
-        }
-
-        {
-            let cls = jls.clone();
-            let arr = RefTo::new(Class::new_array(
-                Object::new(cls.clone(), cls.unwrap_ref().super_class()),
-                "[Ljava/lang/String;".to_string(),
-                ArrayType::Object(jlo.clone()),
-                ClassFileLayout::from_java_type(types::ARRAY_BASE)
-            ));
-    
-            self.classes.insert("[Ljava/lang/String;".to_string(), arr);
-        }
-        
+        insert!(primitive!(BOOL, "Z"));
+        insert!(primitive!(SHORT, "S"));
+        insert!(primitive!(CHAR, "C"));
+        insert!(primitive!(INT, "I"));
+        insert!(primitive!(LONG, "J"));
+        insert!(primitive!(FLOAT, "F"));
+        insert!(primitive!(DOUBLE, "D"));
 
         self.classes.iter_mut().for_each(|(_, value)| {
             value.unwrap_mut().header_mut().class = self.meta_class.clone();
@@ -261,6 +223,7 @@ impl ClassLoader {
             java_lang_class: jlc,
             java_lang_object: jlo,
             java_lang_string: jls,
+            byte_array_ty: byte.1
         })
     }
 }

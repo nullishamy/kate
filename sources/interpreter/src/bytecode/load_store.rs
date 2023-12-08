@@ -95,6 +95,10 @@ impl Instruction for Ldc {
             }
             ConstantEntry::Class(data) => {
                 let class_name = data.name.resolve().string();
+
+                let class_name = FieldType::parse(class_name.clone())
+                    .or_else(|_| FieldType::parse(format!("L{};", class_name)))?;
+
                 let class = vm.class_loader.for_name(class_name)?;
 
                 ctx.operands.push(RuntimeValue::Object(class.erase()));
@@ -183,8 +187,6 @@ impl Instruction for GetField {
         // The objectref, which must be of type reference but not an array
         // type, is popped from the operand stack.
         let objectref = arg!(ctx, "objectref" => Object);
-
-        // dbg!(&objectref.borrow(), objectref.borrow().header().class().borrow(), &name, &descriptor, &objectref.borrow().class().borrow().instance_layout());
 
         // The value of the reference field in objectref is fetched and pushed onto the operand stack.
         let value = match FieldType::parse(descriptor.clone())? {
@@ -350,12 +352,6 @@ impl Instruction for PutField {
                 let obj = value.as_object().unwrap();
                 let obj = obj.clone();
 
-                // Safety: We have verified the type above.
-                //         The component type does not matter because we are just
-                //         Cloning the RefTo, not caring about the underlying array
-                // let obj = unsafe { obj.cast::<Array<()>>() };
-                // dbg!(&obj.borrow());
-
                 let field = o
                     .field::<RefTo<Object>>((name, descriptor.to_string()))
                     .unwrap();
@@ -395,7 +391,9 @@ impl Instruction for GetStatic {
         // declared the resolved field is initialized if that class or interface
         // has not already been initialized (§5.5).
         let class_name = field.class.resolve().name.resolve().string();
-        let class = vm.class_loader.for_name(class_name.clone())?;
+        let class = vm
+            .class_loader
+            .for_name(format!("L{};", class_name).into())?;
 
         vm.initialise_class(class.clone())?;
 
@@ -424,7 +422,9 @@ impl Instruction for GetStatic {
                 // We searched every class and could not find the static, this is a fault with the classfile
                 // or our parser / layout mechanisms
                 if sup.is_null() {
-                    return Err(internal!("could not locate static field in class or super class(es)"));
+                    return Err(internal!(
+                        "could not locate static field in class or super class(es)"
+                    ));
                 }
 
                 vm.initialise_class(sup.clone())?;
@@ -465,7 +465,9 @@ impl Instruction for PutStatic {
         // declared the resolved field is initialized if that class or interface
         // has not already been initialized (§5.5).
         let class_name = field.class.resolve().name.resolve().string();
-        let class = vm.class_loader.for_name(class_name.clone())?;
+        let class = vm
+            .class_loader
+            .for_name(format!("L{};", class_name).into())?;
         vm.initialise_class(class.clone())?;
 
         let name_and_type = field.name_and_type.resolve();

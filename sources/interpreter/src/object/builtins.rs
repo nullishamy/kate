@@ -1,5 +1,6 @@
 use std::{
     alloc::Layout,
+    borrow::BorrowMut,
     cell::RefCell,
     collections::HashMap,
     fmt,
@@ -106,10 +107,12 @@ impl ArrayPrimitive {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ArrayType {
-    Object(RefTo<Class>),
-    Primitive(ArrayPrimitive),
+#[derive(Debug, Clone, PartialEq)]
+pub enum ClassType {
+    Class,
+    Interface,
+    Array,
+    Primitive,
 }
 
 #[repr(C)]
@@ -135,7 +138,8 @@ pub struct Class {
 
     // Our extra fields
     name: String,
-    component_type: Option<ArrayType>,
+    ty: ClassType,
+    component_type: RefTo<Class>,
     native_module: Option<Box<RefCell<dyn NativeModule>>>,
     classfile: Option<ClassFile>,
     is_initialised: bool,
@@ -168,7 +172,8 @@ impl Class {
             annotation_type: RefTo::null(),
             class_value_map: RefTo::null(),
 
-            component_type: None,
+            ty: ClassType::Class,
+            component_type: RefTo::null(),
             name,
             native_module: None,
             classfile: Some(class_file),
@@ -197,7 +202,8 @@ impl Class {
             annotation_type: RefTo::null(),
             class_value_map: RefTo::null(),
 
-            component_type: None,
+            ty: ClassType::Primitive,
+            component_type: RefTo::null(),
             name,
             native_module: None,
             classfile: None,
@@ -206,12 +212,10 @@ impl Class {
         }
     }
 
-    pub fn new_array(
-        object: Object,
-        ty_name: String,
-        ty: ArrayType,
-        layout: ClassFileLayout,
-    ) -> Self {
+    pub fn new_array(object: Object, array_ty: RefTo<Class>, layout: ClassFileLayout) -> Self {
+        let name = &array_ty.unwrap_ref().name;
+        let name = format!("[{}", name);
+
         Self {
             object,
 
@@ -231,8 +235,9 @@ impl Class {
             annotation_type: RefTo::null(),
             class_value_map: RefTo::null(),
 
-            component_type: Some(ty),
-            name: ty_name,
+            ty: ClassType::Array,
+            component_type: array_ty,
+            name,
             native_module: None,
             classfile: None,
             is_initialised: false,
@@ -273,7 +278,6 @@ impl Class {
     }
 
     pub fn is_assignable_to(&self, _other: &Class) -> bool {
-        // warn!("Need to implement is_assignable_to");
         true
     }
 
@@ -282,24 +286,31 @@ impl Class {
     }
 
     pub fn is_interface(&self) -> bool {
-        self.flags().has(ClassFileAccessFlag::INTERFACE)
+        if self.is_array() || self.is_primitive() {
+            false
+        } else {
+            self.flags().has(ClassFileAccessFlag::INTERFACE)
+        }
     }
 
     pub fn is_array(&self) -> bool {
-        self.component_type.is_some()
+        self.ty == ClassType::Array
     }
 
     pub fn is_primitive(&self) -> bool {
-        // Not an array and not a class, must be primitive
-        self.component_type.is_none() && self.classfile.is_none()
+        self.ty == ClassType::Primitive
     }
 
     pub fn super_class(&self) -> RefTo<Class> {
         self.object.super_class.clone()
     }
 
-    pub fn component_type(&self) -> Option<ArrayType> {
+    pub fn component_type(&self) -> RefTo<Class> {
         self.component_type.clone()
+    }
+
+    pub fn ty(&self) -> ClassType {
+        self.ty.clone()
     }
 }
 
@@ -308,6 +319,7 @@ impl fmt::Debug for Class {
         f.debug_struct("Class")
             .field("object", &self.object)
             .field("name", &self.name)
+            .field("ty", &self.ty)
             .field("is_initialised", &self.is_initialised)
             .finish_non_exhaustive()
     }
@@ -344,7 +356,7 @@ pub struct Array<T> {
 }
 
 impl<T: Copy> Array<T> {
-    pub fn copy_from_slice(ty: ArrayType, ty_name: String, data: &[T]) -> RefTo<Array<T>> {
+    pub fn copy_from_slice(array_ty: RefTo<Class>, data: &[T]) -> RefTo<Array<T>> {
         let base_layout = Layout::new::<Array<T>>();
         let storage_layout = Layout::array::<T>(data.len()).unwrap();
         let (layout, _) = base_layout.extend(storage_layout).unwrap();
@@ -352,12 +364,7 @@ impl<T: Copy> Array<T> {
         let array_ref = unsafe {
             let mem = std::alloc::alloc_zeroed(layout).cast::<Array<T>>();
             (*mem).object = Object::new(
-                RefTo::new(Class::new_array(
-                    Object::new(RefTo::null(), RefTo::null()),
-                    ty_name,
-                    ty,
-                    ClassFileLayout::from_java_type(types::ARRAY_BASE),
-                )),
+                array_ty,
                 RefTo::null(),
             );
 
@@ -376,22 +383,14 @@ impl<T: Copy> Array<T> {
 }
 
 impl<T> Array<T> {
-    pub fn from_vec(ty: ArrayType, ty_name: String, data: Vec<T>) -> RefTo<Array<T>> {
+    pub fn from_vec(array_ty: RefTo<Class>, data: Vec<T>) -> RefTo<Array<T>> {
         let base_layout = Layout::new::<Array<T>>();
         let storage_layout = Layout::array::<T>(data.len()).unwrap();
         let (layout, _) = base_layout.extend(storage_layout).unwrap();
 
         let array_ref = unsafe {
             let mem = std::alloc::alloc_zeroed(layout).cast::<Array<T>>();
-            (*mem).object = Object::new(
-                RefTo::new(Class::new_array(
-                    Object::new(RefTo::null(), RefTo::null()),
-                    ty_name,
-                    ty,
-                    ClassFileLayout::from_java_type(types::ARRAY_BASE),
-                )),
-                RefTo::null(),
-            );
+            (*mem).object = Object::new(array_ty, RefTo::null());
 
             (*mem).capacity = data.len();
             (*mem).count = data.len();

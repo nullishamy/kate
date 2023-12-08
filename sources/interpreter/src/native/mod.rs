@@ -61,7 +61,7 @@ pub trait NativeModule {
     }
 
     fn get_class(&self, vm: &mut VM) -> Result<RefTo<Class>, Throwable> {
-        vm.class_loader.for_name(self.classname().to_string())
+        vm.class_loader.for_name(format!("L{};", self.classname()).into())
     }
 }
 
