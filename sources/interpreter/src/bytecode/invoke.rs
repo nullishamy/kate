@@ -900,33 +900,16 @@ fn do_call(
 
         // See if this code threw a (runtime // java) exception
         // If so, see if we (the caller) can handle it
-        if let Err((Throwable::Runtime(err), state)) = &res {
-            let ty = err.ty.unwrap_ref();
-
-            for entry in &code.exception_table {
-                // The handler supports the type of the exception
-                let has_type_match = if entry.catch_type.index() != 0 {
-                    let entry_ty = {
-                        let name = entry.catch_type.resolve().name.resolve().string();
-                        vm.class_loader.for_name(format!("L{};", name).into())
-                    }?;
-                    entry_ty.unwrap_ref().is_assignable_to(ty)
-                } else {
-                    // If the value of the catch_type item is zero, this exception handler is called for all exceptions.
-                    true
-                };
-
-                // The handler covers the range of code we just called
-                let has_range_match = (entry.start_pc..entry.end_pc).contains(&(state.pc as u16));
-
-                if has_type_match && has_range_match {
-                    // We matched, jump to the handler
+        if let Err((err, state)) = &res {
+            // Only try to catch runtime errors. Internal errors should never be caught by user code.
+            if let Throwable::Runtime(rte) = err {
+                if let Some(entry) = err.caught_by(vm, &code, state)? {
                     let re_enter_context = Context {
                         code: code.clone(),
                         class,
                         pc: entry.handler_pc as i32,
                         // Push the exception object as the first operand
-                        operands: vec![err.obj.clone()],
+                        operands: vec![rte.obj.clone()],
                         locals: args.clone(),
                     };
 

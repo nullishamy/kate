@@ -14,7 +14,7 @@ use interpreter::{
         mem::{FieldRef, RefTo},
         runtime::RuntimeValue,
     },
-    static_method, Context, VM, ThrownState,
+    static_method, Context, ThrownState, VM,
 };
 use parse::attributes::CodeAttribute;
 use support::encoding::{decode_string, CompactEncoding};
@@ -174,6 +174,66 @@ fn boot_system(vm: &mut VM, cls: RefTo<Class>) {
     }
 }
 
+fn run_method(vm: &mut VM, ctx: Context, args: &Cli) {
+    let code = ctx.code.clone();
+    let cls = ctx.class.clone();
+
+    let res = if args.has_option(opts::TEST_THROW_INTERNAL) {
+        Err((
+            Throwable::Internal(anyhow!("testing, internal errors")),
+            ThrownState { pc: -1 },
+        ))
+    } else {
+        vm.run(ctx)
+    };
+
+    if let Err((err, state)) = res {
+        if let Throwable::Internal(ite) = &err {
+            println!("/----------------------------------------------------------\\");
+            println!("|The VM encountered an unrecoverable error and had to abort.|");
+            println!("\\----------------------------------------------------------/");
+            println!("Uncaught exception in main: {}", ite);
+
+            for source in vm.frames.iter().rev() {
+                println!("  {}", source);
+            }
+        }
+
+        if let Throwable::Runtime(rte) = &err {
+            if let Some(entry) = err.caught_by(vm, &code, &state).unwrap() {
+                let re_enter_context = Context {
+                    code: code.clone(),
+                    class: cls,
+                    pc: entry.handler_pc as i32,
+                    // Push the exception object as the first operand
+                    operands: vec![rte.obj.clone()],
+                    locals: vec![],
+                };
+
+                info!("Re-entering main at {}", re_enter_context.pc);
+
+                return run_method(vm, re_enter_context, args);
+            } else {
+                println!("Uncaught exception in main: {}", rte);
+                for source in rte.sources.iter().rev() {
+                    println!("  {}", source);
+                }
+            }
+        }
+
+        println!(
+            "  {}",
+            Frame {
+                class_name: cls.unwrap_ref().name().to_string(),
+                method_name: "main".to_string()
+            }
+        );
+        exit(1);
+    } else {
+        info!("Execution concluded without error")
+    }
+}
+
 fn main() {
     let args = Cli::parse();
 
@@ -225,7 +285,7 @@ fn main() {
     let interner = StringInterner::new(
         bootstrapped_classes.java_lang_string.clone(),
         bootstrapped_classes.java_lang_object.clone(),
-        bootstrapped_classes.byte_array_ty.clone()
+        bootstrapped_classes.byte_array_ty.clone(),
     );
 
     set_interner(interner);
@@ -241,7 +301,10 @@ fn main() {
     info!("Bootstrap complete");
 
     for class_name in &args.classes {
-        let cls = vm.class_loader.for_name(format!("L{};", class_name).into()).unwrap();
+        let cls = vm
+            .class_loader
+            .for_name(format!("L{};", class_name).into())
+            .unwrap();
         if args.has_option(opts::TEST_BOOT) {
             boot_system(&mut vm, cls.clone());
         }
@@ -258,51 +321,15 @@ fn main() {
             .known_attribute::<CodeAttribute>(&cls.unwrap_ref().class_file().constant_pool)
             .unwrap();
 
-        let ctx = Context {
-            class: cls,
-            code,
+        let main_ctx = Context {
+            class: cls.clone(),
+            code: code.clone(),
             operands: vec![],
             locals: vec![],
             pc: 0,
         };
 
         info!("Entering main");
-        let res = if args.has_option(opts::TEST_THROW_INTERNAL) {
-            Err((Throwable::Internal(anyhow!("testing, internal errors")), ThrownState { pc: -1 }))
-        } else {
-            vm.run(ctx)
-        };
-
-        if let Err((e, _)) = res {
-            if let Throwable::Internal(_) = e {
-                println!("/----------------------------------------------------------\\");
-                println!("|The VM encountered an unrecoverable error and had to abort.|");
-                println!("\\----------------------------------------------------------/");
-            }
-
-            println!("Uncaught exception in main: {}", e);
-
-            if let Throwable::Runtime(ref err) = e {
-                for source in err.sources.iter().rev() {
-                    println!("  {}", source);
-                }
-            } else {
-                for source in vm.frames.iter().rev() {
-                    println!("  {}", source);
-                }
-            }
-
-
-            println!(
-                "  {}",
-                Frame {
-                    class_name: class_name.to_string(),
-                    method_name: "main".to_string()
-                }
-            );
-            exit(1);
-        } else {
-            info!("Execution concluded without error")
-        }
+        run_method(&mut vm, main_ctx, &args);
     }
 }

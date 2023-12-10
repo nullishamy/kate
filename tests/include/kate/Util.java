@@ -23,7 +23,14 @@ public class Util {
 
     public static void assertEqual(Object lhs, Object rhs) {
         if (!java.util.Objects.equals(lhs, rhs)) {
-            throw new RuntimeException("(==) Assertion failed. lhs was '" + lhs + "', rhs was '" + rhs + "'");
+            StringBuilder sb = new StringBuilder();
+            sb.append("(==) Assertion failed. lhs was '");
+            sb.append(lhs);
+            sb.append("', rhs was '");
+            sb.append(rhs);
+            sb.append("'");
+
+            throw new RuntimeException(sb.toString());
         }
     }
 

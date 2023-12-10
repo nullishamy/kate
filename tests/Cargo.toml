@@ -4,8 +4,14 @@ version = "0.1.0"
 edition = "2021"
 publish = false
 
+
 [dev-dependencies]
 interpreter = { path = "../sources/interpreter/" }
+
+# Small utility to pre-compile all our test dependencies (assertions, native printers, ...)
+[[bin]]
+name = "before-test"
+path = "before-test.rs"
 
 [[test]]
 name = "execution"

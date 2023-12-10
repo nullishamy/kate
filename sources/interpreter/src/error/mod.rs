@@ -1,16 +1,19 @@
 use std::fmt;
 
+use parse::{
+    attributes::{CodeAttribute, ExceptionEntry},
+    classfile::Resolvable,
+};
 use thiserror::Error;
 
-use crate::object::{mem::RefTo, builtins::Class, runtime::RuntimeValue};
+use crate::{
+    object::{builtins::Class, mem::RefTo, runtime::RuntimeValue},
+    ThrownState, VM,
+};
 
 pub enum VMError {
-    ArrayIndexOutOfBounds {
-        at: i64
-    },
-    NullPointerException {
-        ctx: String
-    }
+    ArrayIndexOutOfBounds { at: i64 },
+    NullPointerException { ctx: String },
 }
 
 impl VMError {
@@ -38,6 +41,42 @@ pub enum Throwable {
 
     #[error(transparent)]
     Internal(#[from] anyhow::Error),
+}
+
+impl Throwable {
+    pub fn caught_by<'a>(
+        &'a self,
+        vm: &mut VM,
+        method: &'a CodeAttribute,
+        state: &'a ThrownState,
+    ) -> Result<Option<&'a ExceptionEntry>, Throwable> {
+        if let Throwable::Runtime(rte) = self {
+            let ty = rte.ty.unwrap_ref();
+
+            for entry in &method.exception_table {
+                // The handler supports the type of the exception
+                let has_type_match = if entry.catch_type.index() != 0 {
+                    let entry_ty = {
+                        let name = entry.catch_type.resolve().name.resolve().string();
+                        vm.class_loader.for_name(format!("L{};", name).into())
+                    }?;
+                    entry_ty.unwrap_ref().is_assignable_to(ty)
+                } else {
+                    // If the value of the catch_type item is zero, this exception handler is called for all exceptions.
+                    true
+                };
+    
+                // The handler covers the range of code we just called
+                let has_range_match = (entry.start_pc..entry.end_pc).contains(&(state.pc as u16));
+                
+                if has_type_match && has_range_match {
+                    return Ok(Some(entry))
+                }
+            }
+        }
+
+        Ok(None)
+    }
 }
 
 #[macro_export]

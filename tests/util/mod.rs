@@ -36,14 +36,16 @@ pub fn compile_abs(path: impl Into<PathBuf>) -> Result<String, Error> {
 
 pub fn compile(path: impl Into<PathBuf>) -> Result<String, Error> {
     let tmp_dir: PathBuf = TMP_DIR.into();
-    let include_dir = PathBuf::from(SOURCE_DIR).join("include");
 
     let path = path.into();
 
     // javac takes args with this form:
     // javac SOURCEFILE.java -d OUTPUT_DIR
     let compilation = Command::new("javac")
-        .args(["-cp", &include_dir.display().to_string()])
+        // https://stackoverflow.com/questions/2441760/differences-between-classpath-and-sourcepath-options-of-javac
+        // using the classpath so that javac will not attempt to recompile our utils (which are pre-compiled by a utility and placed into)
+        // tmp_dir/kate so that our tests can reference them
+        .args(["-cp", &tmp_dir.display().to_string()])
         .arg(tmp_dir.join(format!("{}.java", path.display())))
         .args(["--add-exports", "java.base/jdk.internal.ref=ALL-UNNAMED"])
         .args(["--add-exports", "java.base/jdk.internal.misc=ALL-UNNAMED"])
@@ -90,11 +92,6 @@ impl PartialEq for Execution {
 impl Execution {
     pub fn with_output(mut self, line: impl Into<String>) -> Self {
         self.out.push(line.into());
-        self
-    }
-
-    pub fn with_error(mut self, line: impl Into<String>) -> Self {
-        self.err.push(line.into());
         self
     }
 
@@ -150,7 +147,6 @@ impl State {
 
 pub fn execute(state: State, class_name: String) -> Result<Execution, Error> {
     let mut command = Command::new("cargo");
-    let include_dir = PathBuf::from(SOURCE_DIR).join("include");
     let exec = command
         .arg("run")
         .arg("--manifest-path")
@@ -158,8 +154,6 @@ pub fn execute(state: State, class_name: String) -> Result<Execution, Error> {
         .arg("--")
         .arg("--cp")
         .arg(TMP_DIR)
-        .arg("--cp")
-        .arg(include_dir)
         .arg("-Xtest.init=true")
         .arg(class_name);
 

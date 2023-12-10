@@ -241,20 +241,6 @@ mod instruction {
     fn athrow() -> TestResult {
         let state = state().init();
 
-        // FIXME: Support try/catch in main():
-        // This currently fails because the catch is never checked after the main call
-        /*
-            String status = "Trying to throw";
-            try {
-                throw new RuntimeException("throw!");
-            }
-            catch (RuntimeException ex) {
-                status = "Caught";
-            }
-
-            assertEqual(status, "Caught");
-        */
-
         let source = using_helpers(
             "AThrow",
             r#"
@@ -295,12 +281,29 @@ mod instruction {
             public static void main(String[] args) {
                 String status = thrownWithinMethod();
                 assertEqual(status, "Caught");
+
+                // This is its own special case because the cli has to handle the catching 
+                // of exceptions thrown / caught in main
+                try {
+                    status = "About to throw";
+                    throw new IllegalStateException();
+                } catch (IllegalStateException e) {
+                    status = "Caught in main";
+                }
+
+                assertEqual(status, "Caught in main");
+
+                // Just checking that it properly ignores exceptions that arent caught
+                throw new RuntimeException("thrown from main");
             }
             "#,
         );
 
         let got = execute(state, inline(source)?)?;
-        let expected = expected().has_success();
+        let expected = expected()
+            .has_error()
+            .with_output("Uncaught exception in main: java/lang/RuntimeException: thrown from main")
+            .with_output("  at AThrow.main");
 
         compare(got, expected);
 
@@ -588,7 +591,6 @@ mod instruction {
         Ok(())
     }
 
-
     #[test]
     fn getfield() -> TestResult {
         let state = state().init();
@@ -659,10 +661,7 @@ mod instruction {
 // Test instructions to make sure they throw in exceptional cases
 #[cfg(test)]
 mod exceptions {
-    use crate::util::{
-        builder::using_main,
-        compare, execute, expected, inline, state, TestResult,
-    };
+    use crate::util::{builder::using_main, compare, execute, expected, inline, state, TestResult};
 
     #[test]
     fn caload_oob() -> TestResult {
@@ -685,7 +684,9 @@ mod exceptions {
         let got = execute(state, inline(source)?)?;
         let expected = expected()
             .has_error()
-            .with_output("Uncaught exception in main: java/lang/ArrayIndexOutOfBoundsException: OOB @ 1")
+            .with_output(
+                "Uncaught exception in main: java/lang/ArrayIndexOutOfBoundsException: OOB @ 1",
+            )
             .with_output("  at CALoadOOB.main");
 
         compare(got, expected);
