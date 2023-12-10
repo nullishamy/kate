@@ -12,8 +12,8 @@ use crate::{
     instance_method, module_base,
     object::{
         builtins::{Array, BuiltinString, Class, Object},
-        layout::types::{Bool, Int, Long},
-        mem::{FieldRef, HasObjectHeader, RefTo},
+        layout::types::Int,
+        mem::{FieldRef, RefTo},
         numeric::FALSE,
         runtime::RuntimeValue,
     },
