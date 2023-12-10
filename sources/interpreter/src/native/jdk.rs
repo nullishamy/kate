@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     error::Throwable,
-    module_base,
+    instance_method, module_base,
     object::{
         builtins::{Array, BuiltinString, Class, Object},
         interner::{intern_string, interner_meta_class},
@@ -159,7 +159,9 @@ impl NativeModule for JdkReflection {
 
             let cls = if let Some(frame) = first_frame_that_isnt_ours {
                 Some(RuntimeValue::Object(
-                    vm.class_loader.for_name(format!("L{};", frame.class_name).into())?.erase(),
+                    vm.class_loader
+                        .for_name(format!("L{};", frame.class_name).into())?
+                        .erase(),
                 ))
             } else {
                 None
@@ -332,7 +334,7 @@ impl NativeModule for JdkUnsafe {
 
     fn init(&mut self) {
         fn object_field_offset1(
-            _: RefTo<Class>,
+            _: RefTo<Object>,
             args: Vec<RuntimeValue>,
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
@@ -349,9 +351,9 @@ impl NativeModule for JdkUnsafe {
             };
 
             let layout = cls.unwrap_ref().instance_layout();
-            let info = layout
-                .field_info(&field.unwrap_ref().string()?)
-                .expect("TODO: internal error");
+            let str = field.unwrap_ref().string()?;
+            let info = layout.field_info(&str).expect("TODO: internal error");
+
             let offset = info.location.offset as i64;
 
             Ok(Some(RuntimeValue::Integral(offset.into())))
@@ -360,7 +362,7 @@ impl NativeModule for JdkUnsafe {
         self.set_method(
             "objectFieldOffset1",
             "(Ljava/lang/Class;Ljava/lang/String;)J",
-            static_method!(object_field_offset1),
+            instance_method!(object_field_offset1),
         );
 
         fn register_natives(
@@ -374,17 +376,17 @@ impl NativeModule for JdkUnsafe {
         self.set_method("registerNatives", "()V", static_method!(register_natives));
 
         fn store_fence(
-            _: RefTo<Class>,
+            _: RefTo<Object>,
             _: Vec<RuntimeValue>,
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
             Ok(None)
         }
 
-        self.set_method("storeFence", "()V", static_method!(store_fence));
+        self.set_method("storeFence", "()V", instance_method!(store_fence));
 
         fn compare_and_set_int(
-            _: RefTo<Class>,
+            _: RefTo<Object>,
             args: Vec<RuntimeValue>,
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
@@ -429,11 +431,11 @@ impl NativeModule for JdkUnsafe {
         self.set_method(
             "compareAndSetInt",
             "(Ljava/lang/Object;JII)Z",
-            static_method!(compare_and_set_int),
+            instance_method!(compare_and_set_int),
         );
 
         fn compare_and_set_reference(
-            _: RefTo<Class>,
+            _: RefTo<Object>,
             args: Vec<RuntimeValue>,
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
@@ -477,11 +479,11 @@ impl NativeModule for JdkUnsafe {
         self.set_method(
             "compareAndSetReference",
             "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
-            static_method!(compare_and_set_reference),
+            instance_method!(compare_and_set_reference),
         );
 
         fn compare_and_set_long(
-            _: RefTo<Class>,
+            _: RefTo<Object>,
             args: Vec<RuntimeValue>,
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
@@ -528,11 +530,11 @@ impl NativeModule for JdkUnsafe {
         self.set_method(
             "compareAndSetLong",
             "(Ljava/lang/Object;JJJ)Z",
-            static_method!(compare_and_set_long),
+            instance_method!(compare_and_set_long),
         );
 
         fn get_reference_volatile(
-            _: RefTo<Class>,
+            _: RefTo<Object>,
             args: Vec<RuntimeValue>,
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
@@ -557,11 +559,40 @@ impl NativeModule for JdkUnsafe {
         self.set_method(
             "getReferenceVolatile",
             "(Ljava/lang/Object;J)Ljava/lang/Object;",
-            static_method!(get_reference_volatile),
+            instance_method!(get_reference_volatile),
+        );
+
+        fn get_reference(
+            _: RefTo<Object>,
+            args: Vec<RuntimeValue>,
+            _: &mut VM,
+        ) -> Result<Option<RuntimeValue>, Throwable> {
+            let object = {
+                let val = args.get(1).unwrap();
+                val.as_object().unwrap()
+            };
+
+            let offset = {
+                let val = args.get(2).unwrap();
+                val.as_integral().unwrap().value
+            };
+
+            let raw_ptr = object.unwrap_mut() as *mut Object;
+            let raw_ptr = unsafe { raw_ptr.byte_add(offset as usize) };
+            let raw_ptr = raw_ptr.cast::<RefTo<Object>>();
+            let val = unsafe { raw_ptr.as_ref().unwrap() }.clone();
+
+            Ok(Some(RuntimeValue::Object(val)))
+        }
+
+        self.set_method(
+            "getReference",
+            "(Ljava/lang/Object;J)Ljava/lang/Object;",
+            instance_method!(get_reference),
         );
 
         fn get_int_volatile(
-            _: RefTo<Class>,
+            _: RefTo<Object>,
             args: Vec<RuntimeValue>,
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
@@ -586,11 +617,11 @@ impl NativeModule for JdkUnsafe {
         self.set_method(
             "getIntVolatile",
             "(Ljava/lang/Object;J)I",
-            static_method!(get_int_volatile),
+            instance_method!(get_int_volatile),
         );
 
         fn put_reference_volatile(
-            _: RefTo<Class>,
+            _: RefTo<Object>,
             args: Vec<RuntimeValue>,
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
@@ -609,6 +640,16 @@ impl NativeModule for JdkUnsafe {
                 val.as_object().unwrap()
             };
 
+            let class = object.unwrap_ref().class();
+            let class_name = class.unwrap_ref().name();
+
+            // HACK: Noop if you're trying to set contextClassLoader on an innoc thread
+            // This is because there exists a bug in the unsafe parts of this that I do
+            // not want to try and find. Reallllly need to fix this :^)
+            if class_name.contains("InnocuousThread") && offset == 80 {
+                return Ok(None)
+            }
+
             let raw_ptr = object.unwrap_mut() as *mut Object;
             let raw_ptr = unsafe { raw_ptr.byte_add(offset as usize) };
             let raw_ptr = raw_ptr.cast::<RefTo<Object>>();
@@ -620,11 +661,11 @@ impl NativeModule for JdkUnsafe {
         self.set_method(
             "putReferenceVolatile",
             "(Ljava/lang/Object;JLjava/lang/Object;)V",
-            static_method!(put_reference_volatile),
+            instance_method!(put_reference_volatile),
         );
 
         fn array_index_scale0(
-            _: RefTo<Class>,
+            _: RefTo<Object>,
             args: Vec<RuntimeValue>,
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
@@ -658,11 +699,11 @@ impl NativeModule for JdkUnsafe {
         self.set_method(
             "arrayIndexScale0",
             "(Ljava/lang/Class;)I",
-            static_method!(array_index_scale0),
+            instance_method!(array_index_scale0),
         );
 
         fn array_base_offset0(
-            _: RefTo<Class>,
+            _: RefTo<Object>,
             args: Vec<RuntimeValue>,
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
@@ -696,7 +737,7 @@ impl NativeModule for JdkUnsafe {
         self.set_method(
             "arrayBaseOffset0",
             "(Ljava/lang/Class;)I",
-            static_method!(array_base_offset0),
+            instance_method!(array_base_offset0),
         );
     }
 }

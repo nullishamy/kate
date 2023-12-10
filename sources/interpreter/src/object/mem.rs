@@ -17,7 +17,7 @@ pub struct FieldRef<T> {
 
 impl <T : Copy> FieldRef<T> {
     pub fn copy_out(&self) -> T {
-        *self.to_ref()
+        *self.unwrap_ref()
     }
 }
 
@@ -30,7 +30,7 @@ impl<T> FieldRef<T> {
         }
     }
 
-    pub fn to_ref(&self) -> &T {
+    pub fn unwrap_ref(&self) -> &T {
         assert!(!self.object.is_null(), "cannot read from null");
 
         let offset = self.field.offset;
@@ -186,6 +186,13 @@ impl<T: HasObjectHeader<T>> RefTo<T> {
     pub fn null() -> Self {
         Self {
             object: std::ptr::null_mut(),
+            phantom: PhantomData,
+        }
+    }
+
+    pub fn garbage() -> Self {
+        Self {
+            object: 0xFFFFFFFFFFFF_u64 as *mut Object,
             phantom: PhantomData,
         }
     }

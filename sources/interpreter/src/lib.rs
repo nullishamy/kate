@@ -151,8 +151,14 @@ impl VM {
                 locals: vec![],
             };
 
-            self.run(ctx).map_err(|e| e.0)?;
+            self.frames.push(Frame {
+                method_name: "<clinit>".to_string(),
+                class_name: class_name.clone(),
+            });
+            let res = self.run(ctx).map_err(|e| e.0);
+            res?;
             debug!("Finished initialising {}", class_name);
+            self.frames.pop();
         } else {
             debug!("No clinit in {}", class_name);
             // Might as well mark this as initialised to avoid future
@@ -169,7 +175,9 @@ impl VM {
 
     /// Try and make the error. This may fail if a class fails to resolve, or object creation fails
     pub fn try_make_error(&mut self, ty: VMError) -> Result<Throwable, Throwable> {
-        let cls = self.class_loader.for_name(format!("L{};", ty.class_name()).into())?;
+        let cls = self
+            .class_loader
+            .for_name(format!("L{};", ty.class_name()).into())?;
 
         match ty {
             VMError::ArrayIndexOutOfBounds { .. } => {
@@ -180,14 +188,14 @@ impl VM {
                     sources: self.frames.clone(),
                 }))
             }
-            VMError::NullPointerException => {
+            VMError::NullPointerException { .. } => {
                 Ok(Throwable::Runtime(error::RuntimeException {
                     message: ty.message(),
                     ty: cls,
                     obj: RuntimeValue::null_ref(),
                     sources: self.frames.clone(),
                 }))
-            },
+            }
         }
     }
 
@@ -221,6 +229,7 @@ impl VM {
         load_module(self, lang::LangDouble::new());
         load_module(self, lang::LangFloat::new());
         load_module(self, lang::LangThrowable::new());
+        load_module(self, lang::LangClassLoader::new());
         load_module(self, lang::LangThread::new());
 
         load_module(self, jdk::JdkVM::new());
@@ -234,6 +243,9 @@ impl VM {
 
         load_module(self, io::IOFileDescriptor::new());
         load_module(self, io::IOFileOutputStream::new());
+        load_module(self, io::IOUnixFileSystem::new());
+        load_module(self, io::IOFileInputStream::new());
+
         load_module(self, security::SecurityAccessController::new());
 
         // Init String so that we can set the static after it's done. The clinit sets it to a default.
@@ -256,7 +268,9 @@ impl VM {
             let mut statics = statics.write();
             // indicates if a security manager is possible
             // private static final int NEVER = 1;
-            let field = statics.get_mut(&"allowSecurityManager".to_string()).unwrap();
+            let field = statics
+                .get_mut(&"allowSecurityManager".to_string())
+                .unwrap();
 
             field.value = Some(RuntimeValue::Integral(1_i32.into()));
         }
@@ -271,7 +285,10 @@ impl VM {
         self.initialise_class(thread_class.clone())?;
 
         let thread = BuiltinThread {
-            object: Object::new(thread_class.clone(), thread_class.unwrap_ref().super_class()),
+            object: Object::new(
+                thread_class.clone(),
+                thread_class.unwrap_ref().super_class(),
+            ),
             name: intern_string("main".to_string())?,
             priority: 1,
             daemon: 0,

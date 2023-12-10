@@ -40,7 +40,9 @@ impl Instruction for InvokeVirtual {
         let cls = ctx.class.clone();
         let cls = cls
             .to_ref()
-            .ok_or(vm.try_make_error(VMError::NullPointerException)?)?;
+            .ok_or(vm.try_make_error(VMError::NullPointerException {
+                ctx: "invokevirtual".to_string(),
+            })?)?;
         let pool = &cls.class_file().constant_pool;
 
         // The unsigned indExbyte1 and indexbyte2 are used to construct an
@@ -58,7 +60,13 @@ impl Instruction for InvokeVirtual {
         let (method_name, method_descriptor, class_name, _) = to_method_info(pool_entry)?;
 
         // The named method is resolved (§5.4.3.3, §5.4.3.4).
-        let loaded_class = vm.class_loader.for_name(format!("L{};", class_name).into())?;
+        let class_name_desc = if !class_name.starts_with('[') {
+            FieldType::parse(format!("L{};", class_name))?
+        } else {
+            FieldType::parse(class_name.clone())?
+        };
+
+        let loaded_class = vm.class_loader.for_name(class_name_desc)?;
 
         let loaded_method = resolve_class_method(
             vm,
@@ -88,7 +96,9 @@ impl Instruction for InvokeVirtual {
         // to C and the resolved method (§5.4.6). This is the method to be invoked.
         let objectclass = objectref
             .to_ref()
-            .ok_or(vm.try_make_error(VMError::NullPointerException)?)?
+            .ok_or(vm.try_make_error(VMError::NullPointerException {
+                ctx: format!("cannot invoke method '{}' on null", &method_name),
+            })?)?
             .header()
             .class
             .clone();
@@ -124,10 +134,12 @@ pub struct InvokeSpecial {
 
 impl Instruction for InvokeSpecial {
     fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
-        let cls = ctx
-            .class
-            .to_ref()
-            .ok_or(vm.try_make_error(VMError::NullPointerException)?)?;
+        let cls =
+            ctx.class
+                .to_ref()
+                .ok_or(vm.try_make_error(VMError::NullPointerException {
+                    ctx: "invokespecial".to_string(),
+                })?)?;
 
         let pool = &cls.class_file().constant_pool;
 
@@ -146,7 +158,9 @@ impl Instruction for InvokeSpecial {
         let (method_name, method_descriptor, class_name, _) = to_method_info(pool_entry)?;
 
         // The named method is resolved (§5.4.3.3, §5.4.3.4).
-        let loaded_class = vm.class_loader.for_name(format!("L{};", class_name).into())?;
+        let loaded_class = vm
+            .class_loader
+            .for_name(format!("L{};", class_name).into())?;
         let loaded_method = resolve_class_method(
             vm,
             loaded_class.clone(),
@@ -201,10 +215,12 @@ pub struct InvokeStatic {
 
 impl Instruction for InvokeStatic {
     fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
-        let cls = ctx
-            .class
-            .to_ref()
-            .ok_or(vm.try_make_error(VMError::NullPointerException)?)?;
+        let cls =
+            ctx.class
+                .to_ref()
+                .ok_or(vm.try_make_error(VMError::NullPointerException {
+                    ctx: "invokestatic".to_string(),
+                })?)?;
         let pool = &cls.class_file().constant_pool;
 
         // The unsigned indexbyte1 and indexbyte2 are used to construct an
@@ -222,7 +238,9 @@ impl Instruction for InvokeStatic {
         let (method_name, method_descriptor, class_name, location) = to_method_info(pool_entry)?;
 
         // The named method is resolved (§5.4.3.3, §5.4.3.4).
-        let loaded_class = vm.class_loader.for_name(format!("L{};", class_name).into())?;
+        let loaded_class = vm
+            .class_loader
+            .for_name(format!("L{};", class_name).into())?;
         let loaded_method = match location {
             MethodLocation::Interface => resolve_interface_method(
                 vm,
@@ -320,7 +338,9 @@ impl Instruction for InvokeInterface {
         let (method_name, method_descriptor, class_name, _) = to_method_info(pool_entry)?;
 
         // The named method is resolved (§5.4.3.3, §5.4.3.4).
-        let loaded_class = vm.class_loader.for_name(format!("L{};", class_name).into())?;
+        let loaded_class = vm
+            .class_loader
+            .for_name(format!("L{};", class_name).into())?;
         let loaded_method = resolve_interface_method(
             vm,
             loaded_class.clone(),
@@ -418,7 +438,9 @@ fn resolve_class_method(
     // invoked on the direct superclass of C.
     if let Some(super_class) = class.unwrap_ref().super_class().into_option() {
         let class_name = super_class.name();
-        let super_class = vm.class_loader.for_name(format!("L{};", class_name).into())?;
+        let super_class = vm
+            .class_loader
+            .for_name(format!("L{};", class_name).into())?;
 
         return resolve_class_method(vm, super_class, method_name, method_descriptor);
     }
@@ -480,7 +502,9 @@ fn resolve_interface_method(
     // TODO: Respect the flags
     if let Some(super_class) = class.unwrap_ref().super_class().into_option() {
         let class_name = super_class.name();
-        let super_class = vm.class_loader.for_name(format!("L{};", class_name).into())?;
+        let super_class = vm
+            .class_loader
+            .for_name(format!("L{};", class_name).into())?;
 
         return resolve_interface_method(vm, super_class, method_name, method_descriptor);
     }
@@ -543,7 +567,9 @@ fn select_special_method(
     // method to be invoked.
     if let Some(super_class) = class.unwrap_ref().super_class().into_option() {
         let class_name = super_class.name();
-        let super_class = vm.class_loader.for_name(format!("L{};", class_name).into())?;
+        let super_class = vm
+            .class_loader
+            .for_name(format!("L{};", class_name).into())?;
 
         return select_method(vm, super_class, declared_class, method);
     }
@@ -614,7 +640,9 @@ fn select_method(
     // is the selected method.
     if let Some(super_class) = class.unwrap_ref().super_class().into_option() {
         let class_name = super_class.name();
-        let super_class = vm.class_loader.for_name(format!("L{};", class_name).into())?;
+        let super_class = vm
+            .class_loader
+            .for_name(format!("L{};", class_name).into())?;
 
         return select_method(vm, super_class, declared_class, method);
     }
@@ -688,8 +716,7 @@ impl Instruction for New {
         let object_ty = match entry {
             ConstantEntry::Class(data) => {
                 let class_name = data.name.resolve().string();
-                vm
-                    .class_loader
+                vm.class_loader
                     .for_name(format!("L{};", class_name).into())?
             }
             e => return Err(internal!("{:#?} cannot be used to create a new object", e)),
@@ -877,13 +904,17 @@ fn do_call(
             let ty = err.ty.unwrap_ref();
 
             for entry in &code.exception_table {
-                let entry_ty = {
-                    let name = entry.catch_type.resolve().name.resolve().string();
-                    vm.class_loader.for_name(format!("L{};", name).into())
-                }?;
-
                 // The handler supports the type of the exception
-                let has_type_match = entry_ty.unwrap_ref().is_assignable_to(ty);
+                let has_type_match = if entry.catch_type.index() != 0 {
+                    let entry_ty = {
+                        let name = entry.catch_type.resolve().name.resolve().string();
+                        vm.class_loader.for_name(format!("L{};", name).into())
+                    }?;
+                    entry_ty.unwrap_ref().is_assignable_to(ty)
+                } else {
+                    // If the value of the catch_type item is zero, this exception handler is called for all exceptions.
+                    true
+                };
 
                 // The handler covers the range of code we just called
                 let has_range_match = (entry.start_pc..entry.end_pc).contains(&(state.pc as u16));
@@ -956,9 +987,12 @@ impl Instruction for Athrow {
             .context("throwable was not an object")?
             .clone();
 
-        let throwable = throwable
-            .to_ref()
-            .ok_or(vm.try_make_error(VMError::NullPointerException)?)?;
+        let throwable =
+            throwable
+                .to_ref()
+                .ok_or(vm.try_make_error(VMError::NullPointerException {
+                    ctx: "when throwing".to_string(),
+                })?)?;
 
         let class = throwable.header().class.clone();
         let class_name = class.unwrap_ref().name();
@@ -970,7 +1004,7 @@ impl Instruction for Athrow {
             ))
             .unwrap();
 
-        let message = message.to_ref();
+        let message = message.unwrap_ref();
         // assert_eq!(message.borrow().ty, ObjectType::String);
         // Safety: Pray
         let message = unsafe { message.cast::<BuiltinString>() };

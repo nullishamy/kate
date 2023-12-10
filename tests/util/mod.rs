@@ -36,12 +36,17 @@ pub fn compile_abs(path: impl Into<PathBuf>) -> Result<String, Error> {
 
 pub fn compile(path: impl Into<PathBuf>) -> Result<String, Error> {
     let tmp_dir: PathBuf = TMP_DIR.into();
+    let include_dir = PathBuf::from(SOURCE_DIR).join("include");
+
     let path = path.into();
 
     // javac takes args with this form:
     // javac SOURCEFILE.java -d OUTPUT_DIR
     let compilation = Command::new("javac")
+        .args(["-cp", &include_dir.display().to_string()])
         .arg(tmp_dir.join(format!("{}.java", path.display())))
+        .args(["--add-exports", "java.base/jdk.internal.ref=ALL-UNNAMED"])
+        .args(["--add-exports", "java.base/jdk.internal.misc=ALL-UNNAMED"])
         .arg("-d")
         .arg(&tmp_dir)
         .output()?;
@@ -145,6 +150,7 @@ impl State {
 
 pub fn execute(state: State, class_name: String) -> Result<Execution, Error> {
     let mut command = Command::new("cargo");
+    let include_dir = PathBuf::from(SOURCE_DIR).join("include");
     let exec = command
         .arg("run")
         .arg("--manifest-path")
@@ -152,6 +158,8 @@ pub fn execute(state: State, class_name: String) -> Result<Execution, Error> {
         .arg("--")
         .arg("--cp")
         .arg(TMP_DIR)
+        .arg("--cp")
+        .arg(include_dir)
         .arg("-Xtest.init=true")
         .arg(class_name);
 
@@ -183,12 +191,12 @@ pub fn execute(state: State, class_name: String) -> Result<Execution, Error> {
     })
 }
 
-const ERR_LIMIT: usize = 45;
+const ERR_LIMIT: usize = 250;
 pub fn compare(got: Execution, expected: Execution) {
     // Execution of the JVM failed, log the error.
     // This includes assertion failures
     if got.code != expected.code {
-        let err = if got.err.len() > 25 {
+        let err = if got.err.len() > ERR_LIMIT {
             got.err.split_at(got.err.len() - ERR_LIMIT).1
         } else {
             &got.err

@@ -8,21 +8,23 @@ pub enum VMError {
     ArrayIndexOutOfBounds {
         at: i64
     },
-    NullPointerException
+    NullPointerException {
+        ctx: String
+    }
 }
 
 impl VMError {
     pub fn class_name(&self) -> &'static str {
         match self {
             VMError::ArrayIndexOutOfBounds { .. } => "java/lang/ArrayIndexOutOfBoundsException",
-            VMError::NullPointerException => "java/lang/NullPointerException",
+            VMError::NullPointerException { .. } => "java/lang/NullPointerException",
         }
     }
 
     pub fn message(&self) -> String {
         let ctx = match self {
             VMError::ArrayIndexOutOfBounds { at } => format!("OOB @ {}", at),
-            VMError::NullPointerException => "NPE".to_string(),
+            VMError::NullPointerException { ctx } => format!("NPE ({})", ctx),
         };
 
         format!("{}: {}", self.class_name(), ctx)

@@ -3,7 +3,7 @@ mod util;
 use std::{fs::File, io::Write, path::PathBuf};
 
 use util::{
-    builder::{direct},
+    builder::{direct, using_class},
     TMP_DIR,
 };
 
@@ -133,7 +133,6 @@ pub fn internal_error() -> TestResult {
 }
 
 #[test]
-#[ignore = "natives unavailable"]
 pub fn read_file() -> TestResult {
     let state = state().init().init_std();
 
@@ -152,8 +151,18 @@ pub fn read_file() -> TestResult {
                 File file = new File("{}");
                 FileInputStream inputStream = new FileInputStream(file);
                 byte[] bytes = inputStream.readAllBytes();
-                System.out.print("Content: ");
-                System.out.println(bytes);
+
+                for (byte b : bytes) {{
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("Byte: ");
+                    sb.append(b);
+
+                    System.err.println(sb.toString());
+                }}
+
+                String s = new String(bytes);
+
+                System.out.println("String: ".concat(s));
             }}
         }}
         "#,
@@ -163,12 +172,13 @@ pub fn read_file() -> TestResult {
     let source = direct("ReadFile", &content);
 
     let got = execute(state, inline(source)?)?;
-    let expected = expected().has_success();
+    let expected = expected().has_success().with_output("String: test test test");
 
     compare(got, expected);
 
     Ok(())
 }
+
 #[test]
 pub fn new_thread_set_priority() -> TestResult {
     let state = state().init();
@@ -183,6 +193,152 @@ pub fn new_thread_set_priority() -> TestResult {
 
     let got = execute(state, inline(source)?)?;
     let expected = expected().has_success();
+
+    compare(got, expected);
+
+    Ok(())
+}
+
+#[test]
+pub fn new_thread_start() -> TestResult {
+    let state = state().init();
+
+    let source = using_main(
+        "NewThreadStart",
+        r#"
+            Thread t = new Thread();
+            t.start();
+        "#,
+    );
+
+    let got = execute(state, inline(source)?)?;
+    let expected = expected().has_success();
+
+    compare(got, expected);
+
+    Ok(())
+}
+
+#[test]
+pub fn anonymous_classes() -> TestResult {
+    let state = state().init().init_std();
+
+    let source = direct(
+        "AnonymousClasses",
+        r#"
+            abstract class MakeMeAnonymous {
+                int x;
+                abstract void work();
+            }
+
+            public class AnonymousClasses {
+                public static void main(String[] args) {
+                    MakeMeAnonymous an = new MakeMeAnonymous() {
+                        int x = 10;
+                        void work() {
+                            System.out.println("worked");
+                        }
+                    };
+
+                    an.work();
+                }
+            }
+        "#,
+    );
+
+    let got = execute(state, inline(source)?)?;
+    let expected = expected().has_success().with_output("worked");
+
+    compare(got, expected);
+
+    Ok(())
+}
+
+#[test]
+#[ignore = "threads don't run currently"]
+pub fn thread_factory() -> TestResult {
+    let state = state().init();
+
+    let source = using_main(
+        "ThreadFactory",
+        r#"
+            var fact = new java.util.concurrent.ThreadFactory() {
+                @Override
+                public Thread newThread(Runnable r) {
+                    return new Thread(r);
+                }                
+            };
+
+            var t = fact.newThread(new Runnable() {
+                @Override
+                public void run() {
+                    print("ran");
+                }
+            });
+
+            t.setDaemon(true);
+            t.start(); 
+        "#,
+    );
+
+    let got = execute(state, inline(source)?)?;
+    let expected = expected().has_success().with_output("ran");
+
+    compare(got, expected);
+
+    Ok(())
+}
+
+#[test]
+pub fn get_current_thread_group() -> TestResult {
+    let state = state().init();
+
+    let source = using_main(
+        "GetCurrentThreadGroup",
+        r#"
+            var t = Thread.currentThread();
+            print(t.getName());
+
+            var g = t.getThreadGroup();
+            print(g.getName());
+        "#,
+    );
+
+    let got = execute(state, inline(source)?)?;
+    let expected = expected()
+        .has_success()
+        .with_output("main")
+        .with_output("main");
+
+    compare(got, expected);
+
+    Ok(())
+}
+
+#[test]
+pub fn new_thread_group() -> TestResult {
+    let state = state().init();
+
+    let source = using_main(
+        "NewThreadGroup",
+        r#"
+            var t = Thread.currentThread();
+            print(t.getName());
+
+            var g = t.getThreadGroup();
+            print(g.getName());
+
+            var ng = new ThreadGroup(g, "main2");
+            print(ng.getName());
+        "#,
+    );
+
+    let got = execute(state, inline(source)?)?;
+    let expected = expected()
+        .has_success()
+        .with_output("main")
+        .with_output("main")
+        .with_output("main2");
 
     compare(got, expected);
 

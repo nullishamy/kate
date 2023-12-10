@@ -25,7 +25,7 @@ pub struct BootstrappedClasses {
     pub java_lang_class: RefTo<Class>,
     pub java_lang_object: RefTo<Class>,
     pub java_lang_string: RefTo<Class>,
-    pub byte_array_ty: RefTo<Class>
+    pub byte_array_ty: RefTo<Class>,
 }
 
 impl ClassLoader {
@@ -122,10 +122,21 @@ impl ClassLoader {
 
         if let Some(array) = field_type.as_array() {
             let component_ty = self.for_name(*array.field_type.clone())?;
-            let cls = Class::new_array(
+            let mut cls = Class::new_array(
                 Object::new(RefTo::null(), RefTo::null()),
                 component_ty,
                 ClassFileLayout::from_java_type(types::ARRAY_BASE),
+            );
+
+            // Set the array classfile to the jlo classfile
+            // Kinda hacky but not really sure how else to get methods onto arrays
+            cls.set_class_file(
+                self.meta_class
+                    .unwrap_ref()
+                    .super_class()
+                    .unwrap_ref()
+                    .class_file()
+                    .clone(),
             );
 
             let cls = RefTo::new(cls);
@@ -142,7 +153,11 @@ impl ClassLoader {
             return self.for_bytes(field_type, &bytes);
         }
 
-        Err(internal!("Could not locate classfile {} ({:#?})", formatted_name, field_type))
+        Err(internal!(
+            "Could not locate classfile {} ({:#?})",
+            formatted_name,
+            field_type
+        ))
     }
 
     fn resolve_name(&self, name: String) -> Option<PathBuf> {
@@ -202,11 +217,10 @@ impl ClassLoader {
             };
         }
 
-
         // Primitives
         let byte = primitive!(BYTE, "B");
         insert!(byte.clone());
-        
+
         insert!(primitive!(BOOL, "Z"));
         insert!(primitive!(SHORT, "S"));
         insert!(primitive!(CHAR, "C"));
@@ -223,7 +237,7 @@ impl ClassLoader {
             java_lang_class: jlc,
             java_lang_object: jlo,
             java_lang_string: jls,
-            byte_array_ty: byte.1
+            byte_array_ty: byte.1,
         })
     }
 }

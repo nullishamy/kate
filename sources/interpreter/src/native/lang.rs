@@ -478,6 +478,17 @@ impl NativeModule for LangObject {
 
         self.set_method("notifyAll", "()V", instance_method!(notify_all));
 
+        fn clone(
+            this: RefTo<Object>,
+            _: Vec<RuntimeValue>,
+            _: &mut VM,
+        ) -> Result<Option<RuntimeValue>, Throwable> {
+            // TODO: Probably not the right semantics lmao
+            Ok(Some(RuntimeValue::Object(this.clone())))
+        }
+
+        self.set_method("clone", "()Ljava/lang/Object;", instance_method!(clone));
+
         fn hash_code(
             this: RefTo<Object>,
             _: Vec<RuntimeValue>,
@@ -788,5 +799,32 @@ impl NativeModule for LangThread {
             "()Ljava/lang/Thread;",
             static_method!(current_thread),
         );
+    }
+}
+
+module_base!(LangClassLoader);
+impl NativeModule for LangClassLoader {
+    fn classname(&self) -> &'static str {
+        "java/lang/ClassLoader"
+    }
+
+    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+        &self.methods
+    }
+
+    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+        &mut self.methods
+    }
+
+    fn init(&mut self) {
+        fn register_natives(
+            _: RefTo<Class>,
+            _: Vec<RuntimeValue>,
+            _: &mut VM,
+        ) -> Result<Option<RuntimeValue>, Throwable> {
+            Ok(None)
+        }
+
+        self.set_method("registerNatives", "()V", static_method!(register_natives));
     }
 }

@@ -90,6 +90,10 @@ impl<T> Addressed<T> {
             entries: pool,
         }
     }
+
+    pub fn index(&self) -> u16 {
+        self.index
+    }
 }
 
 impl<T> fmt::Debug for Addressed<T> {

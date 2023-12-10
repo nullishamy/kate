@@ -246,12 +246,12 @@ impl Instruction for GetField {
             FieldType::Object(_) => {
                 let field: FieldRef<RefTo<Object>> =
                     objectref.unwrap_ref().field((name, descriptor)).unwrap();
-                RuntimeValue::Object(field.to_ref().clone())
+                RuntimeValue::Object(field.unwrap_ref().clone())
             }
             FieldType::Array(_) => {
                 let field: FieldRef<RefTo<Object>> =
                     objectref.unwrap_ref().field((name, descriptor)).unwrap();
-                let value = field.to_ref();
+                let value = field.unwrap_ref();
                 RuntimeValue::Object(value.clone())
             }
         };

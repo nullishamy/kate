@@ -81,12 +81,12 @@ fn test_init(cls: RefTo<Class>) {
                 .field(("value".to_string(), "[B".to_string()))
                 .expect("could not locate value field");
 
-            let bytes = bytes.to_ref().unwrap_ref().slice().to_vec();
+            let bytes = bytes.unwrap_ref().unwrap_ref().slice().to_vec();
 
             let str =
                 decode_string((CompactEncoding::Utf16, bytes)).expect("could not decode string");
 
-            println!("{:#?}", str);
+            println!("{}", str);
         }),
         printer!("([B)V", |arr: RuntimeValue| {
             let arr = arr.as_object().expect("not an object (byte[])");
@@ -214,6 +214,12 @@ fn main() {
         class_loader.add_path(cp);
     }
 
+    // Init the natives that we declare in kate/Util
+    if args.has_option(opts::TEST_INIT) {
+        let kate_util = class_loader.for_name("Lkate/Util;".into()).unwrap();
+        test_init(kate_util)
+    }
+
     let bootstrapped_classes = class_loader.bootstrap().unwrap();
 
     let interner = StringInterner::new(
@@ -236,10 +242,6 @@ fn main() {
 
     for class_name in &args.classes {
         let cls = vm.class_loader.for_name(format!("L{};", class_name).into()).unwrap();
-        if args.has_option(opts::TEST_INIT) {
-            test_init(cls.clone());
-        }
-
         if args.has_option(opts::TEST_BOOT) {
             boot_system(&mut vm, cls.clone());
         }
@@ -280,11 +282,16 @@ fn main() {
 
             println!("Uncaught exception in main: {}", e);
 
-            if let Throwable::Runtime(err) = e {
+            if let Throwable::Runtime(ref err) = e {
                 for source in err.sources.iter().rev() {
                     println!("  {}", source);
                 }
+            } else {
+                for source in vm.frames.iter().rev() {
+                    println!("  {}", source);
+                }
             }
+
 
             println!(
                 "  {}",

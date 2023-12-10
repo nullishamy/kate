@@ -244,6 +244,10 @@ impl Class {
         }
     }
 
+    pub fn set_class_file(&mut self, class_file: ClassFile) {
+        self.classfile = Some(class_file);
+    }
+
     pub fn instance_layout(&self) -> &ClassFileLayout {
         &self.instance_layout
     }
