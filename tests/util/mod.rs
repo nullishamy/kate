@@ -154,6 +154,8 @@ pub fn execute(state: State, class_name: String) -> Result<Execution, Error> {
         .arg("--")
         .arg("--cp")
         .arg(TMP_DIR)
+        .arg("--std")
+        .arg(format!("{SOURCE_DIR}/../std/java.base"))
         .arg("-Xtest.init=true")
         .arg(class_name);
 

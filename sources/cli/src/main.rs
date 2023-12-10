@@ -263,12 +263,11 @@ fn main() {
         return;
     }
 
-    let source_root = env!("CARGO_MANIFEST_DIR");
     let mut class_loader = ClassLoader::new();
 
-    class_loader
-        .add_path(format!("{source_root}/../../std/java.base"))
-        .add_path(format!("{source_root}/../../samples"));
+    if let Some(std) = &args.std {
+        class_loader.add_path(std);
+    }
 
     for cp in &args.classpath {
         class_loader.add_path(cp);

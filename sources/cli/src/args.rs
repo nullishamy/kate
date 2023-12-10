@@ -43,6 +43,10 @@ pub struct Cli {
     #[arg(short('X'))]
     pub options: Vec<VmOption>,
 
+    /// The std root to use
+    #[arg(long("std"))]
+    pub std: Option<String>,
+
     // TODO: Make this a short("cp") once we can: https://github.com/clap-rs/clap/issues/2468
     #[arg(long("cp"))]
     /// A list of paths to add to the classpath
