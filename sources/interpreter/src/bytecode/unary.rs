@@ -87,6 +87,9 @@ macro_rules! unop {
     ($ins: ident (long => float) => $op: expr) => {
       unop!($ins, i64, |result: f32| RuntimeValue::Floating(result.into()) => $op);
     };
+    ($ins: ident (long => double) => $op: expr) => {
+      unop!($ins, i64, |result: f64| RuntimeValue::Floating(result.into()) => $op);
+    };
     ($ins: ident (float => int) => $op: expr) => {
       unop!($ins, f32, |result: i32| RuntimeValue::Integral(result.into()) => $op);
     };
@@ -159,6 +162,10 @@ unop!(L2i (long => int) => |val: Integral| {
 
 unop!(L2f (long => float) => |val: Integral| {
     val.value as f32
+});
+
+unop!(L2d (long => double) => |val: Integral| {
+    val.value as f64
 });
 
 // Zero comparisons

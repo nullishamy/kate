@@ -388,3 +388,128 @@ pub fn newline_to_int() -> TestResult {
 
     Ok(())
 }
+
+#[test]
+pub fn area_of_circle() -> TestResult {
+    let state = state().init().init_std().stdin("7\n");
+
+    let source = using_main(
+        "AreaOfCircle",
+        r#"
+            var br = newReader(System.in);
+            var rad = nextDouble(br);
+
+            double area = (22 * rad * rad) / 7;
+            print(area);      
+        "#,
+    );
+
+    let got = execute(state, inline(source)?)?;
+    let expected = expected().has_success().with_output("154.000");
+    compare(got, expected);
+
+    Ok(())
+}
+
+#[test]
+pub fn area_of_triangle() -> TestResult {
+    let state = state().init().init_std().stdin("10\n").stdin("20\n");
+
+    let source = using_main(
+        "AreaOfTriangle",
+        r#"
+            var br = newReader(System.in);
+            double base = nextDouble(br);
+            double height = nextDouble(br);
+
+            // area = (width * height) / 2
+            double area = (base * height) / 2;
+            print(area);      
+        "#,
+    );
+
+    let got = execute(state, inline(source)?)?;
+    let expected = expected().has_success().with_output("100.000");
+    compare(got, expected);
+
+    Ok(())
+}
+
+#[test]
+pub fn fibonacci_series() -> TestResult {
+    let state = state().init().init_std().stdin("5\n");
+
+    let source = using_main(
+        "FibonacciSeries",
+        r#"
+            var br = newReader(System.in);
+            int terms = nextInt(br);
+
+            int i = 0;
+            int j = 1;
+            int nextTerm = 0;
+
+            for (int c = 0; c < terms; c++) {
+                if (c <= 1) {
+                    nextTerm = c;
+                }
+                else {
+                    nextTerm = i + j;
+                    i = j;
+                    j = nextTerm;
+                }
+
+                print(nextTerm);
+            }
+        "#,
+    );
+
+    let got = execute(state, inline(source)?)?;
+    let expected = expected()
+        .has_success()
+        .with_output("0")
+        .with_output("1")
+        .with_output("1")
+        .with_output("2")
+        .with_output("3");
+
+    compare(got, expected);
+
+    Ok(())
+}
+
+#[test]
+pub fn decimal_to_binary() -> TestResult {
+    let state = state().init().init_std().stdin("100\n");
+
+    let source = using_main(
+        "DecToBin",
+        r#"
+            var br = newReader(System.in);
+
+            int n = nextInt(br);
+            int[] bin = new int[100];
+            int i = 0;
+
+            while(n > 0) {
+                bin[i++] = n % 2;
+                n = n/2;
+            }
+
+            StringBuilder sb = new StringBuilder();
+
+            for(int j = i - 1; j >= 0; j--) {
+                sb.append(bin[j]);
+            }
+
+            print(sb.toString());
+        "#,
+    );
+
+    let got = execute(state, inline(source)?)?;
+    let expected = expected().has_success().with_output("1100100");
+
+    compare(got, expected);
+
+    Ok(())
+}

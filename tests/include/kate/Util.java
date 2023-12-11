@@ -1,6 +1,11 @@
 
 package kate;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+
 public class Util {
 
     public static native void print(byte b);
@@ -94,5 +99,25 @@ public class Util {
 
     public static void assertNotReached() {
         throw new RuntimeException("Unreachable statement reached");
+    }
+
+    public static BufferedReader newReader(InputStream is) {
+        return new BufferedReader(new InputStreamReader(is));
+    }
+
+    public static double nextDouble(BufferedReader br) {
+        try {
+            return Double.parseDouble(br.readLine());
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read line");
+        }
+    }
+
+    public static int nextInt(BufferedReader br) {
+        try {
+            return Integer.parseInt(br.readLine());
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read line");
+        }
     }
 }

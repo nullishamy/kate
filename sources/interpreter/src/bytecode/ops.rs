@@ -300,6 +300,12 @@ impl Instruction for ArrayStore {
                     let value = value.as_floating().expect("array store exception").value;
                     array[index.value as usize] = value
                 }
+                n if { n == types::FLOAT.name } => {
+                    let array = arg!(ctx, "array" => Array<Float>);
+                    let array = array.unwrap_mut().slice_mut();
+                    let value = value.as_floating().expect("array store exception").value;
+                    array[index.value as usize] = value as Float
+                }
                 n if { n == types::BYTE.name } => {
                     let array = arg!(ctx, "array" => Array<Byte>);
                     let array = array.unwrap_mut().slice_mut();
@@ -359,6 +365,13 @@ impl Instruction for ArrayLoad {
                 }
                 n if { n == types::DOUBLE.name } => {
                     let array = arg!(ctx, "array" => Array<Double>);
+                    let array = array.unwrap_ref().slice();
+                    let value = array[index.value as usize];
+
+                    RuntimeValue::Floating(value.into())
+                }
+                n if { n == types::FLOAT.name } => {
+                    let array = arg!(ctx, "array" => Array<Float>);
                     let array = array.unwrap_ref().slice();
                     let value = array[index.value as usize];
 

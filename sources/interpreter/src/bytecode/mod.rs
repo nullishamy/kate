@@ -362,7 +362,7 @@ pub fn decode_instruction(
         //  0x87 => Opcode::I2D,
         0x88 => b(ops::L2i),
         0x89 => b(ops::L2f),
-        //  0x8a => Opcode::L2D,
+        0x8a => b(ops::L2d),
         0x8b => b(ops::F2i),
         //  0x8c => Opcode::F2L,
         0x8d => b(ops::F2d),
