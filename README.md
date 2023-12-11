@@ -6,7 +6,8 @@ knowledge of systems development and JVM internals.
 Contributions are welcome (see CONTRIBUTING.md). Check the issues for any
 "up for grabs" issues.
 
-This is still a very early stages project but documentation should be coming soon:tm:.
+The project can now run basic Java code, boot the JDK, and do primitive file IO (including writing to stdout etc).
+For the most part, it assumes well-formedness of classfiles, and will not handle invalid classfiles gracefully.
 
 ## External resources
 

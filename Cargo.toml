@@ -21,10 +21,3 @@ all = "warn"
 pedantic = "warn"
 nursery = "warn"
 cargo = "warn"
-new_without_default = "deny"
-
-# [package]
-# name = "kate"
-# version = "0.0.1"
-# description = "A JVM, written in rust"
-# repository = "https://github.com/nullishamy/kate"
