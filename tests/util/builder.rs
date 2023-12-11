@@ -1,8 +1,6 @@
 // Overloads for numerics so that we don't need to boot the system (for autoboxing to Object)
 // When doing basic numeric assertions. These overloads use manual string builders to work around
 // javac inserting "invokedynamic"s to make the strings.
-// TODO: Remove these when we support invokedynamic
-// TODO: Move this into another class?
 
 use std::path::PathBuf;
 
@@ -39,7 +37,7 @@ pub fn using_relative<'a>(file: impl Into<PathBuf>, class_name: impl Into<PathBu
     let file: PathBuf = file.into();
     let mut components = file.components();
 
-    // Drop 'tests', runner executes from there
+    // Drop 'tests' dir from path, runner executes from there
     let _ = components.next();
 
     components

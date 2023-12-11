@@ -51,7 +51,7 @@ impl Throwable {
         state: &'a ThrownState,
     ) -> Result<Option<&'a ExceptionEntry>, Throwable> {
         if let Throwable::Runtime(rte) = self {
-            let ty = rte.ty.unwrap_ref();
+            let ty = &rte.ty;
 
             for entry in &method.exception_table {
                 // The handler supports the type of the exception
@@ -60,7 +60,8 @@ impl Throwable {
                         let name = entry.catch_type.resolve().name.resolve().string();
                         vm.class_loader.for_name(format!("L{};", name).into())
                     }?;
-                    entry_ty.unwrap_ref().is_assignable_to(ty)
+
+                    Class::can_assign(entry_ty, ty.clone())
                 } else {
                     // If the value of the catch_type item is zero, this exception handler is called for all exceptions.
                     true

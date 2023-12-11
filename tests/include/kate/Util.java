@@ -39,6 +39,18 @@ public class Util {
         }
     }
 
+    public static void assertTrue(boolean condition) {
+        if (!condition) {
+            throw new RuntimeException("(true) Assertion failed. Expected true got false");
+        }
+    }
+
+    public static void assertfalse(boolean condition) {
+        if (condition) {
+            throw new RuntimeException("(false) Assertion failed. Expected false got true");
+        }
+    }
+
     public static void assertEqual(long lhs, long rhs) {
         if (lhs != rhs) {
             StringBuilder sb = new StringBuilder();

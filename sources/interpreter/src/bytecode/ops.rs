@@ -179,7 +179,7 @@ impl Instruction for ANewArray {
                 
                 vm
                     .class_loader
-                    .for_name(format!("L{};", class_name).into())?
+                    .for_name(format!("[L{};", class_name).into())?
             }
             e => return Err(internal!("{:#?} cannot be used as an array type", e)),
         };
@@ -192,7 +192,7 @@ impl Instruction for ANewArray {
         // from the garbage-collected heap.
         let array = Array::<RefTo<Object>>::from_vec(array_ty, values);
 
-        //  and a arrayref to this new array object is pushed onto the operand stack.
+        // and a ref to this new array object is pushed onto the operand stack.
         ctx.operands.push(RuntimeValue::Object(array.erase()));
 
         Ok(Progression::Next)

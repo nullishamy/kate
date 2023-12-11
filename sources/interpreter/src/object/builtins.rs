@@ -10,8 +10,8 @@ use std::{
 
 use parking_lot::RwLock;
 use parse::{
-    classfile::ClassFile,
-    flags::{ClassFileAccessFlag, ClassFileAccessFlags},
+    classfile::{ClassFile, Resolvable},
+    flags::{ClassFileAccessFlag, ClassFileAccessFlags}, constants::MAX_SUPPORTED_MAJOR,
 };
 use support::encoding::{decode_string, CompactEncoding};
 
@@ -280,8 +280,83 @@ impl Class {
         self.is_initialised = value
     }
 
-    pub fn is_assignable_to(&self, _other: &Class) -> bool {
-        true
+    pub fn can_assign(_s: RefTo<Class>, _t: RefTo<Class>) -> bool {
+        /*
+            Taken from checkcast/instanceof (which have the same semantics at this stage of checking)
+            Given S is the type of the object referred to by objectref, and T is the resolved class, array, or interface type;
+        */
+
+        let s = _s.unwrap_ref();
+        let t = _t.unwrap_ref();
+
+        // • If S is a class type, then:
+        if s.is_class() {
+            // Interface checking comes first, because interfaces are a form of class at the moment
+            // – If T is an interface type, then S must implement interface T.
+            if t.is_interface() {
+                let mut super_interfaces = vec![];
+                let mut _super = _s.clone();
+                while let Some(sup) = _super.to_ref() {
+                    super_interfaces.extend(sup.class_file().interfaces.values.clone().into_iter());
+                    _super = sup.super_class();
+                }
+
+                return super_interfaces.iter().any(|i| {
+                    let i = i.resolve();
+                    let i_name = i.name.resolve().string();
+                    t.name() == &i_name
+                });
+            }
+
+            // – If T is a class type;
+            if t.is_class() {
+                // then S must be the same class as T
+                if _s.as_ptr() == _t.as_ptr() {
+                    return true;
+                }
+
+                // or S must be a subclass of T
+                let mut _super = _s.clone();
+                while let Some(sup) = _super.to_ref() {
+                    // We found a match in the hierarchy
+                    if _super.as_ptr() == _t.as_ptr() {
+                        return true;
+                    }
+
+                    _super = sup.super_class();
+                }
+            }
+        }
+
+        // • If S is an array type SC[], that is, an array of components of type SC, then:
+        if s.is_array() {
+            let _component_ty = s.component_type();
+            let component_ty = _component_ty.unwrap_ref();
+
+            // – If T is a class type, then T must be Object.
+            if t.is_class() {
+                return component_ty.name() == "java/lang/Object";
+            }
+
+            //  – If T is an interface type, then T must be one of the interfaces implemented by arrays (JLS §4.10.3).
+            if t.is_interface() {
+                todo!("don't know how to check these");
+            }
+
+            // – If T is an array type TC[], that is, an array of components of type TC, then one of the following must be true:
+            if t.is_array() {
+                let _other_component_ty = s.component_type();
+                let other_component_ty = _other_component_ty.unwrap_ref();
+
+                if component_ty.is_primitive() && other_component_ty.is_primitive() {
+                    return component_ty.name() == other_component_ty.name();
+                }
+
+                return Class::can_assign(_component_ty, _other_component_ty);
+            }
+        }
+
+        false
     }
 
     pub fn flags(&self) -> ClassFileAccessFlags {
@@ -298,6 +373,10 @@ impl Class {
 
     pub fn is_array(&self) -> bool {
         self.ty == ClassType::Array
+    }
+
+    pub fn is_class(&self) -> bool {
+        self.ty == ClassType::Class
     }
 
     pub fn is_primitive(&self) -> bool {
@@ -366,10 +445,7 @@ impl<T: Copy> Array<T> {
 
         let array_ref = unsafe {
             let mem = std::alloc::alloc_zeroed(layout).cast::<Array<T>>();
-            (*mem).object = Object::new(
-                array_ty,
-                RefTo::null(),
-            );
+            (*mem).object = Object::new(array_ty, RefTo::null());
 
             (*mem).capacity = data.len();
             (*mem).count = data.len();

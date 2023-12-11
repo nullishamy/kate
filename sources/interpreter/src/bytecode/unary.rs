@@ -7,7 +7,7 @@ use crate::{
     internal,
     object::{
         numeric::{Floating, FloatingType, Integral, IntegralType},
-        runtime::RuntimeValue,
+        runtime::RuntimeValue, builtins::Class,
     },
     pop, Context, VM,
 };
@@ -258,13 +258,13 @@ impl Instruction for InstanceOf {
 
         // TODO: Properly check the types
         let ty_class_name = ty.name.resolve().string();
-        let _ty_class = vm
+        let ty_class = vm
             .class_loader
             .for_name(format!("L{};", ty_class_name).into())?;
 
-        let class_name = val.unwrap_ref().class.unwrap_ref().name().clone();
+        let class = val.unwrap_ref().class.clone();
 
-        if ty_class_name == class_name {
+        if Class::can_assign(class, ty_class) {
             ctx.operands.push(RuntimeValue::Integral(1_i32.into()))
         } else {
             ctx.operands.push(RuntimeValue::Integral(0_i32.into()))
@@ -300,9 +300,7 @@ impl Instruction for CheckCast {
             .address(self.type_index)
             .resolve();
 
-        // TODO: Properly check the types
         let other_class_name = other.name.resolve().string();
-
         let other_class_name = FieldType::parse(other_class_name.clone())
             .or_else(|_| FieldType::parse(format!("L{};", other_class_name)))?;
 
@@ -310,17 +308,15 @@ impl Instruction for CheckCast {
             .class_loader
             .for_name(other_class_name.clone())?;
 
-        // TODO: Support interface type checking etc
+        let val_class = &val.unwrap_ref().class;
 
-        let val_class = { val.unwrap_ref().class.unwrap_ref() };
-
-        if val_class.is_assignable_to(other_class.unwrap_ref()) {
+        if Class::can_assign(val_class.clone(), other_class) {
             ctx.operands.push(RuntimeValue::Object(val.clone()));
         } else {
             // TODO: Throw class cast exception
             return Err(internal!(
-                "invalid cast from {} to {}",
-                val_class.name(),
+                "[checkcast] invalid cast from {} to {}",
+                val_class.unwrap_ref().name(),
                 other_class_name.to_string()
             ));
         }

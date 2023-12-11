@@ -1,6 +1,6 @@
-use std::{alloc::Layout, collections::HashMap, fs, path::PathBuf};
+use std::{alloc::Layout, cell::RefCell, collections::HashMap, fs, path::PathBuf};
 
-use crate::{error::Throwable, internal, internalise};
+use crate::{error::Throwable, internal, internalise, native::{lang::LangObject, NativeModule}};
 
 use super::{
     builtins::{Class, Object},
@@ -139,6 +139,11 @@ impl ClassLoader {
                     .clone(),
             );
 
+            // Similarly, give all the native methods that object has and put them onto arrays
+            let mut module = LangObject::new();
+            module.init();
+            cls.set_native_module(Box::new(RefCell::new(module)));
+
             let cls = RefTo::new(cls);
             self.classes.insert(field_type, cls.clone());
             return Ok(cls);
@@ -198,11 +203,31 @@ impl ClassLoader {
                     ClassFileLayout::from_java_type(types::$layout_ty),
                 ));
 
-                let array = RefTo::new(Class::new_array(
-                    Object::new(jlc.clone(), jlo.clone()),
-                    prim.clone(),
-                    ClassFileLayout::from_java_type(types::ARRAY_BASE),
-                ));
+                let array = {
+                    let mut cls = Class::new_array(
+                        Object::new(RefTo::null(), RefTo::null()),
+                        prim.clone(),
+                        ClassFileLayout::from_java_type(types::ARRAY_BASE),
+                    );
+
+                    // Set the array classfile to the jlo classfile
+                    // Kinda hacky but not really sure how else to get methods onto arrays
+                    cls.set_class_file(
+                        self.meta_class
+                            .unwrap_ref()
+                            .super_class()
+                            .unwrap_ref()
+                            .class_file()
+                            .clone(),
+                    );
+
+                    // Similarly, give all the native methods that object has and put them onto arrays
+                    let mut module = LangObject::new();
+                    module.init();
+                    cls.set_native_module(Box::new(RefCell::new(module)));
+
+                    RefTo::new(cls)
+                };
 
                 (prim, array)
             }};

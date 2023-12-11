@@ -43,6 +43,7 @@ impl Instruction for InvokeVirtual {
             .ok_or(vm.try_make_error(VMError::NullPointerException {
                 ctx: "invokevirtual".to_string(),
             })?)?;
+
         let pool = &cls.class_file().constant_pool;
 
         // The unsigned indExbyte1 and indexbyte2 are used to construct an

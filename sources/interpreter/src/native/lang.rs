@@ -301,7 +301,7 @@ impl NativeModule for LangSystem {
         fn arraycopy(
             _: RefTo<Class>,
             args: Vec<RuntimeValue>,
-            _: &mut VM,
+            vm: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
             use crate::object::layout::types::*;
 
@@ -341,23 +341,23 @@ impl NativeModule for LangSystem {
             assert_eq!(src_ty.ty(), ClassType::Array);
             assert_eq!(dest_ty.ty(), ClassType::Array);
 
-            let src_component = src_ty.component_type();
-            let src_component = src_component.unwrap_ref();
+            let _src_component = src_ty.component_type();
+            let src_component = _src_component.unwrap_ref();
 
-            let dest_component = dest_ty.component_type();
-            let dest_component = dest_component.unwrap_ref();
+            let _dest_component = dest_ty.component_type();
+            let dest_component = _dest_component.unwrap_ref();
 
 
             if src_pos < 0 {
-                panic!("out of bounds")
+                return Err(vm.try_make_error(crate::error::VMError::ArrayIndexOutOfBounds { at: -1 })?);
             }
 
             if dest_pos < 0 {
-                panic!("out of bounds")
+                return Err(vm.try_make_error(crate::error::VMError::ArrayIndexOutOfBounds { at: -1 })?);
             }
 
             if len < 0 {
-                panic!("out of bounds")
+                return Err(vm.try_make_error(crate::error::VMError::ArrayIndexOutOfBounds { at: -1 })?);
             }
 
             let src_pos = src_pos as usize;
@@ -387,7 +387,7 @@ impl NativeModule for LangSystem {
                     n => todo!("implement {n}"),
                 }
             } else {
-                if !src_component.is_assignable_to(dest_component) {
+                if !Class::can_assign(_src_component, _dest_component) {
                     panic!("array store exception")
                 }
 

@@ -513,3 +513,30 @@ pub fn decimal_to_binary() -> TestResult {
 
     Ok(())
 }
+
+#[test]
+pub fn array_clone() -> TestResult {
+    let state = state().init();
+
+    let source = using_main(
+        "ArrayClone",
+        r#"
+            String[] refArray = new String[100];
+            String[] refClone = refArray.clone();
+
+            assertTrue(refArray == refClone);
+
+            int[] primArray = new int[100];
+            int[] primClone = primArray.clone();
+
+            assertTrue(primArray == primClone);
+        "#,
+    );
+
+    let got = execute(state, inline(source)?)?;
+    let expected = expected().has_success();
+
+    compare(got, expected);
+
+    Ok(())
+}
