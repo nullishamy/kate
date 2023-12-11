@@ -2,10 +2,7 @@ mod util;
 
 use std::{fs::File, io::Write, path::PathBuf};
 
-use util::{
-    builder::direct,
-    TMP_DIR,
-};
+use util::{builder::direct, TMP_DIR};
 
 use crate::util::{builder::using_main, compare, execute, expected, inline, state, TestResult};
 
@@ -172,7 +169,9 @@ pub fn read_file() -> TestResult {
     let source = direct("ReadFile", &content);
 
     let got = execute(state, inline(source)?)?;
-    let expected = expected().has_success().with_output("String: test test test");
+    let expected = expected()
+        .has_success()
+        .with_output("String: test test test");
 
     compare(got, expected);
 
@@ -340,6 +339,51 @@ pub fn new_thread_group() -> TestResult {
         .with_output("main")
         .with_output("main2");
 
+    compare(got, expected);
+
+    Ok(())
+}
+
+#[test]
+pub fn read_stdin() -> TestResult {
+    let state = state().init().init_std().stdin("line\n");
+
+    let source = direct(
+        "ReadStdin",
+        r#"
+            import java.io.InputStreamReader;
+            import java.io.BufferedReader;
+            import java.io.IOException;
+
+            public class ReadStdin {
+                public static void main(String args[]) throws IOException {
+                    BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+                    System.out.println(br.readLine());
+                }
+            }
+        "#,
+    );
+
+    let got = execute(state, inline(source)?)?;
+    let expected = expected().has_success().with_output("line");
+    compare(got, expected);
+
+    Ok(())
+}
+
+#[test]
+pub fn newline_to_int() -> TestResult {
+    let state = state().init();
+
+    let source = using_main(
+        "NewLineToInt",
+        r"
+            print((int) '\n');
+        ",
+    );
+
+    let got = execute(state, inline(source)?)?;
+    let expected = expected().has_success().with_output("10");
     compare(got, expected);
 
     Ok(())

@@ -379,6 +379,13 @@ impl Instruction for ArrayLoad {
 
                     RuntimeValue::Integral(value.into())
                 }
+                n if { n == types::INT.name } => {
+                    let array = arg!(ctx, "array" => Array<Int>);
+                    let array = array.unwrap_ref().slice();
+                    let value = array[index.value as usize];
+
+                    RuntimeValue::Integral(value.into())
+                }
                 ty => return Err(internal!("cannot encode {:#?}", ty)),
             }
         } else {

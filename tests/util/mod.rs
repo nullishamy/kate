@@ -2,7 +2,7 @@ use std::{
     fs::File,
     io::{Error, Write},
     path::PathBuf,
-    process::Command,
+    process::{Command, Stdio},
 };
 
 pub mod builder;
@@ -120,13 +120,14 @@ pub fn expected() -> Execution {
 }
 
 pub fn state() -> State {
-    State { init_std: false, opts: vec![] }
+    State { init_std: false, opts: vec![], stdin: vec![] }
 }
 
 #[derive(Debug)]
 pub struct State {
     init_std: bool,
-    opts: Vec<(&'static str, &'static str)>
+    opts: Vec<(&'static str, &'static str)>,
+    stdin: Vec<String>
 }
 
 impl State {
@@ -139,6 +140,11 @@ impl State {
         self
     }
 
+    pub fn stdin(mut self, line: impl Into<String>) -> Self {
+        self.stdin.push(line.into());
+        self
+    }
+
     pub fn opt(mut self, key: &'static str, value: &'static str) -> Self {
         self.opts.push((key, value));
         self
@@ -148,6 +154,9 @@ impl State {
 pub fn execute(state: State, class_name: String) -> Result<Execution, Error> {
     let mut command = Command::new("cargo");
     let exec = command
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .arg("run")
         .arg("--manifest-path")
         .arg(format!("{SOURCE_DIR}/../Cargo.toml"))
@@ -167,7 +176,14 @@ pub fn execute(state: State, class_name: String) -> Result<Execution, Error> {
         exec.arg(format!("-X{}={}", key, value));
     }
 
-    let output = exec.output()?;
+    let mut child = exec.spawn()?;
+    let mut stdin = child.stdin.take().unwrap();
+
+    for line in state.stdin {
+        stdin.write_all(line.as_bytes())?;
+    }
+
+    let output = child.wait_with_output()?;
 
     let (out, err) = (
         String::from_utf8_lossy(&output.stdout),

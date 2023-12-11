@@ -185,9 +185,29 @@ impl NativeModule for IOUnixFileSystem {
 }
 
 lazy_static::lazy_static! {
-    static ref FILES: Mutex<HashMap<usize, BufReader<File>>> = {
-        Mutex::new(HashMap::new())
+    // FD -> File
+    static ref FILES: Mutex<HashMap<Int, BufReader<File>>> = {
+        Mutex::new(HashMap::from([
+            (0, BufReader::new(unsafe { File::from_raw_fd(0) }) ),
+            (1, BufReader::new(unsafe { File::from_raw_fd(1) }) ),
+            (2, BufReader::new(unsafe { File::from_raw_fd(2) }) )
+        ]))
     };
+}
+
+fn get_fd(this: &RefTo<Object>) -> FieldRef<Int> {
+    let field: FieldRef<RefTo<Object>> = this
+        .unwrap_mut()
+        .field(("fd".to_string(), "Ljava/io/FileDescriptor;".to_string()))
+        .unwrap();
+
+    let fd_obj = field.unwrap_ref();
+    let fd_int: FieldRef<Int> = fd_obj
+        .unwrap_mut()
+        .field(("fd".to_string(), "I".to_string()))
+        .unwrap();
+
+    fd_int
 }
 
 module_base!(IOFileInputStream);
@@ -220,20 +240,7 @@ impl NativeModule for IOFileInputStream {
             args: Vec<RuntimeValue>,
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
-            let fd_ref = {
-                let field: FieldRef<RefTo<Object>> = this
-                    .unwrap_mut()
-                    .field(("fd".to_string(), "Ljava/io/FileDescriptor;".to_string()))
-                    .unwrap();
-
-                let fd_obj = field.unwrap_ref();
-                let fd_int: FieldRef<Int> = fd_obj
-                    .unwrap_mut()
-                    .field(("fd".to_string(), "I".to_string()))
-                    .unwrap();
-
-                fd_int
-            };
+            let fd_ref = get_fd(&this);
 
             let path = {
                 let val = args.get(1).unwrap();
@@ -242,11 +249,12 @@ impl NativeModule for IOFileInputStream {
             };
 
             let file = File::open(path.unwrap_ref().string()?).unwrap();
-            fd_ref.write(file.as_raw_fd());
+            let raw = file.as_raw_fd();
+            fd_ref.write(raw);
 
             let file = BufReader::new(file);
             let mut files = FILES.lock();
-            files.insert(this.as_ptr() as usize, file);
+            files.insert(raw, file);
 
             Ok(None)
         }
@@ -259,7 +267,9 @@ impl NativeModule for IOFileInputStream {
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
             let files = FILES.lock();
-            let file = files.get(&(this.as_ptr() as usize)).unwrap();
+            let fd_ref = get_fd(&this);
+            let file = files.get(&(fd_ref.copy_out())).unwrap();
+
             let meta = file.get_ref().metadata().unwrap();
 
             Ok(Some(RuntimeValue::Integral((meta.len() as i64).into())))
@@ -273,9 +283,10 @@ impl NativeModule for IOFileInputStream {
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
             let mut files = FILES.lock();
-            let file = files.get_mut(&(this.as_ptr() as usize)).unwrap();
-            let pos = file.stream_position().unwrap();
+            let fd_ref = get_fd(&this);
+            let file = files.get_mut(&(fd_ref.copy_out())).unwrap();
 
+            let pos = file.stream_position().unwrap();
             Ok(Some(RuntimeValue::Integral((pos as i64).into())))
         }
 
@@ -287,7 +298,8 @@ impl NativeModule for IOFileInputStream {
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
             let mut files = FILES.lock();
-            let file = files.get_mut(&(this.as_ptr() as usize)).unwrap();
+            let fd_ref = get_fd(&this);
+            let file = files.get_mut(&(fd_ref.copy_out())).unwrap();
 
             let output_array = {
                 let arr = args.get(1).unwrap().as_object().unwrap();
@@ -326,7 +338,8 @@ impl NativeModule for IOFileInputStream {
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
             let mut files = FILES.lock();
-            let file = files.get_mut(&(this.as_ptr() as usize)).unwrap();
+            let fd_ref = get_fd(&this);
+            let file = files.get_mut(&(fd_ref.copy_out())).unwrap();
 
             let mut slice: [u8; 1] = [0];
             let read_n = file.read(&mut slice).unwrap();
@@ -336,9 +349,25 @@ impl NativeModule for IOFileInputStream {
             } else {
                 Ok(Some(RuntimeValue::Integral((slice[0] as i32).into())))
             }
-
         }
 
         self.set_method("read0", "()I", instance_method!(read0));
+
+        fn available0(
+            _: RefTo<Object>,
+            _: Vec<RuntimeValue>,
+            _: &mut VM,
+        ) -> Result<Option<RuntimeValue>, Throwable> {
+            // Returns an estimate of the number of remaining bytes that can be read (or skipped over) from this input stream without blocking by the 
+            // next invocation of a method for this input stream.
+            // Returns 0 when the file position is beyond EOF. The next invocation might be the same thread or another thread. 
+            // A single read or skip of this many bytes will not block, but may read or skip fewer bytes.
+
+            // 0 seems to work, idk?
+            // TODO:
+            Ok(Some(RuntimeValue::Integral((0_i32).into())))
+        }
+
+        self.set_method("available0", "()I", instance_method!(available0));
     }
 }
