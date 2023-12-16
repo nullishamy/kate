@@ -15,7 +15,7 @@ pub fn is_empty() -> TestResult {
 }
 
 #[test]
-#[ignore = "broken"]
+#[ignore = "broken, we don't support nested arrays yet"]
 pub fn is_blank() -> TestResult {
     let state = state().init();
 

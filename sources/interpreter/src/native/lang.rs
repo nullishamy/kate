@@ -365,6 +365,8 @@ impl NativeModule for LangSystem {
             let len = len as usize;
 
             if src_component.is_primitive() {
+                assert!(dest_component.is_primitive());
+
                 match src_component.name() {
                     n if { n == types::BOOL.name } => {
                         let src = unsafe { src.cast::<Array<Bool>>() };
@@ -540,13 +542,7 @@ impl NativeModule for LangStringUtf16 {
             _: Vec<RuntimeValue>,
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
-            // FIXME: Figure out why setting little endian makes everything explode with stringutf16
-            // let big_endian = if cfg!(target_endian = "big") {
-            //     1
-            // } else {
-            //     0
-            // };
-
+            // We always encode in BE, for portability
             Ok(Some(RuntimeValue::Integral(TRUE)))
         }
 

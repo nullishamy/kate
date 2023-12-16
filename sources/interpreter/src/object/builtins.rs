@@ -11,7 +11,7 @@ use std::{
 use parking_lot::RwLock;
 use parse::{
     classfile::{ClassFile, Resolvable},
-    flags::{ClassFileAccessFlag, ClassFileAccessFlags}, constants::MAX_SUPPORTED_MAJOR,
+    flags::{ClassFileAccessFlag, ClassFileAccessFlags},
 };
 use support::encoding::{decode_string, CompactEncoding};
 
@@ -338,7 +338,7 @@ impl Class {
                 return component_ty.name() == "java/lang/Object";
             }
 
-            //  – If T is an interface type, then T must be one of the interfaces implemented by arrays (JLS §4.10.3).
+            // – If T is an interface type, then T must be one of the interfaces implemented by arrays (JLS §4.10.3).
             if t.is_interface() {
                 todo!("don't know how to check these");
             }
