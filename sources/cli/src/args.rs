@@ -28,6 +28,7 @@ pub mod opts {
     pub const TEST_INIT: &str = "test.init";
     pub const TEST_BOOT: &str = "test.boot";
     pub const TEST_THROW_INTERNAL: &str = "test.throwinternal";
+    pub const MAX_STACK: &str = "vm.maxstack";
 }
 
 #[derive(Parser)]
@@ -55,7 +56,11 @@ pub struct Cli {
 
 impl Cli {
     pub fn has_option(&self, key: &str) -> bool {
-        self.options.iter().any(|o| o.key == key)
+        self.get_option(key).is_some()
+    }
+
+    pub fn get_option(&self, key: &str) -> Option<&String> {
+        self.options.iter().find(|o| o.key == key).map(|o| &o.value)
     }
 
     pub fn has_option_value(&self, key: &str, value: &str) -> bool {

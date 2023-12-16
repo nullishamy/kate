@@ -57,7 +57,7 @@ pub fn direct<'a>(class_name: &'a str, source: &'a str) -> Class<'a> {
     }
 }
 
-pub fn using_class(class_name: &str, class_content: String) -> Class<'_> {
+pub fn using_class(class_name: &str, class_content: impl Into<String>) -> Class<'_> {
     Class {
         name: class_name,
         content: format!(
@@ -66,7 +66,7 @@ pub fn using_class(class_name: &str, class_content: String) -> Class<'_> {
                     {}
                 }}
             "#,
-            class_name, class_content
+            class_name, class_content.into()
         ),
     }
 }

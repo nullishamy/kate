@@ -14,6 +14,7 @@ use crate::{
 pub enum VMError {
     ArrayIndexOutOfBounds { at: i64 },
     NullPointerException { ctx: String },
+    StackOverflowError { },
 }
 
 impl VMError {
@@ -21,6 +22,7 @@ impl VMError {
         match self {
             VMError::ArrayIndexOutOfBounds { .. } => "java/lang/ArrayIndexOutOfBoundsException",
             VMError::NullPointerException { .. } => "java/lang/NullPointerException",
+            VMError::StackOverflowError { .. } => "java/lang/StackOverflowError",
         }
     }
 
@@ -28,6 +30,7 @@ impl VMError {
         let ctx = match self {
             VMError::ArrayIndexOutOfBounds { at } => format!("OOB @ {}", at),
             VMError::NullPointerException { ctx } => format!("NPE ({})", ctx),
+            VMError::StackOverflowError { .. } => format!("thread main has overflowed it's stack")
         };
 
         format!("{}: {}", self.class_name(), ctx)

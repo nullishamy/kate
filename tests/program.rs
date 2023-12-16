@@ -2,7 +2,10 @@ mod util;
 
 use std::{fs::File, io::Write, path::PathBuf};
 
-use util::{builder::direct, TMP_DIR};
+use util::{
+    builder::{direct, using_class, using_helpers},
+    TMP_DIR,
+};
 
 use crate::util::{builder::using_main, compare, execute, expected, inline, state, TestResult};
 
@@ -535,6 +538,87 @@ pub fn array_clone() -> TestResult {
 
     let got = execute(state, inline(source)?)?;
     let expected = expected().has_success();
+
+    compare(got, expected);
+
+    Ok(())
+}
+
+#[test]
+pub fn stack_overflow() -> TestResult {
+    let state = state().init().opt("vm.maxstack", "5");
+
+    let source = using_helpers(
+        "StackOverflow",
+        r#"
+            static void callme() {
+                callme();
+            }
+
+            public static void main(String[] args) {
+                try {
+                    callme();
+                } catch (StackOverflowError soe) {
+                    print("Caught soe");
+                }
+
+                callme();
+            }
+        "#,
+    );
+
+    let got = execute(state, inline(source)?)?;
+    let expected = expected()
+        .has_error()
+        .with_output("Caught soe")
+        .with_output("Uncaught exception in main: java/lang/StackOverflowError: thread main has overflowed it's stack")
+        .with_output("  at StackOverflow.callme")
+        .with_output("  at StackOverflow.callme")
+        .with_output("  at StackOverflow.callme")
+        .with_output("  at StackOverflow.callme")
+        .with_output("  at StackOverflow.callme")
+        .with_output("  at StackOverflow.main");
+
+    compare(got, expected);
+
+    Ok(())
+}
+
+#[test]
+pub fn try_catch_rethrow() -> TestResult {
+    let state = state().init();
+
+    let source = using_helpers(
+        "TryCatchRethrow",
+        r#"
+            static void callme() {
+                throw new IllegalStateException();
+            }
+
+            static void deeper() {
+                callme();
+            }
+
+            public static void main(String[] args) {
+                try {
+                    deeper();
+                } catch (IllegalStateException ise) {
+                    print("Caught ise");
+                }
+
+                deeper();
+            }
+        "#,
+    );
+
+    let got = execute(state, inline(source)?)?;
+    let expected = expected()
+        .has_error()
+        .with_output("Caught ise")
+        .with_output("Uncaught exception in main: java/lang/IllegalStateException: ")
+        .with_output("  at TryCatchRethrow.callme")
+        .with_output("  at TryCatchRethrow.deeper")
+        .with_output("  at TryCatchRethrow.main");
 
     compare(got, expected);
 

@@ -16,7 +16,7 @@ use interpreter::{
     },
     static_method, Context, ThrownState, VM,
 };
-use parse::attributes::CodeAttribute;
+use parse::{attributes::CodeAttribute, classfile::{Method, Resolvable}};
 use support::encoding::{decode_string, CompactEncoding};
 use tracing::{error, info, Level};
 use tracing_subscriber::fmt;
@@ -143,9 +143,15 @@ fn boot_system(vm: &mut VM, cls: RefTo<Class>) {
         class: java_lang_system,
         code,
         operands: vec![],
+        is_reentry: false,
         locals: vec![],
         pc: 0,
     };
+
+    vm.frames.push(Frame {
+        class_name: "java/lang/System".to_string(),
+        method_name: "initPhase1".to_string(),
+    });
 
     let res = vm.run(ctx);
     if let Err((e, _)) = res {
@@ -160,21 +166,13 @@ fn boot_system(vm: &mut VM, cls: RefTo<Class>) {
                 println!("  {}", source);
             }
         }
-
-        println!(
-            "  {}",
-            Frame {
-                class_name: "java/lang/System".to_string(),
-                method_name: "initPhase1".to_string()
-            }
-        );
         exit(1);
     } else {
         info!("Booted system")
     }
 }
 
-fn run_method(vm: &mut VM, ctx: Context, args: &Cli) {
+fn run_method(vm: &mut VM, ctx: Context, method: &Method, args: &Cli) {
     let code = ctx.code.clone();
     let cls = ctx.class.clone();
 
@@ -201,9 +199,23 @@ fn run_method(vm: &mut VM, ctx: Context, args: &Cli) {
 
         if let Throwable::Runtime(rte) = &err {
             if let Some(entry) = err.caught_by(vm, &code, &state).unwrap() {
+                let method_name = method.name.resolve().string();
+                let class_name = cls.unwrap_ref().name();
+
+                // We should consider the performed call "fully returned" because we are now back
+                // As such, we should clear frames that came after ours
+                let our_frame_index = vm
+                    .frames
+                    .iter()
+                    .position(|f| &f.class_name == class_name && f.method_name == method_name)
+                    .unwrap();
+
+                drop(vm.frames.drain(our_frame_index + 1..vm.frames.len()));
+
                 let re_enter_context = Context {
                     code: code.clone(),
                     class: cls,
+                    is_reentry: true,
                     pc: entry.handler_pc as i32,
                     // Push the exception object as the first operand
                     operands: vec![rte.obj.clone()],
@@ -212,7 +224,7 @@ fn run_method(vm: &mut VM, ctx: Context, args: &Cli) {
 
                 info!("Re-entering main at {}", re_enter_context.pc);
 
-                return run_method(vm, re_enter_context, args);
+                return run_method(vm, re_enter_context, method, args);
             } else {
                 println!("Uncaught exception in main: {}", rte);
                 for source in rte.sources.iter().rev() {
@@ -221,13 +233,6 @@ fn run_method(vm: &mut VM, ctx: Context, args: &Cli) {
             }
         }
 
-        println!(
-            "  {}",
-            Frame {
-                class_name: cls.unwrap_ref().name().to_string(),
-                method_name: "main".to_string()
-            }
-        );
         exit(1);
     } else {
         info!("Execution concluded without error")
@@ -289,9 +294,15 @@ fn main() {
 
     set_interner(interner);
 
+    let max_stack = args
+        .get_option(opts::MAX_STACK)
+        .and_then(|f| f.parse::<u64>().ok())
+        .unwrap_or(128);
+
     let mut vm = VM {
         class_loader,
         frames: Vec::new(),
+        options: interpreter::BootOptions { max_stack },
         main_thread: RefTo::null(),
     };
 
@@ -323,12 +334,17 @@ fn main() {
         let main_ctx = Context {
             class: cls.clone(),
             code: code.clone(),
+            is_reentry: false,
             operands: vec![],
             locals: vec![],
             pc: 0,
         };
 
         info!("Entering main");
-        run_method(&mut vm, main_ctx, &args);
+        vm.frames.push(Frame {
+            class_name: cls.unwrap_ref().name().to_string(),
+            method_name: "main".to_string(),
+        });
+        run_method(&mut vm, main_ctx, method, &args);
     }
 }

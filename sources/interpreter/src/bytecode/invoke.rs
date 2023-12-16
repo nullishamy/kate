@@ -890,9 +890,13 @@ fn do_call(
             code: code.clone(),
             class: class.clone(),
             pc: 0,
+            is_reentry: false,
             operands: vec![],
             locals: args.clone(),
         };
+
+        let method_name = method.name.resolve().string();
+        let class_name = class.unwrap_ref().name();
 
         // The new frame is then made current, and the Java Virtual Machine pc is set
         // to the opcode of the first instruction of the method to be invoked.
@@ -905,9 +909,20 @@ fn do_call(
             // Only try to catch runtime errors. Internal errors should never be caught by user code.
             if let Throwable::Runtime(rte) = err {
                 if let Some(entry) = err.caught_by(vm, &code, state)? {
+                    // We should consider the performed call "fully returned" because we are now back
+                    // As such, we should clear frames that came after ours
+                    let our_frame_index = vm
+                        .frames
+                        .iter()
+                        .position(|f| &f.class_name == class_name && f.method_name == method_name)
+                        .unwrap();
+
+                    drop(vm.frames.drain(our_frame_index + 1..vm.frames.len()));
+
                     let re_enter_context = Context {
                         code: code.clone(),
                         class,
+                        is_reentry: true,
                         pc: entry.handler_pc as i32,
                         // Push the exception object as the first operand
                         operands: vec![rte.obj.clone()],

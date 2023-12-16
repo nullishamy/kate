@@ -33,13 +33,19 @@ pub struct Context {
     pub class: RefTo<Class>,
 
     pub pc: i32,
+    pub is_reentry: bool,
     pub operands: Vec<RuntimeValue>,
     pub locals: Vec<RuntimeValue>,
+}
+
+pub struct BootOptions {
+    pub max_stack: u64,
 }
 
 pub struct VM {
     pub class_loader: ClassLoader,
     pub frames: Vec<Frame>,
+    pub options: BootOptions,
 
     pub main_thread: RefTo<Object>,
 }
@@ -54,6 +60,18 @@ impl VM {
         &mut self,
         mut ctx: Context,
     ) -> Result<Option<RuntimeValue>, (Throwable, ThrownState)> {
+        let is_overflowing_in_different_method = {
+            let is_overflowing = self.frames.len() > self.options.max_stack as usize;
+            is_overflowing && !ctx.is_reentry
+        };
+
+        if is_overflowing_in_different_method {
+            return Err(self
+                .try_make_error(VMError::StackOverflowError {})
+                .map_err(|e| (e, ThrownState { pc: ctx.pc }))
+                .map(|e| (e, ThrownState { pc: ctx.pc }))?);
+        }
+
         while ctx.pc < ctx.code.code.len() as i32 {
             let slice = &ctx.code.code[ctx.pc as usize..];
             let consumed_bytes_prev = slice.len();
@@ -147,6 +165,7 @@ impl VM {
                 code,
                 class,
                 pc: 0,
+                is_reentry: false,
                 operands: vec![],
                 locals: vec![],
             };
@@ -179,24 +198,12 @@ impl VM {
             .class_loader
             .for_name(format!("L{};", ty.class_name()).into())?;
 
-        match ty {
-            VMError::ArrayIndexOutOfBounds { .. } => {
-                Ok(Throwable::Runtime(error::RuntimeException {
-                    message: ty.message(),
-                    ty: cls,
-                    obj: RuntimeValue::null_ref(),
-                    sources: self.frames.clone(),
-                }))
-            }
-            VMError::NullPointerException { .. } => {
-                Ok(Throwable::Runtime(error::RuntimeException {
-                    message: ty.message(),
-                    ty: cls,
-                    obj: RuntimeValue::null_ref(),
-                    sources: self.frames.clone(),
-                }))
-            }
-        }
+        Ok(Throwable::Runtime(error::RuntimeException {
+            message: ty.message(),
+            ty: cls,
+            obj: RuntimeValue::null_ref(),
+            sources: self.frames.clone(),
+        }))
     }
 
     pub fn bootstrap(&mut self) -> Result<(), Throwable> {
