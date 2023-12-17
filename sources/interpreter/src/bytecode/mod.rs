@@ -1,13 +1,11 @@
 use std::fmt;
 
-use crate::{
-    error::Throwable,
-    internal,
-    object::{
-        runtime::RuntimeValue, layout::types,
-    },
-    Context, VM,
-};
+use crate::Context;
+use crate::Interpreter;
+use runtime::error::Throwable;
+use runtime::internal;
+use runtime::object::layout::types;
+use runtime::object::value::RuntimeValue;
 use bytes::{Buf, BytesMut};
 use support::bytes_ext::SafeBuf;
 
@@ -26,7 +24,7 @@ pub enum Progression {
 }
 
 pub trait Instruction: fmt::Debug {
-    fn handle(&self, _vm: &mut VM, _ctx: &mut Context) -> Result<Progression, Throwable> {
+    fn handle(&self, _vm: &mut Interpreter, _ctx: &mut Context) -> Result<Progression, Throwable> {
         Ok(Progression::Next)
     }
 }
@@ -37,7 +35,7 @@ fn b<T>(v: T) -> Box<T> {
 }
 
 pub fn decode_instruction(
-    vm: &mut VM,
+    vm: &mut Interpreter,
     bytes: &mut BytesMut,
     ctx: &Context,
 ) -> Result<Box<dyn Instruction>, Throwable> {
@@ -153,28 +151,28 @@ pub fn decode_instruction(
         0x2d => b(ops::LoadLocal { index: 3 }),
 
         0x2e => b(ops::ArrayLoad {
-            ty: vm.class_loader.for_name(types::INT.name.into())?,
+            ty: vm.class_loader().for_name(types::INT.name.into())?,
         }),
         0x2f => b(ops::ArrayLoad {
-            ty: vm.class_loader.for_name(types::LONG.name.into())?,
+            ty: vm.class_loader().for_name(types::LONG.name.into())?,
         }),
         0x30 => b(ops::ArrayLoad {
-            ty: vm.class_loader.for_name(types::FLOAT.name.into())?,
+            ty: vm.class_loader().for_name(types::FLOAT.name.into())?,
         }),
         0x31 => b(ops::ArrayLoad {
-            ty: vm.class_loader.for_name(types::DOUBLE.name.into())?,
+            ty: vm.class_loader().for_name(types::DOUBLE.name.into())?,
         }),
         0x32 => b(ops::ArrayLoad {
-            ty: vm.class_loader.for_name("Ljava/lang/Object;".into())?,
+            ty: vm.class_loader().for_name("Ljava/lang/Object;".into())?,
         }),
         0x33 => b(ops::ArrayLoad {
-            ty: vm.class_loader.for_name(types::BYTE.name.into())?,
+            ty: vm.class_loader().for_name(types::BYTE.name.into())?,
         }),
         0x34 => b(ops::ArrayLoad {
-            ty: vm.class_loader.for_name(types::CHAR.name.into())?,
+            ty: vm.class_loader().for_name(types::CHAR.name.into())?,
         }),
         0x35 => b(ops::ArrayLoad {
-            ty: vm.class_loader.for_name(types::SHORT.name.into())?,
+            ty: vm.class_loader().for_name(types::SHORT.name.into())?,
         }),
 
         0x36 => b(ops::StoreLocal {
@@ -283,28 +281,28 @@ pub fn decode_instruction(
         }),
 
         0x4f => b(ops::ArrayStore {
-            ty: vm.class_loader.for_name(types::INT.name.into())?,
+            ty: vm.class_loader().for_name(types::INT.name.into())?,
         }),
         0x50 => b(ops::ArrayStore {
-            ty: vm.class_loader.for_name(types::LONG.name.into())?,
+            ty: vm.class_loader().for_name(types::LONG.name.into())?,
         }),
         0x51 => b(ops::ArrayStore {
-            ty: vm.class_loader.for_name(types::FLOAT.name.into())?,
+            ty: vm.class_loader().for_name(types::FLOAT.name.into())?,
         }),
         0x52 => b(ops::ArrayStore {
-            ty: vm.class_loader.for_name(types::DOUBLE.name.into())?,
+            ty: vm.class_loader().for_name(types::DOUBLE.name.into())?,
         }),
         0x53 => b(ops::ArrayStore {
-            ty: vm.class_loader.for_name("Ljava/lang/Object;".into())?,
+            ty: vm.class_loader().for_name("Ljava/lang/Object;".into())?,
         }),
         0x54 => b(ops::ArrayStore {
-            ty: vm.class_loader.for_name(types::BYTE.name.into())?,
+            ty: vm.class_loader().for_name(types::BYTE.name.into())?,
         }),
         0x55 => b(ops::ArrayStore {
-            ty: vm.class_loader.for_name(types::CHAR.name.into())?,
+            ty: vm.class_loader().for_name(types::CHAR.name.into())?,
         }),
         0x56 => b(ops::ArrayStore {
-            ty: vm.class_loader.for_name(types::SHORT.name.into())?,
+            ty: vm.class_loader().for_name(types::SHORT.name.into())?,
         }),
 
         // Stack Math Conversions

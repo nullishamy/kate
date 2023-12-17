@@ -1,5 +1,5 @@
 [package]
-name = "interpreter"
+name = "runtime"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,7 +8,6 @@ edition = "2021"
 [dependencies]
 parse = { path = '../parse/' }
 support = { path = '../support/' }
-runtime = { path = '../runtime/' }
 enum-as-inner = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }

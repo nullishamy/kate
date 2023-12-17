@@ -1,15 +1,32 @@
 use super::{Instruction, Progression};
-use crate::error::{Throwable, VMError};
-use crate::object::builtins::{Array, ArrayPrimitive, Class, Object};
-use crate::object::layout::types::{self, Bool, Byte, Char, Double, Float, Int, Long, Short};
-use crate::object::mem::RefTo;
-use crate::object::numeric::IntegralType;
-use crate::object::runtime::RuntimeValue;
-use crate::{internal, Context, VM};
+use crate::arg;
+use crate::pop;
+use crate::Context;
+use crate::Interpreter;
 use anyhow::Context as AnyhowContext;
+use parse::{classfile::Resolvable, pool::ConstantEntry};
+use runtime::error::Throwable;
+use runtime::error::VMError;
+use runtime::internal;
+use runtime::object::builtins::Array;
+use runtime::object::builtins::ArrayPrimitive;
+use runtime::object::builtins::Class;
+use runtime::object::builtins::Object;
 
-use parse::classfile::Resolvable;
-use parse::pool::ConstantEntry;
+use runtime::object::layout::types;
+use runtime::object::layout::types::Bool;
+use runtime::object::layout::types::Byte;
+use runtime::object::layout::types::Char;
+use runtime::object::layout::types::Double;
+use runtime::object::layout::types::Float;
+use runtime::object::layout::types::Int;
+use runtime::object::layout::types::Long;
+use runtime::object::layout::types::Short;
+
+use runtime::object::mem::RefTo;
+use runtime::object::numeric::IntegralType;
+
+use runtime::object::value::RuntimeValue;
 
 pub use super::binary::*;
 pub use super::invoke::*;
@@ -34,7 +51,7 @@ macro_rules! arg {
             .as_integral()
             .context(format!("{} was not an integral", $side))?;
         if val.ty != IntegralType::Int {
-            return Err($crate::internal!(format!(
+            return Err(runtime::internal!(format!(
                 "{} was not an int, got {:#?}",
                 $side, val
             )));
@@ -49,7 +66,7 @@ macro_rules! arg {
             .as_integral()
             .context(format!("{} was not an integral", $side))?;
         if val.ty != IntegralType::Long {
-            return Err($crate::internal!(format!(
+            return Err(runtime::internal!(format!(
                 "{} was not a long, got {:#?}",
                 $side, val
             )));
@@ -64,7 +81,7 @@ macro_rules! arg {
             .as_floating()
             .context(format!("{} was not a floating", $side))?;
         if val.ty != FloatingType::Float {
-            return Err($crate::internal!(format!("{} was not a float", $side)));
+            return Err(runtime::internal!(format!("{} was not a float", $side)));
         }
 
         val.clone()
@@ -76,7 +93,7 @@ macro_rules! arg {
             .as_floating()
             .context(format!("{} was not a floating", $side))?;
         if val.ty != FloatingType::Double {
-            return Err($crate::internal!(format!("{} was not a double", $side)));
+            return Err(runtime::internal!(format!("{} was not a double", $side)));
         }
 
         val.clone()
@@ -108,7 +125,7 @@ impl Instruction for Nop {}
 #[derive(Debug)]
 pub struct VoidReturn;
 impl Instruction for VoidReturn {
-    fn handle(&self, _vm: &mut VM, _ctx: &mut Context) -> Result<Progression, Throwable> {
+    fn handle(&self, _vm: &mut Interpreter, _ctx: &mut Context) -> Result<Progression, Throwable> {
         Ok(Progression::Return(None))
     }
 }
@@ -117,7 +134,7 @@ impl Instruction for VoidReturn {
 pub struct ValueReturn;
 
 impl Instruction for ValueReturn {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
+    fn handle(&self, _vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
         let return_value = ctx.operands.pop().context("no return value popped")?;
 
         Ok(Progression::Return(Some(return_value)))
@@ -130,7 +147,7 @@ pub struct Goto {
 }
 
 impl Instruction for Goto {
-    fn handle(&self, _vm: &mut VM, _ctx: &mut Context) -> Result<Progression, Throwable> {
+    fn handle(&self, _vm: &mut Interpreter, _ctx: &mut Context) -> Result<Progression, Throwable> {
         Ok(Progression::JumpRel(self.jump_to as i32))
     }
 }
@@ -139,7 +156,7 @@ impl Instruction for Goto {
 pub struct ArrayLength;
 
 impl Instruction for ArrayLength {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
+    fn handle(&self, _vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
         // The arrayref must be of type reference and must refer to an array. It is popped from the operand stack.
         let array = arg!(ctx, "array" => Array<()>);
 
@@ -158,7 +175,7 @@ pub struct ANewArray {
 }
 
 impl Instruction for ANewArray {
-    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
+    fn handle(&self, vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
         // The count must be of type int. It is popped off the operand stack.
         let count = arg!(ctx, "count" => i32);
 
@@ -176,9 +193,8 @@ impl Instruction for ANewArray {
         let array_ty = match ty {
             ConstantEntry::Class(data) => {
                 let class_name = data.name.resolve().string();
-                
-                vm
-                    .class_loader
+
+                vm.class_loader()
                     .for_name(format!("[L{};", class_name).into())?
             }
             e => return Err(internal!("{:#?} cannot be used as an array type", e)),
@@ -205,7 +221,7 @@ pub struct NewArray {
 }
 
 impl Instruction for NewArray {
-    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
+    fn handle(&self, vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
         // The count must be of type int. It is popped off the operand stack.
         let count = arg!(ctx, "count" => i32);
 
@@ -218,52 +234,57 @@ impl Instruction for NewArray {
             ArrayPrimitive::Bool => {
                 let values: Vec<Bool> = vec![0; count.value as usize];
                 RuntimeValue::Object(
-                    Array::<Bool>::from_vec(vm.class_loader.for_name("[Z".into())?, values).erase(),
+                    Array::<Bool>::from_vec(vm.class_loader().for_name("[Z".into())?, values)
+                        .erase(),
                 )
             }
             ArrayPrimitive::Char => {
                 let values: Vec<Char> = vec![0; count.value as usize];
                 RuntimeValue::Object(
-                    Array::<Char>::from_vec(vm.class_loader.for_name("[C".into())?, values).erase(),
+                    Array::<Char>::from_vec(vm.class_loader().for_name("[C".into())?, values)
+                        .erase(),
                 )
             }
             ArrayPrimitive::Float => {
                 let values: Vec<Float> = vec![0.0; count.value as usize];
                 RuntimeValue::Object(
-                    Array::<Float>::from_vec(vm.class_loader.for_name("[F".into())?, values)
+                    Array::<Float>::from_vec(vm.class_loader().for_name("[F".into())?, values)
                         .erase(),
                 )
             }
             ArrayPrimitive::Double => {
                 let values: Vec<Double> = vec![0.0; count.value as usize];
                 RuntimeValue::Object(
-                    Array::<Double>::from_vec(vm.class_loader.for_name("[D".into())?, values)
+                    Array::<Double>::from_vec(vm.class_loader().for_name("[D".into())?, values)
                         .erase(),
                 )
             }
             ArrayPrimitive::Byte => {
                 let values: Vec<Byte> = vec![0; count.value as usize];
                 RuntimeValue::Object(
-                    Array::<Byte>::from_vec(vm.class_loader.for_name("[B".into())?, values).erase(),
+                    Array::<Byte>::from_vec(vm.class_loader().for_name("[B".into())?, values)
+                        .erase(),
                 )
             }
             ArrayPrimitive::Short => {
                 let values: Vec<Short> = vec![0; count.value as usize];
                 RuntimeValue::Object(
-                    Array::<Short>::from_vec(vm.class_loader.for_name("[S".into())?, values)
+                    Array::<Short>::from_vec(vm.class_loader().for_name("[S".into())?, values)
                         .erase(),
                 )
             }
             ArrayPrimitive::Int => {
                 let values: Vec<Int> = vec![0; count.value as usize];
                 RuntimeValue::Object(
-                    Array::<Int>::from_vec(vm.class_loader.for_name("[I".into())?, values).erase(),
+                    Array::<Int>::from_vec(vm.class_loader().for_name("[I".into())?, values)
+                        .erase(),
                 )
             }
             ArrayPrimitive::Long => {
                 let values: Vec<Long> = vec![0; count.value as usize];
                 RuntimeValue::Object(
-                    Array::<Long>::from_vec(vm.class_loader.for_name("[J".into())?, values).erase(),
+                    Array::<Long>::from_vec(vm.class_loader().for_name("[J".into())?, values)
+                        .erase(),
                 )
             }
         };
@@ -281,7 +302,7 @@ pub struct ArrayStore {
 }
 
 impl Instruction for ArrayStore {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
+    fn handle(&self, _vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
         let value = pop!(ctx);
         let index = arg!(ctx, "index" => i32);
 
@@ -343,7 +364,7 @@ pub struct ArrayLoad {
 }
 
 impl Instruction for ArrayLoad {
-    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
+    fn handle(&self, vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
         let index = arg!(ctx, "index" => i32);
         let ty = self.ty.unwrap_ref();
         let value = if ty.is_primitive() {
@@ -418,7 +439,7 @@ impl Instruction for ArrayLoad {
 pub struct MonitorEnter;
 impl Instruction for MonitorEnter {
     // TODO: Support when we support MT
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
+    fn handle(&self, _vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
         pop!(ctx);
         Ok(Progression::Next)
     }
@@ -428,7 +449,7 @@ impl Instruction for MonitorEnter {
 pub struct MonitorExit;
 impl Instruction for MonitorExit {
     // TODO: Support when we support MT
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
+    fn handle(&self, _vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
         pop!(ctx);
         Ok(Progression::Next)
     }

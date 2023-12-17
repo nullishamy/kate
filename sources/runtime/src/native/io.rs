@@ -15,9 +15,9 @@ use crate::{
         layout::types::Int,
         mem::{FieldRef, RefTo},
         numeric::FALSE,
-        runtime::RuntimeValue,
+        value::RuntimeValue,
     },
-    static_method, VM,
+    static_method, vm::VM,
 };
 
 use super::{NameAndDescriptor, NativeFunction, NativeModule};

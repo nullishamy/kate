@@ -3,11 +3,11 @@ use std::collections::HashMap;
 use crate::{
     error::Throwable, module_base,
     object::{
-        builtins::{Class},
-        mem::{RefTo},
-        runtime::RuntimeValue,
+        builtins::Class,
+        mem::RefTo,
+        value::RuntimeValue,
     },
-    static_method, VM,
+    static_method, vm::VM,
 };
 
 use super::{NameAndDescriptor, NativeFunction, NativeModule};

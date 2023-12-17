@@ -14,7 +14,7 @@ use crate::{error::Throwable, internalise};
 
 use self::types::JavaType;
 
-use super::{builtins::Object, runtime::RuntimeValue};
+use super::{builtins::Object, value::RuntimeValue};
 
 #[derive(Debug, Clone)]
 /// More expensive to clone, but more comprehensive field information.

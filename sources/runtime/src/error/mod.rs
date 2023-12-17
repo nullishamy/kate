@@ -7,8 +7,8 @@ use parse::{
 use thiserror::Error;
 
 use crate::{
-    object::{builtins::Class, mem::RefTo, runtime::RuntimeValue},
-    ThrownState, VM,
+    object::{builtins::Class, mem::RefTo, value::RuntimeValue},
+    vm::VM,
 };
 
 pub enum VMError {
@@ -46,6 +46,11 @@ pub enum Throwable {
     Internal(#[from] anyhow::Error),
 }
 
+#[derive(Debug)]
+pub struct ThrownState {
+    pub pc: i32,
+}
+
 impl Throwable {
     pub fn caught_by<'a>(
         &'a self,
@@ -61,7 +66,7 @@ impl Throwable {
                 let has_type_match = if entry.catch_type.index() != 0 {
                     let entry_ty = {
                         let name = entry.catch_type.resolve().name.resolve().string();
-                        vm.class_loader.for_name(format!("L{};", name).into())
+                        vm.class_loader().for_name(format!("L{};", name).into())
                     }?;
 
                     Class::can_assign(entry_ty, ty.clone())
@@ -86,13 +91,13 @@ impl Throwable {
 #[macro_export]
 macro_rules! internal {
     ($msg:literal $(,)?) => {
-        $crate::Throwable::Internal(anyhow::anyhow!($msg))
+        $crate::error::Throwable::Internal(anyhow::anyhow!($msg))
     };
     ($err:expr $(,)?) => {
-        $crate::Throwable::Internal(anyhow::anyhow!($err))
+        $crate::error::Throwable::Internal(anyhow::anyhow!($err))
     };
     ($fmt:expr, $($arg:tt)*) => {
-        $crate::Throwable::Internal(anyhow::anyhow!($fmt, $($arg)*))
+        $crate::error::Throwable::Internal(anyhow::anyhow!($fmt, $($arg)*))
     };
 }
 
@@ -102,6 +107,7 @@ macro_rules! internalise {
         |f| $crate::internal!(f)
     };
 }
+
 #[derive(Error, Debug, Clone)]
 #[error("at {class_name}.{method_name}")]
 pub struct Frame {

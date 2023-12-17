@@ -5,9 +5,9 @@ use crate::{
     object::{
         builtins::{Class, Object},
         mem::RefTo,
-        runtime::RuntimeValue,
+        value::RuntimeValue,
     },
-    VM,
+    vm::VM,
 };
 
 pub mod io;
@@ -61,7 +61,7 @@ pub trait NativeModule {
     }
 
     fn get_class(&self, vm: &mut VM) -> Result<RefTo<Class>, Throwable> {
-        vm.class_loader.for_name(format!("L{};", self.classname()).into())
+        vm.class_loader().for_name(format!("L{};", self.classname()).into())
     }
 }
 

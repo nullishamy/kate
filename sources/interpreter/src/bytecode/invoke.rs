@@ -1,21 +1,35 @@
 use std::sync::atomic::AtomicU64;
 
 use super::{Instruction, Progression};
-use crate::{
-    arg,
-    error::{Frame, RuntimeException, Throwable, VMError},
-    internal,
-    native::NativeFunction,
-    object::{
-        builtins::{Array, BuiltinString, Class, Object},
-        layout::types::{Bool, Byte, Char, Double, Float, Int, Long, Short},
-        mem::{FieldRef, HasObjectHeader, RefTo},
-        numeric::{FloatingType, IntegralType},
-        runtime::RuntimeValue,
-    },
-    pop, Context, VM,
-};
+use crate::arg;
+use crate::pop;
+use crate::Context;
+use crate::Interpreter;
 use anyhow::Context as AnyhowContext;
+use runtime::error::Frame;
+use runtime::error::RuntimeException;
+use runtime::error::Throwable;
+use runtime::error::VMError;
+use runtime::internal;
+use runtime::native::NativeFunction;
+use runtime::object::builtins::Array;
+use runtime::object::builtins::BuiltinString;
+use runtime::object::builtins::Class;
+use runtime::object::builtins::Object;
+use runtime::object::layout::types::Bool;
+use runtime::object::layout::types::Byte;
+use runtime::object::layout::types::Char;
+use runtime::object::layout::types::Double;
+use runtime::object::layout::types::Float;
+use runtime::object::layout::types::Int;
+use runtime::object::layout::types::Long;
+use runtime::object::layout::types::Short;
+use runtime::object::mem::FieldRef;
+use runtime::object::mem::HasObjectHeader;
+use runtime::object::mem::RefTo;
+use runtime::object::numeric::FloatingType;
+use runtime::object::numeric::IntegralType;
+use runtime::object::value::RuntimeValue;
 
 use parking_lot::RwLock;
 use parse::{
@@ -36,7 +50,7 @@ pub struct InvokeVirtual {
 }
 
 impl Instruction for InvokeVirtual {
-    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
+    fn handle(&self, vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
         let cls = ctx.class.clone();
         let cls = cls
             .to_ref()
@@ -67,7 +81,7 @@ impl Instruction for InvokeVirtual {
             FieldType::parse(class_name.clone())?
         };
 
-        let loaded_class = vm.class_loader.for_name(class_name_desc)?;
+        let loaded_class = vm.class_loader().for_name(class_name_desc)?;
 
         let loaded_method = resolve_class_method(
             vm,
@@ -80,12 +94,12 @@ impl Instruction for InvokeVirtual {
         // the invokevirtual instruction proceeds as follows.
         // TODO: Support signature polymorphic methods
 
-        vm.frames.push(Frame {
+        vm.push_frame(Frame {
             method_name: method_name.clone(),
             class_name,
         });
 
-        debug!("Invoking: {:#?}", vm.frames.last());
+        debug!("Invoking: {:#?}", vm.frames().last());
 
         // NOTE: We must get the args before relative resolution.
         // This is because the `objectref` lives at the "bottom" of the stack,
@@ -116,8 +130,8 @@ impl Instruction for InvokeVirtual {
 
         let exec_result = do_call(vm, selected_method, selected_class, args_for_call)?;
 
-        debug!("Returned from: {:#?}", vm.frames.last());
-        vm.frames.pop();
+        debug!("Returned from: {:#?}", vm.frames().last());
+        vm.pop_frame();
 
         // Callee gave us a value, push it to our stack (Xreturn does this)
         if let Some(return_value) = exec_result {
@@ -134,7 +148,7 @@ pub struct InvokeSpecial {
 }
 
 impl Instruction for InvokeSpecial {
-    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
+    fn handle(&self, vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
         let cls =
             ctx.class
                 .to_ref()
@@ -160,7 +174,7 @@ impl Instruction for InvokeSpecial {
 
         // The named method is resolved (§5.4.3.3, §5.4.3.4).
         let loaded_class = vm
-            .class_loader
+            .class_loader()
             .for_name(format!("L{};", class_name).into())?;
         let loaded_method = resolve_class_method(
             vm,
@@ -169,12 +183,12 @@ impl Instruction for InvokeSpecial {
             method_descriptor.to_string(),
         )?;
 
-        vm.frames.push(Frame {
+        vm.push_frame(Frame {
             method_name: method_name.clone(),
             class_name,
         });
 
-        debug!("Invoking: {:#?}", vm.frames.last());
+        debug!("Invoking: {:#?}", vm.frames().last());
 
         // NOTE: We must get the args before resolution.
         // This is because the `objectref` lives at the "bottom" of the stack,
@@ -197,8 +211,8 @@ impl Instruction for InvokeSpecial {
 
         let exec_result = do_call(vm, selected_method, selected_class, args_for_call)?;
 
-        debug!("Returned from: {:#?}", vm.frames.last());
-        vm.frames.pop();
+        debug!("Returned from: {:#?}", vm.frames().last());
+        vm.pop_frame();
 
         // Callee gave us a value, push it to our stack (Xreturn does this)
         if let Some(return_value) = exec_result {
@@ -215,7 +229,7 @@ pub struct InvokeStatic {
 }
 
 impl Instruction for InvokeStatic {
-    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
+    fn handle(&self, vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
         let cls =
             ctx.class
                 .to_ref()
@@ -240,8 +254,9 @@ impl Instruction for InvokeStatic {
 
         // The named method is resolved (§5.4.3.3, §5.4.3.4).
         let loaded_class = vm
-            .class_loader
+            .class_loader()
             .for_name(format!("L{};", class_name).into())?;
+
         let loaded_method = match location {
             MethodLocation::Interface => resolve_interface_method(
                 vm,
@@ -278,20 +293,20 @@ impl Instruction for InvokeStatic {
         // new frame, with arg1 in local variable 0 (or, if arg1 is of type
         // long or double, in local variables 0 and 1) and so on.
 
-        vm.frames.push(Frame {
+        vm.push_frame(Frame {
             method_name,
             class_name,
         });
 
-        debug!("Invoking: {:#?}", vm.frames.last());
+        debug!("Invoking: {:#?}", vm.frames().last());
 
         let mut args_for_call = clone_args_from_operands(method_descriptor, ctx)?;
         args_for_call.reverse();
 
         let exec_result = do_call(vm, loaded_method, loaded_class, args_for_call)?;
 
-        debug!("Returned from: {:#?}", vm.frames.last());
-        vm.frames.pop();
+        debug!("Returned from: {:#?}", vm.frames().last());
+        vm.pop_frame();
 
         // Callee gave us a value, push it to our stack (Xreturn does this)
         if let Some(return_value) = exec_result {
@@ -310,7 +325,7 @@ pub struct InvokeInterface {
 }
 
 impl Instruction for InvokeInterface {
-    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
+    fn handle(&self, vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
         // The value of the fourth operand byte must always be zero.
         if self.zero != 0 {
             return Err(internal!("zero was not zero"));
@@ -340,7 +355,7 @@ impl Instruction for InvokeInterface {
 
         // The named method is resolved (§5.4.3.3, §5.4.3.4).
         let loaded_class = vm
-            .class_loader
+            .class_loader()
             .for_name(format!("L{};", class_name).into())?;
         let loaded_method = resolve_interface_method(
             vm,
@@ -375,19 +390,19 @@ impl Instruction for InvokeInterface {
                 method_descriptor.to_string()
             ))?;
 
-        vm.frames.push(Frame {
+        vm.push_frame(Frame {
             method_name,
             class_name,
         });
 
-        debug!("Invoking: {:#?}", vm.frames.last());
+        debug!("Invoking: {:#?}", vm.frames().last());
         args_for_call.push(RuntimeValue::Object(objectref));
         args_for_call.reverse();
 
         let exec_result = do_call(vm, selected_method, selected_class, args_for_call)?;
 
-        debug!("Returned from: {:#?}", vm.frames.last());
-        vm.frames.pop();
+        debug!("Returned from: {:#?}", vm.frames().last());
+        vm.pop_frame();
 
         // Callee gave us a value, push it to our stack (Xreturn does this)
         if let Some(return_value) = exec_result {
@@ -399,7 +414,7 @@ impl Instruction for InvokeInterface {
 }
 
 fn resolve_class_method(
-    vm: &mut VM,
+    vm: &mut Interpreter,
     class: RefTo<Class>,
     method_name: String,
     method_descriptor: String,
@@ -440,7 +455,7 @@ fn resolve_class_method(
     if let Some(super_class) = class.unwrap_ref().super_class().into_option() {
         let class_name = super_class.name();
         let super_class = vm
-            .class_loader
+            .class_loader()
             .for_name(format!("L{};", class_name).into())?;
 
         return resolve_class_method(vm, super_class, method_name, method_descriptor);
@@ -470,7 +485,7 @@ fn resolve_class_method(
 }
 
 fn resolve_interface_method(
-    vm: &mut VM,
+    vm: &mut Interpreter,
     class: RefTo<Class>,
     method_name: String,
     method_descriptor: String,
@@ -504,7 +519,7 @@ fn resolve_interface_method(
     if let Some(super_class) = class.unwrap_ref().super_class().into_option() {
         let class_name = super_class.name();
         let super_class = vm
-            .class_loader
+            .class_loader()
             .for_name(format!("L{};", class_name).into())?;
 
         return resolve_interface_method(vm, super_class, method_name, method_descriptor);
@@ -533,7 +548,7 @@ fn resolve_interface_method(
 }
 
 fn select_special_method(
-    vm: &mut VM,
+    vm: &mut Interpreter,
     class: RefTo<Class>,
     declared_class: RefTo<Class>,
     method: Method,
@@ -569,7 +584,7 @@ fn select_special_method(
     if let Some(super_class) = class.unwrap_ref().super_class().into_option() {
         let class_name = super_class.name();
         let super_class = vm
-            .class_loader
+            .class_loader()
             .for_name(format!("L{};", class_name).into())?;
 
         return select_method(vm, super_class, declared_class, method);
@@ -591,7 +606,7 @@ fn select_special_method(
 }
 
 fn select_method(
-    vm: &mut VM,
+    vm: &mut Interpreter,
     class: RefTo<Class>,
     declared_class: RefTo<Class>,
     method: Method,
@@ -642,7 +657,7 @@ fn select_method(
     if let Some(super_class) = class.unwrap_ref().super_class().into_option() {
         let class_name = super_class.name();
         let super_class = vm
-            .class_loader
+            .class_loader()
             .for_name(format!("L{};", class_name).into())?;
 
         return select_method(vm, super_class, declared_class, method);
@@ -702,7 +717,7 @@ pub struct New {
 }
 
 impl Instruction for New {
-    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
+    fn handle(&self, vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
         // The run-time constant pool entry at the index must be a symbolic
         // reference to a class or interface type. The named class or interface
         // type is resolved (§5.4.3.1) and should result in a class type.
@@ -717,7 +732,7 @@ impl Instruction for New {
         let object_ty = match entry {
             ConstantEntry::Class(data) => {
                 let class_name = data.name.resolve().string();
-                vm.class_loader
+                vm.class_loader()
                     .for_name(format!("L{};", class_name).into())?
             }
             e => return Err(internal!("{:#?} cannot be used to create a new object", e)),
@@ -874,7 +889,7 @@ fn clone_args_from_operands(
 }
 
 fn do_call(
-    vm: &mut VM,
+    vm: &mut Interpreter,
     method: Method,
     class: RefTo<Class>,
     args: Vec<RuntimeValue>,
@@ -912,12 +927,13 @@ fn do_call(
                     // We should consider the performed call "fully returned" because we are now back
                     // As such, we should clear frames that came after ours
                     let our_frame_index = vm
-                        .frames
+                        .frames()
                         .iter()
                         .position(|f| &f.class_name == class_name && f.method_name == method_name)
                         .unwrap();
 
-                    drop(vm.frames.drain(our_frame_index + 1..vm.frames.len()));
+                    let len = vm.frames().len();
+                    drop(vm.frames_mut().drain(our_frame_index + 1..len));
 
                     let re_enter_context = Context {
                         code: code.clone(),
@@ -979,7 +995,7 @@ fn do_call(
 pub struct Athrow;
 
 impl Instruction for Athrow {
-    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
+    fn handle(&self, vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
         let _throwable = pop!(ctx);
         let throwable = _throwable
             .as_object()
@@ -1022,7 +1038,7 @@ impl Instruction for Athrow {
             message: format!("{}: {}", class_name, message),
             ty: class,
             obj: _throwable,
-            sources: vm.frames.clone(),
+            sources: vm.frames().clone(),
         })))
     }
 }
@@ -1036,7 +1052,7 @@ pub struct TableSwitch {
 }
 
 impl Instruction for TableSwitch {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
+    fn handle(&self, _vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
         // The index must be of type int and is popped from the operand stack.
         let index = arg!(ctx, "index" => i32);
         let index = index.value as i32;
@@ -1070,7 +1086,7 @@ pub struct LookupSwitch {
 }
 
 impl Instruction for LookupSwitch {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
+    fn handle(&self, _vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
         // The key must be of type int and is popped from the operand stack.
         let key = arg!(ctx, "key" => i32);
         let key = key.value as i32;

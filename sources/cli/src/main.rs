@@ -3,8 +3,15 @@ use std::{cell::RefCell, process::exit};
 use anyhow::anyhow;
 use args::Cli;
 use clap::Parser;
-use interpreter::{
-    error::{Frame, Throwable},
+
+use interpreter::{Context, Interpreter};
+use parse::{
+    attributes::CodeAttribute,
+    classfile::{Method, Resolvable},
+};
+use runtime::static_method;
+use runtime::{
+    error::{Frame, Throwable, ThrownState},
     native::{DefaultNativeModule, NativeFunction},
     object::{
         builtins::{Array, Class},
@@ -12,11 +19,10 @@ use interpreter::{
         layout::types::Byte,
         loader::ClassLoader,
         mem::{FieldRef, RefTo},
-        runtime::RuntimeValue,
+        value::RuntimeValue,
     },
-    static_method, Context, ThrownState, VM,
+    vm::VM,
 };
-use parse::{attributes::CodeAttribute, classfile::{Method, Resolvable}};
 use support::encoding::{decode_string, CompactEncoding};
 use tracing::{error, info, Level};
 use tracing_subscriber::fmt;
@@ -118,11 +124,11 @@ fn test_init(cls: RefTo<Class>) {
     }
 }
 
-fn boot_system(vm: &mut VM, cls: RefTo<Class>) {
+fn boot_system(vm: &mut Interpreter, cls: RefTo<Class>) {
     info!("Booting system");
 
     let java_lang_system = vm
-        .class_loader
+        .class_loader()
         .for_name("Ljava/lang/System;".into())
         .unwrap();
 
@@ -148,7 +154,7 @@ fn boot_system(vm: &mut VM, cls: RefTo<Class>) {
         pc: 0,
     };
 
-    vm.frames.push(Frame {
+    vm.push_frame(Frame {
         class_name: "java/lang/System".to_string(),
         method_name: "initPhase1".to_string(),
     });
@@ -162,7 +168,7 @@ fn boot_system(vm: &mut VM, cls: RefTo<Class>) {
                 println!("  {}", source);
             }
         } else if let Throwable::Internal(_) = e {
-            for source in vm.frames.iter().rev() {
+            for source in vm.frames().iter().rev() {
                 println!("  {}", source);
             }
         }
@@ -172,7 +178,7 @@ fn boot_system(vm: &mut VM, cls: RefTo<Class>) {
     }
 }
 
-fn run_method(vm: &mut VM, ctx: Context, method: &Method, args: &Cli) {
+fn run_method(vm: &mut Interpreter, ctx: Context, method: &Method, args: &Cli) {
     let code = ctx.code.clone();
     let cls = ctx.class.clone();
 
@@ -192,7 +198,7 @@ fn run_method(vm: &mut VM, ctx: Context, method: &Method, args: &Cli) {
             println!("\\----------------------------------------------------------/");
             println!("Uncaught exception in main: {}", ite);
 
-            for source in vm.frames.iter().rev() {
+            for source in vm.frames().iter().rev() {
                 println!("  {}", source);
             }
         }
@@ -205,12 +211,13 @@ fn run_method(vm: &mut VM, ctx: Context, method: &Method, args: &Cli) {
                 // We should consider the performed call "fully returned" because we are now back
                 // As such, we should clear frames that came after ours
                 let our_frame_index = vm
-                    .frames
+                    .frames()
                     .iter()
                     .position(|f| &f.class_name == class_name && f.method_name == method_name)
                     .unwrap();
 
-                drop(vm.frames.drain(our_frame_index + 1..vm.frames.len()));
+                let len = vm.frames().len();
+                drop(vm.frames_mut().drain(our_frame_index + 1..len));
 
                 let re_enter_context = Context {
                     code: code.clone(),
@@ -299,12 +306,10 @@ fn main() {
         .and_then(|f| f.parse::<u64>().ok())
         .unwrap_or(128);
 
-    let mut vm = VM {
-        class_loader,
-        frames: Vec::new(),
-        options: interpreter::BootOptions { max_stack },
-        main_thread: RefTo::null(),
-    };
+    let mut vm = Interpreter::new(
+        VM::new(class_loader),
+        interpreter::BootOptions { max_stack },
+    );
 
     vm.bootstrap().unwrap();
 
@@ -312,7 +317,7 @@ fn main() {
 
     for class_name in &args.classes {
         let cls = vm
-            .class_loader
+            .class_loader()
             .for_name(format!("L{};", class_name).into())
             .unwrap();
         if args.has_option(opts::TEST_BOOT) {
@@ -341,7 +346,7 @@ fn main() {
         };
 
         info!("Entering main");
-        vm.frames.push(Frame {
+        vm.push_frame(Frame {
             class_name: cls.unwrap_ref().name().to_string(),
             method_name: "main".to_string(),
         });

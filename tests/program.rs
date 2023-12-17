@@ -3,7 +3,7 @@ mod util;
 use std::{fs::File, io::Write, path::PathBuf};
 
 use util::{
-    builder::{direct, using_class, using_helpers},
+    builder::{direct, using_helpers},
     TMP_DIR,
 };
 

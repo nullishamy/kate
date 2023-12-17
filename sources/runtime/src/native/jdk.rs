@@ -9,9 +9,9 @@ use crate::{
         layout::types,
         mem::RefTo,
         numeric::FALSE,
-        runtime::RuntimeValue,
+        value::RuntimeValue,
     },
-    static_method, VM,
+    static_method, vm::VM,
 };
 
 use super::{NameAndDescriptor, NativeFunction, NativeModule};
@@ -150,7 +150,7 @@ impl NativeModule for JdkReflection {
             _: Vec<RuntimeValue>,
             vm: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
-            let mut frames = vm.frames.clone();
+            let mut frames = vm.frames().clone();
             let current_frame = frames.pop().expect("no current frame");
             let current_class = current_frame.class_name;
 
@@ -159,7 +159,7 @@ impl NativeModule for JdkReflection {
 
             let cls = if let Some(frame) = first_frame_that_isnt_ours {
                 Some(RuntimeValue::Object(
-                    vm.class_loader
+                    vm.class_loader()
                         .for_name(format!("L{};", frame.class_name).into())?
                         .erase(),
                 ))
@@ -306,7 +306,7 @@ impl NativeModule for JdkSystemPropsRaw {
             arr[fields::SUN_JNU_ENCODING_NDX] = intern_string("UTF-8".to_string())?;
 
             let array: RefTo<Array<RefTo<BuiltinString>>> =
-                Array::from_vec(vm.class_loader.for_name("[Ljava/lang/String;".into())?, arr);
+                Array::from_vec(vm.class_loader().for_name("[Ljava/lang/String;".into())?, arr);
 
             Ok(Some(RuntimeValue::Object(array.erase())))
         }

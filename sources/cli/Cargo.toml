@@ -12,5 +12,6 @@ tracing-subscriber = { workspace = true }
 anyhow = { workspace = true }
 parse = { path = '../parse/' }
 interpreter = { path = '../interpreter/' }
+runtime = { path = '../runtime/' }
 support = { path = '../support/' }
 clap = { version = "4.4.6", features = ['derive'] }

@@ -2,31 +2,21 @@
 #![feature(offset_of)]
 #![allow(clippy::new_without_default)]
 
-use std::cell::RefCell;
+use std::{cell::RefCell, ops::{Deref, DerefMut}};
 
 use bytecode::decode_instruction;
 use bytes::BytesMut;
 
-use error::{Frame, Throwable, VMError};
-use object::{
-    builtins::{Class, Object},
-    loader::ClassLoader,
-    mem::RefTo,
-    runtime::RuntimeValue,
-};
 use parse::attributes::CodeAttribute;
 
+use runtime::{
+    error::{Frame, Throwable, ThrownState, VMError},
+    object::{builtins::{Class, BuiltinThread, Object, BuiltinThreadGroup}, mem::RefTo, value::RuntimeValue, interner::intern_string},
+    vm::VM,
+};
 use tracing::{debug, info, trace};
 
-use crate::object::{
-    builtins::{BuiltinThread, BuiltinThreadGroup},
-    interner::intern_string,
-};
-
 pub mod bytecode;
-pub mod error;
-pub mod native;
-pub mod object;
 
 pub struct Context {
     pub code: CodeAttribute,
@@ -42,31 +32,46 @@ pub struct BootOptions {
     pub max_stack: u64,
 }
 
-pub struct VM {
-    pub class_loader: ClassLoader,
-    pub frames: Vec<Frame>,
-    pub options: BootOptions,
-
-    pub main_thread: RefTo<Object>,
+pub struct Interpreter {
+    vm: VM,
+    options: BootOptions,
 }
 
-#[derive(Debug)]
-pub struct ThrownState {
-    pub pc: i32,
+impl Interpreter {
+    pub fn new(vm: VM, options: BootOptions) -> Self {
+        Self { vm, options }
+    }
 }
 
-impl VM {
+// Since Interpreter is a more specific version of VM, allow dereffing to vm from it
+// This will allow us to call methods "through" the struct
+impl Deref for Interpreter {
+    type Target = VM;
+
+    fn deref(&self) -> &Self::Target {
+        &self.vm
+    }
+}
+
+impl DerefMut for Interpreter {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.vm
+    }
+}
+
+impl Interpreter {
     pub fn run(
         &mut self,
         mut ctx: Context,
     ) -> Result<Option<RuntimeValue>, (Throwable, ThrownState)> {
         let is_overflowing_in_different_method = {
-            let is_overflowing = self.frames.len() > self.options.max_stack as usize;
+            let is_overflowing = self.vm.frames().len() > self.options.max_stack as usize;
             is_overflowing && !ctx.is_reentry
         };
 
         if is_overflowing_in_different_method {
             return Err(self
+                .vm
                 .try_make_error(VMError::StackOverflowError {})
                 .map_err(|e| (e, ThrownState { pc: ctx.pc }))
                 .map(|e| (e, ThrownState { pc: ctx.pc }))?);
@@ -170,14 +175,16 @@ impl VM {
                 locals: vec![],
             };
 
-            self.frames.push(Frame {
+            self.vm.push_frame(Frame {
                 method_name: "<clinit>".to_string(),
                 class_name: class_name.clone(),
             });
+
             let res = self.run(ctx).map_err(|e| e.0);
             res?;
+
             debug!("Finished initialising {}", class_name);
-            self.frames.pop();
+            self.vm.pop_frame();
         } else {
             debug!("No clinit in {}", class_name);
             // Might as well mark this as initialised to avoid future
@@ -188,34 +195,16 @@ impl VM {
         Ok(())
     }
 
-    pub fn main_thread(&self) -> RefTo<Object> {
-        self.main_thread.clone()
-    }
-
-    /// Try and make the error. This may fail if a class fails to resolve, or object creation fails
-    pub fn try_make_error(&mut self, ty: VMError) -> Result<Throwable, Throwable> {
-        let cls = self
-            .class_loader
-            .for_name(format!("L{};", ty.class_name()).into())?;
-
-        Ok(Throwable::Runtime(error::RuntimeException {
-            message: ty.message(),
-            ty: cls,
-            obj: RuntimeValue::null_ref(),
-            sources: self.frames.clone(),
-        }))
-    }
-
     pub fn bootstrap(&mut self) -> Result<(), Throwable> {
         // Load native modules
-        use native::*;
+        use runtime::native::*;
 
-        fn load_module(vm: &mut VM, mut m: impl NativeModule + 'static) {
+        fn load_module(interpreter: &mut Interpreter, mut m: impl NativeModule + 'static) {
             // Setup all the methods
             m.init();
 
             // Load the class specified by this module
-            let cls = m.get_class(vm).unwrap();
+            let cls = m.get_class(&mut interpreter.vm).unwrap();
             let cls = cls.unwrap_mut();
 
             // Just to stop us making errors with registration.
@@ -256,11 +245,11 @@ impl VM {
         load_module(self, security::SecurityAccessController::new());
 
         // Init String so that we can set the static after it's done. The clinit sets it to a default.
-        let jlstr = self.class_loader.for_name("Ljava/lang/String;".into())?;
+        let jlstr = self.class_loader().for_name("Ljava/lang/String;".into())?;
         self.initialise_class(jlstr.clone())?;
 
         // Load up System so that we can set up the statics
-        let jlsys = self.class_loader.for_name("Ljava/lang/System;".into())?;
+        let jlsys = self.class_loader().for_name("Ljava/lang/System;".into())?;
 
         {
             let statics = jlstr.unwrap_ref().statics();
@@ -283,11 +272,11 @@ impl VM {
         }
 
         // Init thread
-        let thread_class = self.class_loader.for_name("Ljava/lang/Thread;".into())?;
+        let thread_class = self.class_loader().for_name("Ljava/lang/Thread;".into())?;
         self.initialise_class(thread_class.clone())?;
 
         let thread_group_class = self
-            .class_loader
+            .class_loader()
             .for_name("Ljava/lang/ThreadGroup;".into())?;
         self.initialise_class(thread_class.clone())?;
 
@@ -332,8 +321,9 @@ impl VM {
             thread_local_random_probe: 0,
             thread_local_random_secondary_seed: 0,
         };
+
         let thread_ref = RefTo::new(thread);
-        self.main_thread = thread_ref.erase();
+        self.set_main_thread(thread_ref.erase());
 
         Ok(())
     }

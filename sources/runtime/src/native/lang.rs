@@ -12,9 +12,9 @@ use crate::{
         layout::types::{self},
         mem::RefTo,
         numeric::{FALSE, TRUE},
-        runtime::RuntimeValue,
+        value::RuntimeValue,
     },
-    static_method, VM,
+    static_method, vm::VM,
 };
 
 use super::{NameAndDescriptor, NativeFunction, NativeModule};
@@ -64,7 +64,7 @@ impl NativeModule for LangClass {
                 p => return Err(internal!("unknown primitive {}", p)),
             };
 
-            let cls = vm.class_loader.for_name(prim_ty.name.into())?;
+            let cls = vm.class_loader().for_name(prim_ty.name.into())?;
 
             Ok(Some(RuntimeValue::Object(cls.erase())))
         }

@@ -1,19 +1,41 @@
 #![allow(clippy::redundant_closure_call)]
 
 use super::{Instruction, Progression};
-use crate::{
-    arg,
-    error::Throwable,
-    internal,
-    object::{
-        numeric::{Floating, FloatingType, Integral, IntegralType},
-        runtime::RuntimeValue, builtins::Class,
-    },
-    pop, Context, VM,
-};
+use crate::arg;
+use crate::pop;
+use crate::Context;
+use crate::Interpreter;
 use anyhow::Context as AnyhowContext;
-use parse::{classfile::Resolvable, pool::ConstantClass};
-use support::descriptor::FieldType;
+use parse::pool::ConstantClass;
+use parse::{
+    classfile::Resolvable,
+};
+use runtime::error::Throwable;
+
+use runtime::internal;
+
+
+use runtime::object::builtins::Class;
+
+
+
+
+
+
+
+
+
+
+
+
+use runtime::object::numeric::Floating;
+use runtime::object::numeric::FloatingType;
+use runtime::object::numeric::Integral;
+use runtime::object::numeric::IntegralType;
+
+
+use runtime::object::value::RuntimeValue;
+use support::descriptor::{FieldType};
 
 macro_rules! unop {
     // Generic value transformation
@@ -22,7 +44,7 @@ macro_rules! unop {
         pub struct $ins;
 
         impl Instruction for $ins {
-            fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
+            fn handle(&self, _vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
                 let val = arg!(ctx, "unary value" => $res_ty);
 
                 let result = $op(val);
@@ -38,7 +60,7 @@ macro_rules! unop {
         pub struct $ins;
 
         impl Instruction for $ins {
-            fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
+            fn handle(&self, _vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
                 let val = arg!(ctx, "unary value" => $res_ty);
 
                 let result: $res_ty = $op(val);
@@ -57,7 +79,7 @@ macro_rules! unop {
         }
 
         impl Instruction for $ins {
-            fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
+            fn handle(&self, _vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
                 let val = arg!(ctx, "unary value" => $res_ty);
 
                 let result: bool = $op(val);
@@ -200,7 +222,7 @@ pub struct IfNull {
 }
 
 impl Instruction for IfNull {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
+    fn handle(&self, _vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
         let val = pop!(ctx);
         let val = val.as_object().context("not an object")?;
 
@@ -218,7 +240,7 @@ pub struct IfNotNull {
 }
 
 impl Instruction for IfNotNull {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
+    fn handle(&self, _vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
         let val = pop!(ctx);
         let val = val.as_object().context("not an object")?;
 
@@ -236,7 +258,7 @@ pub struct InstanceOf {
 }
 
 impl Instruction for InstanceOf {
-    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
+    fn handle(&self, vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
         let val = pop!(ctx);
         let val = val.as_object().context("not an object")?;
 
@@ -259,7 +281,7 @@ impl Instruction for InstanceOf {
         // TODO: Properly check the types
         let ty_class_name = ty.name.resolve().string();
         let ty_class = vm
-            .class_loader
+            .class_loader()
             .for_name(format!("L{};", ty_class_name).into())?;
 
         let class = val.unwrap_ref().class.clone();
@@ -280,7 +302,7 @@ pub struct CheckCast {
 }
 
 impl Instruction for CheckCast {
-    fn handle(&self, vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
+    fn handle(&self, vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
         let _val = pop!(ctx);
         let val = _val.as_object().context("not an object")?;
 
@@ -305,7 +327,7 @@ impl Instruction for CheckCast {
             .or_else(|_| FieldType::parse(format!("L{};", other_class_name)))?;
 
         let other_class = vm
-            .class_loader
+            .class_loader()
             .for_name(other_class_name.clone())?;
 
         let val_class = &val.unwrap_ref().class;
@@ -331,7 +353,7 @@ pub struct Pop {
 }
 
 impl Instruction for Pop {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
+    fn handle(&self, _vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
         for _ in 0..self.amount {
             pop!(ctx);
         }
@@ -347,7 +369,7 @@ pub struct Iinc {
 }
 
 impl Instruction for Iinc {
-    fn handle(&self, _vm: &mut VM, ctx: &mut Context) -> Result<Progression, Throwable> {
+    fn handle(&self, _vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
         let local = ctx
             .locals
             .get_mut(self.index as usize)
