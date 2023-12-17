@@ -45,6 +45,18 @@ use support::{
 use tracing::{debug, info};
 
 #[derive(Debug)]
+pub struct InvokeDynamic {
+    pub(crate) index: u16,
+    pub(crate) zeroes: u16,
+}
+
+impl Instruction for InvokeDynamic {
+    fn handle(&self, vm: &mut Interpreter, _ctx: &mut Context) -> Result<Progression, Throwable> {
+        Err(internal!("cannot use invokedynamic!: {:#?}", vm.frames()))
+    }
+}
+
+#[derive(Debug)]
 pub struct InvokeVirtual {
     pub(crate) index: u16,
 }
@@ -910,9 +922,6 @@ fn do_call(
             locals: args.clone(),
         };
 
-        let method_name = method.name.resolve().string();
-        let class_name = class.unwrap_ref().name();
-
         // The new frame is then made current, and the Java Virtual Machine pc is set
         // to the opcode of the first instruction of the method to be invoked.
         // Execution continues with the first instruction of the method.
@@ -924,17 +933,6 @@ fn do_call(
             // Only try to catch runtime errors. Internal errors should never be caught by user code.
             if let Throwable::Runtime(rte) = err {
                 if let Some(entry) = err.caught_by(vm, &code, state)? {
-                    // We should consider the performed call "fully returned" because we are now back
-                    // As such, we should clear frames that came after ours
-                    let our_frame_index = vm
-                        .frames()
-                        .iter()
-                        .position(|f| &f.class_name == class_name && f.method_name == method_name)
-                        .unwrap();
-
-                    let len = vm.frames().len();
-                    drop(vm.frames_mut().drain(our_frame_index + 1..len));
-
                     let re_enter_context = Context {
                         code: code.clone(),
                         class,
@@ -950,9 +948,17 @@ fn do_call(
                     return vm.run(re_enter_context).map_err(|e| e.0);
                 }
             }
+
+            // We couldn't handle the exception
+
+            // Pop our frame, we are no longer part of the callstack.
+            // This is only to correctly handle the re-entry case, in which a caller catches the exception
+            // and adds new frames. The callstack is cloned when the exception is thrown, which will preserve
+            // the state at that point
+            vm.pop_frame();
         }
 
-        // We couldn't handle the exception, throw it up
+        // Pass the result to our caller
         res.map_err(|e| e.0)
     } else {
         let method_name = method.name.resolve().string();

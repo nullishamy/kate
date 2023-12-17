@@ -496,7 +496,10 @@ pub fn decode_instruction(
             count: bytes.try_get_u8()?,
             zero: bytes.try_get_u8()?,
         }),
-        //  0xba => Opcode::INVOKEDYNAMIC,
+        0xba => b(ops::InvokeDynamic {
+            index: bytes.try_get_u16()?,
+            zeroes: bytes.try_get_u16()?
+        }),
         0xbb => b(ops::New {
             index: bytes.try_get_u16()?,
         }),

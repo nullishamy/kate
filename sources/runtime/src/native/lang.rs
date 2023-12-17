@@ -2,19 +2,19 @@ use std::{collections::HashMap, process::exit, time::SystemTime};
 
 use support::encoding::{decode_string, CompactEncoding};
 
-
 use crate::{
     error::Throwable,
     instance_method, internal, module_base,
     object::{
-        builtins::{Array, BuiltinString, Class, Object, ClassType},
+        builtins::{Array, BuiltinString, Class, ClassType, Object},
         interner::intern_string,
         layout::types::{self},
         mem::RefTo,
         numeric::{FALSE, TRUE},
         value::RuntimeValue,
     },
-    static_method, vm::VM,
+    static_method,
+    vm::VM,
 };
 
 use super::{NameAndDescriptor, NativeFunction, NativeModule};
@@ -347,17 +347,22 @@ impl NativeModule for LangSystem {
             let _dest_component = dest_ty.component_type();
             let dest_component = _dest_component.unwrap_ref();
 
-
             if src_pos < 0 {
-                return Err(vm.try_make_error(crate::error::VMError::ArrayIndexOutOfBounds { at: -1 })?);
+                return Err(
+                    vm.try_make_error(crate::error::VMError::ArrayIndexOutOfBounds { at: -1 })?
+                );
             }
 
             if dest_pos < 0 {
-                return Err(vm.try_make_error(crate::error::VMError::ArrayIndexOutOfBounds { at: -1 })?);
+                return Err(
+                    vm.try_make_error(crate::error::VMError::ArrayIndexOutOfBounds { at: -1 })?
+                );
             }
 
             if len < 0 {
-                return Err(vm.try_make_error(crate::error::VMError::ArrayIndexOutOfBounds { at: -1 })?);
+                return Err(
+                    vm.try_make_error(crate::error::VMError::ArrayIndexOutOfBounds { at: -1 })?
+                );
             }
 
             let src_pos = src_pos as usize;
@@ -550,6 +555,37 @@ impl NativeModule for LangStringUtf16 {
     }
 }
 
+module_base!(LangString);
+impl NativeModule for LangString {
+    fn classname(&self) -> &'static str {
+        "java/lang/String"
+    }
+
+    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+        &self.methods
+    }
+
+    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+        &mut self.methods
+    }
+
+    fn init(&mut self) {
+        fn intern(
+            this: RefTo<Object>,
+            _: Vec<RuntimeValue>,
+            _: &mut VM,
+        ) -> Result<Option<RuntimeValue>, Throwable> {
+            let str = unsafe { this.cast::<BuiltinString>() };
+            let str = str.unwrap_ref().string()?;
+            let interned = intern_string(str)?;
+
+            Ok(Some(RuntimeValue::Object(interned.erase())))
+        }
+
+        self.set_method("intern", "()Ljava/lang/String;", instance_method!(intern));
+    }
+}
+
 module_base!(LangRuntime);
 impl NativeModule for LangRuntime {
     fn classname(&self) -> &'static str {
@@ -601,6 +637,37 @@ impl NativeModule for LangRuntime {
         }
 
         self.set_method("gc", "()V", instance_method!(gc));
+    }
+}
+
+module_base!(LangStackTraceElement);
+impl NativeModule for LangStackTraceElement {
+    fn classname(&self) -> &'static str {
+        "java/lang/StackTraceElement"
+    }
+
+    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+        &self.methods
+    }
+
+    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+        &mut self.methods
+    }
+
+    fn init(&mut self) {
+        fn init_stack_trace_elements(
+            _: RefTo<Class>,
+            _: Vec<RuntimeValue>,
+            _: &mut VM,
+        ) -> Result<Option<RuntimeValue>, Throwable> {
+            Ok(None)
+        }
+
+        self.set_method(
+            "initStackTraceElements",
+            "([Ljava/lang/StackTraceElement;Ljava/lang/Throwable;)V",
+            static_method!(init_stack_trace_elements),
+        );
     }
 }
 

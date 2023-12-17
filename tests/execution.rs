@@ -293,7 +293,7 @@ mod instruction {
 
                 assertEqual(status, "Caught in main");
 
-                // Just checking that it properly ignores exceptions that arent caught
+                // Just checking that it properly ignores exceptions that aren't caught
                 throw new RuntimeException("thrown from main");
             }
             "#,

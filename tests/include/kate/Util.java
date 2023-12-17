@@ -12,7 +12,6 @@ import java.io.InputStreamReader;
 
     We would need to boot the stdlib in order to use the integer cache, which autoboxing requires.
 */
-
 public class Util {
 
     public static native void print(byte b);

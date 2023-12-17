@@ -10,6 +10,7 @@ use parse::classfile::Resolvable;
 use parse::pool::ConstantClass;
 use runtime::error::Throwable;
 
+use runtime::error::VMError;
 use runtime::internal;
 
 use runtime::object::builtins::Class;
@@ -318,12 +319,10 @@ impl Instruction for CheckCast {
         if Class::can_assign(val_class.clone(), other_class) {
             ctx.operands.push(RuntimeValue::Object(val.clone()));
         } else {
-            // TODO: Throw class cast exception
-            return Err(internal!(
-                "[checkcast] invalid cast from {} to {}",
-                val_class.unwrap_ref().name(),
-                other_class_name.to_string()
-            ));
+            let from = val_class.unwrap_ref().name().clone();
+            let to = other_class_name.to_string();
+
+            return Err(vm.try_make_error(VMError::ClassCastException { from, to })?);
         }
 
         Ok(Progression::Next)

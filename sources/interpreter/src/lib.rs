@@ -73,8 +73,8 @@ impl Interpreter {
             return Err(self
                 .vm
                 .try_make_error(VMError::StackOverflowError {})
-                .map_err(|e| (e, ThrownState { pc: ctx.pc }))
-                .map(|e| (e, ThrownState { pc: ctx.pc }))?);
+                .map_err(|e| (e, ThrownState { pc: ctx.pc, locals: ctx.locals.clone() }))
+                .map(|e| (e, ThrownState { pc: ctx.pc, locals: ctx.locals.clone() }))?);
         }
 
         while ctx.pc < ctx.code.code.len() as i32 {
@@ -88,7 +88,7 @@ impl Interpreter {
             instruction_bytes.extend_from_slice(slice);
 
             let instruction = decode_instruction(self, &mut instruction_bytes, &ctx)
-                .map_err(|e| (e, ThrownState { pc: ctx.pc }))?;
+                .map_err(|e| (e, ThrownState { pc: ctx.pc, locals: ctx.locals.clone() }))?;
 
             let consumed_bytes_post = instruction_bytes.len();
             let bytes_consumed_by_opcode = (consumed_bytes_prev - consumed_bytes_post) as i32;
@@ -100,7 +100,7 @@ impl Interpreter {
 
             let progression = instruction
                 .handle(self, &mut ctx)
-                .map_err(|e| (e, ThrownState { pc: ctx.pc }))?;
+                .map_err(|e| (e, ThrownState { pc: ctx.pc, locals: ctx.locals.clone() }))?;
 
             match progression {
                 bytecode::Progression::JumpAbs(new_pc) => {
@@ -129,7 +129,7 @@ impl Interpreter {
                 }
                 bytecode::Progression::Throw(err) => {
                     info!("Throwing {}", err);
-                    return Err((err, ThrownState { pc: ctx.pc }));
+                    return Err((err, ThrownState { pc: ctx.pc, locals: ctx.locals.clone() }));
                 }
             };
         }
@@ -224,7 +224,9 @@ impl Interpreter {
         load_module(self, lang::LangRuntime::new());
         load_module(self, lang::LangDouble::new());
         load_module(self, lang::LangFloat::new());
+        load_module(self, lang::LangString::new());
         load_module(self, lang::LangThrowable::new());
+        load_module(self, lang::LangStackTraceElement::new());
         load_module(self, lang::LangClassLoader::new());
         load_module(self, lang::LangThread::new());
 

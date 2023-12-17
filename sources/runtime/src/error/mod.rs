@@ -15,6 +15,7 @@ pub enum VMError {
     ArrayIndexOutOfBounds { at: i64 },
     NullPointerException { ctx: String },
     StackOverflowError { },
+    ClassCastException { from: String, to: String },
 }
 
 impl VMError {
@@ -23,6 +24,7 @@ impl VMError {
             VMError::ArrayIndexOutOfBounds { .. } => "java/lang/ArrayIndexOutOfBoundsException",
             VMError::NullPointerException { .. } => "java/lang/NullPointerException",
             VMError::StackOverflowError { .. } => "java/lang/StackOverflowError",
+            VMError::ClassCastException { .. } => "java/lang/ClassCastException",
         }
     }
 
@@ -30,7 +32,8 @@ impl VMError {
         let ctx = match self {
             VMError::ArrayIndexOutOfBounds { at } => format!("OOB @ {}", at),
             VMError::NullPointerException { ctx } => format!("NPE ({})", ctx),
-            VMError::StackOverflowError { .. } => "thread main has overflowed its stack".to_string()
+            VMError::StackOverflowError { .. } => "thread main has overflowed its stack".to_string(),
+            VMError::ClassCastException { from, to } => format!("invalid cast from {} to {}", from, to)
         };
 
         format!("{}: {}", self.class_name(), ctx)
@@ -49,6 +52,7 @@ pub enum Throwable {
 #[derive(Debug)]
 pub struct ThrownState {
     pub pc: i32,
+    pub locals: Vec<RuntimeValue>
 }
 
 impl Throwable {

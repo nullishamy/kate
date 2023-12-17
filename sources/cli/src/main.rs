@@ -174,7 +174,8 @@ fn boot_system(vm: &mut Interpreter, cls: RefTo<Class>) {
         }
         exit(1);
     } else {
-        info!("Booted system")
+        info!("Booted system");
+        vm.pop_frame();
     }
 }
 
@@ -185,7 +186,10 @@ fn run_method(vm: &mut Interpreter, ctx: Context, method: &Method, args: &Cli) {
     let res = if args.has_option(opts::TEST_THROW_INTERNAL) {
         Err((
             Throwable::Internal(anyhow!("testing, internal errors")),
-            ThrownState { pc: -1 },
+            ThrownState {
+                pc: -1,
+                locals: vec![],
+            },
         ))
     } else {
         vm.run(ctx)
@@ -205,20 +209,6 @@ fn run_method(vm: &mut Interpreter, ctx: Context, method: &Method, args: &Cli) {
 
         if let Throwable::Runtime(rte) = &err {
             if let Some(entry) = err.caught_by(vm, &code, &state).unwrap() {
-                let method_name = method.name.resolve().string();
-                let class_name = cls.unwrap_ref().name();
-
-                // We should consider the performed call "fully returned" because we are now back
-                // As such, we should clear frames that came after ours
-                let our_frame_index = vm
-                    .frames()
-                    .iter()
-                    .position(|f| &f.class_name == class_name && f.method_name == method_name)
-                    .unwrap();
-
-                let len = vm.frames().len();
-                drop(vm.frames_mut().drain(our_frame_index + 1..len));
-
                 let re_enter_context = Context {
                     code: code.clone(),
                     class: cls,
@@ -226,7 +216,7 @@ fn run_method(vm: &mut Interpreter, ctx: Context, method: &Method, args: &Cli) {
                     pc: entry.handler_pc as i32,
                     // Push the exception object as the first operand
                     operands: vec![rte.obj.clone()],
-                    locals: vec![],
+                    locals: state.locals,
                 };
 
                 info!("Re-entering main at {}", re_enter_context.pc);
@@ -361,6 +351,7 @@ fn main() {
         };
 
         info!("Entering main");
+
         vm.push_frame(Frame {
             class_name: cls.unwrap_ref().name().to_string(),
             method_name: "main".to_string(),
