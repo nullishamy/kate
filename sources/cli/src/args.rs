@@ -52,6 +52,10 @@ pub struct Cli {
     #[arg(long("cp"))]
     /// A list of paths to add to the classpath
     pub classpath: Vec<String>,
+
+    #[arg(last = true)]
+    /// The arguments to pass to the main function, passed as `cli [opts] -- [extras]`
+    pub extras: Vec<String>,
 }
 
 impl Cli {

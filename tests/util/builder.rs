@@ -1,7 +1,3 @@
-// Overloads for numerics so that we don't need to boot the system (for autoboxing to Object)
-// When doing basic numeric assertions. These overloads use manual string builders to work around
-// javac inserting "invokedynamic"s to make the strings.
-
 use std::path::PathBuf;
 
 pub struct Class<'a> {

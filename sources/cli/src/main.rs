@@ -9,12 +9,11 @@ use parse::{
     attributes::CodeAttribute,
     classfile::{Method, Resolvable},
 };
-use runtime::static_method;
 use runtime::{
     error::{Frame, Throwable, ThrownState},
     native::{DefaultNativeModule, NativeFunction},
     object::{
-        builtins::{Array, Class},
+        builtins::{Array, BuiltinString, Class},
         interner::{set_interner, StringInterner},
         layout::types::Byte,
         loader::ClassLoader,
@@ -23,6 +22,7 @@ use runtime::{
     },
     vm::VM,
 };
+use runtime::{object::interner::intern_string, static_method};
 use support::encoding::{decode_string, CompactEncoding};
 use tracing::{error, info, Level};
 use tracing_subscriber::fmt;
@@ -336,12 +336,27 @@ fn main() {
             .known_attribute::<CodeAttribute>(&cls.unwrap_ref().class_file().constant_pool)
             .unwrap();
 
+        let string_array_ty = vm
+            .class_loader()
+            .for_name("[Ljava/lang/String;".into())
+            .unwrap();
+
+        let cli_args = args
+            .extras
+            .iter()
+            .map(|s| intern_string(s.to_string()))
+            .collect::<Result<_, Throwable>>()
+            .unwrap();
+
+        let cli_args: RefTo<Array<RefTo<BuiltinString>>> =
+            Array::from_vec(string_array_ty, cli_args);
+
         let main_ctx = Context {
             class: cls.clone(),
             code: code.clone(),
             is_reentry: false,
             operands: vec![],
-            locals: vec![],
+            locals: vec![RuntimeValue::Object(cli_args.erase())],
             pc: 0,
         };
 

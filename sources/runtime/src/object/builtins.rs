@@ -462,6 +462,7 @@ impl<T: Copy> Array<T> {
 }
 
 impl<T> Array<T> {
+    /// Create an array from a vector of items. The type should be an "array type" (e.g [Ljava/lang/String;).
     pub fn from_vec(array_ty: RefTo<Class>, data: Vec<T>) -> RefTo<Array<T>> {
         let base_layout = Layout::new::<Array<T>>();
         let storage_layout = Layout::array::<T>(data.len()).unwrap();

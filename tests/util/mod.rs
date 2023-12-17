@@ -120,14 +120,20 @@ pub fn expected() -> Execution {
 }
 
 pub fn state() -> State {
-    State { init_std: false, opts: vec![], stdin: vec![] }
+    State {
+        init_std: false,
+        opts: vec![],
+        stdin: vec![],
+        args: vec![],
+    }
 }
 
 #[derive(Debug)]
 pub struct State {
     init_std: bool,
     opts: Vec<(&'static str, &'static str)>,
-    stdin: Vec<String>
+    args: Vec<String>,
+    stdin: Vec<String>,
 }
 
 impl State {
@@ -142,6 +148,11 @@ impl State {
 
     pub fn stdin(mut self, line: impl Into<String>) -> Self {
         self.stdin.push(line.into());
+        self
+    }
+
+    pub fn arg(mut self, arg: impl Into<String>) -> Self {
+        self.args.push(arg.into());
         self
     }
 
@@ -175,6 +186,8 @@ pub fn execute(state: State, class_name: String) -> Result<Execution, Error> {
     for (key, value) in state.opts {
         exec.arg(format!("-X{}={}", key, value));
     }
+
+    exec.arg("--").args(state.args);
 
     let mut child = exec.spawn()?;
     let mut stdin = child.stdin.take().unwrap();

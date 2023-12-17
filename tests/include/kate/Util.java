@@ -6,6 +6,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
+/*
+    The assertions here have overloaded primitive variants to avoid
+    needing to boot the stdlib for every test, as that takes time, introduces complexity, and is not needed.
+
+    We would need to boot the stdlib in order to use the integer cache, which autoboxing requires.
+*/
+
 public class Util {
 
     public static native void print(byte b);
@@ -45,7 +52,7 @@ public class Util {
         }
     }
 
-    public static void assertfalse(boolean condition) {
+    public static void assertFalse(boolean condition) {
         if (condition) {
             throw new RuntimeException("(false) Assertion failed. Expected false got true");
         }

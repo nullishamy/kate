@@ -624,3 +624,24 @@ pub fn try_catch_rethrow() -> TestResult {
 
     Ok(())
 }
+#[test]
+pub fn use_argv() -> TestResult {
+    let state = state().init().arg("the arg");
+
+    let source = using_helpers(
+        "UseArgv",
+        r#"
+            public static void main(String[] args) {
+                assertEqual(args.length, 1);
+                assertEqual(args[0], "the arg");
+            }
+        "#,
+    );
+
+    let got = execute(state, inline(source)?)?;
+    let expected = expected().has_success();
+
+    compare(got, expected);
+
+    Ok(())
+}
