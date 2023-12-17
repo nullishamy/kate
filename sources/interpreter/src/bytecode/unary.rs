@@ -6,36 +6,21 @@ use crate::pop;
 use crate::Context;
 use crate::Interpreter;
 use anyhow::Context as AnyhowContext;
+use parse::classfile::Resolvable;
 use parse::pool::ConstantClass;
-use parse::{
-    classfile::Resolvable,
-};
 use runtime::error::Throwable;
 
 use runtime::internal;
 
-
 use runtime::object::builtins::Class;
-
-
-
-
-
-
-
-
-
-
-
 
 use runtime::object::numeric::Floating;
 use runtime::object::numeric::FloatingType;
 use runtime::object::numeric::Integral;
 use runtime::object::numeric::IntegralType;
 
-
 use runtime::object::value::RuntimeValue;
-use support::descriptor::{FieldType};
+use support::descriptor::FieldType;
 
 macro_rules! unop {
     // Generic value transformation
@@ -326,9 +311,7 @@ impl Instruction for CheckCast {
         let other_class_name = FieldType::parse(other_class_name.clone())
             .or_else(|_| FieldType::parse(format!("L{};", other_class_name)))?;
 
-        let other_class = vm
-            .class_loader()
-            .for_name(other_class_name.clone())?;
+        let other_class = vm.class_loader().for_name(other_class_name.clone())?;
 
         let val_class = &val.unwrap_ref().class;
 

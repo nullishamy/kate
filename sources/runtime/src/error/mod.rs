@@ -30,7 +30,7 @@ impl VMError {
         let ctx = match self {
             VMError::ArrayIndexOutOfBounds { at } => format!("OOB @ {}", at),
             VMError::NullPointerException { ctx } => format!("NPE ({})", ctx),
-            VMError::StackOverflowError { .. } => format!("thread main has overflowed it's stack")
+            VMError::StackOverflowError { .. } => "thread main has overflowed its stack".to_string()
         };
 
         format!("{}: {}", self.class_name(), ctx)

@@ -571,7 +571,7 @@ pub fn stack_overflow() -> TestResult {
     let expected = expected()
         .has_error()
         .with_output("Caught soe")
-        .with_output("Uncaught exception in main: java/lang/StackOverflowError: thread main has overflowed it's stack")
+        .with_output("Uncaught exception in main: java/lang/StackOverflowError: thread main has overflowed its stack")
         .with_output("  at StackOverflow.callme")
         .with_output("  at StackOverflow.callme")
         .with_output("  at StackOverflow.callme")
