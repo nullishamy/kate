@@ -31,6 +31,20 @@ mod tests {
     }
 
     #[test]
+    fn it_parses_deep_array_descriptors() -> Result<()> {
+        let descriptor = FieldType::parse("[[[D".to_string())?;
+        let descriptor = descriptor.into_array().unwrap();
+
+        let field = descriptor.field_type;
+        let field = field.into_base().unwrap();
+
+        assert_eq!(descriptor.dimensions, 3);
+        assert!(field.is_double());
+
+        Ok(())
+    }
+
+    #[test]
     fn it_parses_class_descriptors() -> Result<()> {
         let descriptor = FieldType::parse("Ljava/lang/Object;".to_string())?;
         let descriptor = descriptor.into_object().unwrap();
@@ -80,6 +94,16 @@ mod tests {
         let unparsed = descriptor.to_string();
 
         assert_eq!(unparsed, "[D");
+
+        Ok(())
+    }
+
+    #[test]
+    fn it_unparses_deep_array_descriptors() -> Result<()> {
+        let descriptor = FieldType::parse("[[[D".to_string())?;
+        let unparsed = descriptor.to_string();
+
+        assert_eq!(unparsed, "[[[D");
 
         Ok(())
     }

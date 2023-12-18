@@ -662,3 +662,72 @@ pub fn newline_to_int() -> TestResult {
 
     Ok(())
 }
+
+#[test]
+pub fn multidimensional_arrays() -> TestResult {
+    let state = state().init();
+
+    let source = using_main(
+        "MultidimensionalArrays",
+        r#"
+            String[][] strings = new String[][] {
+                {"Hello", "world"},
+                {"Foo", "bar"},
+            }; 
+
+            for (String[] arr : strings) {
+                for (String str : arr) {
+                    print(str);
+                }
+            }
+
+            int[][][][] ints = new int[][][][] {
+                {
+                    {
+                        {1, 2, 3, 4},
+                        {5, 6, 7, 8},
+                    }
+                },
+                {
+                    {
+                        { 9, 10, 11, 12 }
+                    },
+                }
+            }; 
+
+            for (int[][][] arr : ints) {
+                for (int[][] arr2 : arr) {
+                    for (int[] arr3 : arr2) {
+                        for (int i : arr3) {
+                            print(i);
+                        }
+                    }
+                }
+            }
+        "#,
+    );
+
+    let got = execute(state, inline(source)?)?;
+    let expected = expected()
+        .has_success()
+        .with_output("Hello")
+        .with_output("world")
+        .with_output("Foo")
+        .with_output("bar")
+        .with_output("1")
+        .with_output("2")
+        .with_output("3")
+        .with_output("4")
+        .with_output("5")
+        .with_output("6")
+        .with_output("7")
+        .with_output("8")
+        .with_output("9")
+        .with_output("10")
+        .with_output("11")
+        .with_output("12");
+
+    compare(got, expected);
+
+    Ok(())
+}

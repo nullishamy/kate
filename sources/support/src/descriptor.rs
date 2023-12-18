@@ -50,11 +50,12 @@ impl ToString for ObjectType {
 #[derive(Debug, PartialEq, Clone, Hash, Eq)]
 pub struct ArrayType {
     pub field_type: Box<FieldType>,
+    pub dimensions: usize,
 }
 
 impl ToString for ArrayType {
     fn to_string(&self) -> String {
-        format!("[{}", self.field_type.to_string())
+        format!("{}{}", "[".repeat(self.dimensions), self.field_type.to_string())
     }
 }
 
@@ -167,9 +168,23 @@ impl FieldType {
             'S' => FieldType::Base(BaseType::Short),
             'Z' => FieldType::Base(BaseType::Boolean),
             'V' => FieldType::Base(BaseType::Void),
-            '[' => FieldType::Array(ArrayType {
-                field_type: Box::new(FieldType::parse_from_iterator(chars)?),
-            }),
+            '[' => {
+                let mut dimensions = 1;
+                while let Some(ch) = chars.peek() {
+                    if *ch != '[' {
+                        break
+                    }
+
+                    chars.next();
+
+                    dimensions += 1;
+                }
+
+                FieldType::Array(ArrayType {
+                    dimensions,
+                    field_type: Box::new(FieldType::parse_from_iterator(chars)?),
+                })
+            }
             'L' => FieldType::Object(ObjectType {
                 class_name: chars.take_while(|c| *c != ';').collect::<String>(),
             }),

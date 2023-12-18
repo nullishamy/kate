@@ -194,8 +194,16 @@ impl Instruction for ANewArray {
             ConstantEntry::Class(data) => {
                 let class_name = data.name.resolve().string();
 
+                // Allow descriptors that already look like arrays to be parsed as normal
+                let class_name = if class_name.starts_with('[') {
+                    class_name
+                } else {
+                    // Otherwise, form them into array descriptors
+                    format!("[L{};", class_name)
+                };
+
                 vm.class_loader()
-                    .for_name(format!("[L{};", class_name).into())?
+                    .for_name(class_name.into())?
             }
             e => return Err(internal!("{:#?} cannot be used as an array type", e)),
         };
