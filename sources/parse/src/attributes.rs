@@ -1,6 +1,6 @@
 use crate::{
     classfile::{Addressed, Resolvable},
-    pool::{ConstantClass, ConstantPool, ConstantUtf8},
+    pool::{ConstantClass, ConstantEntry, ConstantPool, ConstantUtf8},
 };
 use anyhow::{anyhow, Result};
 use bytes::Bytes;
@@ -109,7 +109,23 @@ impl KnownAttribute for CodeAttribute {
     }
 }
 
-pub struct ConstantValueAttribute {}
+#[derive(Debug, Clone)]
+pub struct ConstantValueAttribute {
+    pub value: Addressed<ConstantEntry>,
+}
+
+impl KnownAttribute for ConstantValueAttribute {
+    fn decode(mut bytes: Bytes, constant_pool: &ConstantPool) -> Result<Self> {
+        Ok(ConstantValueAttribute {
+            value: constant_pool.address(bytes.try_get_u16()?),
+        })
+    }
+
+    fn id() -> &'static str {
+        "ConstantValue"
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct CodeAttribute {
     pub max_stack: u16,

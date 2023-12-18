@@ -5,16 +5,18 @@ use std::{
 
 use parking_lot::RwLock;
 use parse::{
+    attributes::ConstantValueAttribute,
     classfile::{ClassFile, Field, Resolvable},
     flags::FieldAccessFlag,
+    pool::ConstantEntry,
 };
 use support::descriptor::FieldType;
 
-use crate::{error::Throwable, internalise};
+use crate::{error::Throwable, internal, internalise};
 
 use self::types::JavaType;
 
-use super::{builtins::Object, value::RuntimeValue};
+use super::{builtins::Object, interner::intern_string, value::RuntimeValue};
 
 #[derive(Debug, Clone)]
 /// More expensive to clone, but more comprehensive field information.
@@ -101,7 +103,7 @@ pub mod types {
         pub alignment: Alignment,
         pub size: Size,
         pub layout: Layout,
-        pub name: &'static str
+        pub name: &'static str,
     }
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -224,11 +226,43 @@ pub fn basic_layout(class_file: &ClassFile, base_layout: Layout) -> Result<Basic
 
     for field in class_file.fields.clone().values.into_iter() {
         if field.flags.has(FieldAccessFlag::STATIC) {
+            // Static fields are initialised before clinit is ran
+            
+            // Try and load from the constant value attribute, falling back to descriptor defaults if no attr exists
+            let attr = field
+                .attributes
+                .known_attribute::<ConstantValueAttribute>(&class_file.constant_pool);
+
+            let static_value = if let Ok(entry) = attr {
+                let entry = entry.value.resolve();
+
+                match entry {
+                    ConstantEntry::String(data) => {
+                        let str = data.string();
+                        RuntimeValue::Object(intern_string(str)?.erase())
+                    }
+                    ConstantEntry::Integer(data) => {
+                        RuntimeValue::Integral((data.bytes as i32).into())
+                    },
+                    ConstantEntry::Float(data) => {
+                        RuntimeValue::Floating(data.bytes.into())
+                    },
+                    ConstantEntry::Long(data) => {
+                        RuntimeValue::Integral((data.bytes as i64).into())
+                    },
+                    ConstantEntry::Double(data) => {
+                        RuntimeValue::Floating(data.bytes.into())
+                    },
+                    e => return Err(internal!("cannot use {:#?} in constant value", e)),
+                }
+            } else {
+                let descriptor = &FieldType::parse(field.descriptor.resolve().string())?;
+                RuntimeValue::default_for_field(descriptor)
+            };
+
             static_fields.push(FieldInfo {
                 name: field.name.resolve().string(),
-                value: Some(RuntimeValue::default_for_field(&FieldType::parse(
-                    field.descriptor.resolve().string(),
-                )?)),
+                value: Some(static_value),
                 data: field,
                 location: FieldLocation { offset: 0 },
             });
