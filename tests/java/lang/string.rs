@@ -15,9 +15,9 @@ pub fn is_empty() -> TestResult {
 }
 
 #[test]
-#[ignore = "broken, we don't support nested arrays yet"]
+#[ignore = "broken, throws assertion errors in j.l.CharacterData00.<clinit>. the string length is wrong. see also comments in class"]
 pub fn is_blank() -> TestResult {
-    let state = state().init();
+    let state = state().init().init_std();
 
     let path = using_relative(file!(), "IsBlank");
 
