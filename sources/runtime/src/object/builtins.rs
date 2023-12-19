@@ -13,12 +13,12 @@ use parse::{
     classfile::{ClassFile, Resolvable},
     flags::{ClassFileAccessFlag, ClassFileAccessFlags},
 };
-use support::encoding::{decode_string, CompactEncoding};
+use support::{encoding::{decode_string, CompactEncoding}, types::FieldDescriptor};
 
 use crate::{
     error::Throwable,
     internal,
-    native::{NameAndDescriptor, NativeModule},
+    native::NativeModule,
 };
 
 use super::{
@@ -45,12 +45,12 @@ impl Object {
         }
     }
 
-    pub fn field<T>(&self, field: NameAndDescriptor) -> Option<FieldRef<T>> {
+    pub fn field<T>(&self, field: &FieldDescriptor) -> Option<FieldRef<T>> {
         self.inc_count();
 
         let class = self.class();
         let layout = &class.unwrap_ref().instance_layout;
-        let field_info = layout.field_info(&field.0)?;
+        let field_info = layout.field_info(field.name())?;
 
         let location = field_info.location;
 
@@ -297,7 +297,7 @@ impl Class {
                 let mut super_interfaces = vec![];
                 let mut _super = _s.clone();
                 while let Some(sup) = _super.to_ref() {
-                    super_interfaces.extend(sup.class_file().interfaces.values.clone().into_iter());
+                    super_interfaces.extend(sup.class_file().interfaces.clone().into_iter());
                     _super = sup.super_class();
                 }
 

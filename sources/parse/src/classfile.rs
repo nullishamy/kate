@@ -8,12 +8,8 @@ use crate::{
 };
 use anyhow::Result;
 use parking_lot::RwLock;
-use std::{
-    fmt,
-    marker::PhantomData,
-    sync::Arc,
-};
-
+use std::{convert::TryInto, fmt, marker::PhantomData, sync::Arc};
+use support::types::MethodDescriptor;
 
 #[derive(Debug, Clone)]
 pub struct ClassFile {
@@ -39,7 +35,16 @@ pub struct Field {
 }
 #[derive(Debug, Clone)]
 pub struct Fields {
-    pub values: Vec<Field>,
+    pub(crate) values: Vec<Field>,
+}
+
+impl IntoIterator for Fields {
+    type Item = Field;
+    type IntoIter = std::vec::IntoIter<Field>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.values.into_iter()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -51,22 +56,33 @@ pub struct Method {
 }
 #[derive(Debug, Clone)]
 pub struct Methods {
-    pub values: Vec<Method>,
+    pub(crate) values: Vec<Method>,
 }
 
 impl Methods {
-    pub fn locate(&self, name: String, descriptor: String) -> Option<&Method> {
+    pub fn locate(&self, descriptor: &MethodDescriptor) -> Option<&Method> {
         return self.values.iter().find(|v| {
-            let mname = v.name.resolve().string();
-            let mdescriptor = v.descriptor.resolve().string();
-            name == mname && descriptor == mdescriptor
+            let d: MethodDescriptor = (v.name.resolve().string(), v.descriptor.resolve().string())
+                .try_into()
+                .unwrap();
+
+            &d == descriptor
         });
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct Interfaces {
-    pub values: Vec<Addressed<ConstantClass>>,
+    pub(crate) values: Vec<Addressed<ConstantClass>>,
+}
+
+impl IntoIterator for Interfaces {
+    type Item = Addressed<ConstantClass>;
+    type IntoIter = std::vec::IntoIter<Addressed<ConstantClass>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.values.into_iter()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -121,12 +137,14 @@ macro_rules! address {
 
                 match value {
                     ConstantEntry::$enum(data) => Ok(data.clone()),
-                    _ => return Err(anyhow::anyhow!(
-                        "expected {} got type {:#?} @ {}",
-                        stringify!($enum),
-                        value,
-                        self.index
-                    )),
+                    _ => {
+                        return Err(anyhow::anyhow!(
+                            "expected {} got type {:#?} @ {}",
+                            stringify!($enum),
+                            value,
+                            self.index
+                        ))
+                    }
                 }
             }
         }

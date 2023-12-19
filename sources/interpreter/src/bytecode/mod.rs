@@ -2,11 +2,11 @@ use std::fmt;
 
 use crate::Context;
 use crate::Interpreter;
+use bytes::{Buf, BytesMut};
 use runtime::error::Throwable;
 use runtime::internal;
 use runtime::object::layout::types;
 use runtime::object::value::RuntimeValue;
-use bytes::{Buf, BytesMut};
 use support::bytes_ext::SafeBuf;
 
 mod binary;
@@ -497,8 +497,8 @@ pub fn decode_instruction(
             zero: bytes.try_get_u8()?,
         }),
         0xba => b(ops::InvokeDynamic {
-            index: bytes.try_get_u16()?,
-            zeroes: bytes.try_get_u16()?
+            _index: bytes.try_get_u16()?,
+            _zeroes: bytes.try_get_u16()?,
         }),
         0xbb => b(ops::New {
             index: bytes.try_get_u16()?,

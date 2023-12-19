@@ -6,6 +6,7 @@ use std::{
 };
 
 use parking_lot::Mutex;
+use support::types::MethodDescriptor;
 
 use crate::{
     error::Throwable,
@@ -17,10 +18,11 @@ use crate::{
         numeric::FALSE,
         value::RuntimeValue,
     },
-    static_method, vm::VM,
+    static_method,
+    vm::VM,
 };
 
-use super::{NameAndDescriptor, NativeFunction, NativeModule};
+use super::{NativeFunction, NativeModule};
 
 module_base!(IOFileDescriptor);
 impl NativeModule for IOFileDescriptor {
@@ -28,11 +30,11 @@ impl NativeModule for IOFileDescriptor {
         "java/io/FileDescriptor"
     }
 
-    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods(&self) -> &HashMap<MethodDescriptor, NativeFunction> {
         &self.methods
     }
 
-    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods_mut(&mut self) -> &mut HashMap<MethodDescriptor, NativeFunction> {
         &mut self.methods
     }
 
@@ -45,7 +47,7 @@ impl NativeModule for IOFileDescriptor {
             Ok(None)
         }
 
-        self.set_method("initIDs", "()V", static_method!(init_ids));
+        self.set_method(("initIDs", "()V"), static_method!(init_ids));
 
         fn get_handle(
             _: RefTo<Class>,
@@ -56,7 +58,7 @@ impl NativeModule for IOFileDescriptor {
             Ok(Some(RuntimeValue::Integral((-1_i64).into())))
         }
 
-        self.set_method("getHandle", "(I)J", static_method!(get_handle));
+        self.set_method(("getHandle", "(I)J"), static_method!(get_handle));
 
         fn get_append(
             _: RefTo<Class>,
@@ -67,7 +69,7 @@ impl NativeModule for IOFileDescriptor {
             Ok(Some(RuntimeValue::Integral(FALSE)))
         }
 
-        self.set_method("getAppend", "(I)Z", static_method!(get_append));
+        self.set_method(("getAppend", "(I)Z"), static_method!(get_append));
     }
 }
 
@@ -77,11 +79,11 @@ impl NativeModule for IOFileOutputStream {
         "java/io/FileOutputStream"
     }
 
-    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods(&self) -> &HashMap<MethodDescriptor, NativeFunction> {
         &self.methods
     }
 
-    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods_mut(&mut self) -> &mut HashMap<MethodDescriptor, NativeFunction> {
         &mut self.methods
     }
 
@@ -94,7 +96,7 @@ impl NativeModule for IOFileOutputStream {
             Ok(None)
         }
 
-        self.set_method("initIDs", "()V", static_method!(init_ids));
+        self.set_method(("initIDs", "()V"), static_method!(init_ids));
 
         fn write_bytes(
             this: RefTo<Object>,
@@ -104,13 +106,13 @@ impl NativeModule for IOFileOutputStream {
             let fd = {
                 let field: FieldRef<RefTo<Object>> = this
                     .unwrap_mut()
-                    .field(("fd".to_string(), "Ljava/io/FileDescriptor;".to_string()))
+                    .field(&("fd", "Ljava/io/FileDescriptor;").try_into().unwrap())
                     .unwrap();
 
                 let fd_obj = field.unwrap_ref();
                 let fd_int: FieldRef<Int> = fd_obj
                     .unwrap_mut()
-                    .field(("fd".to_string(), "I".to_string()))
+                    .field(&("fd", "I").try_into().unwrap())
                     .unwrap();
 
                 fd_int.copy_out()
@@ -153,7 +155,7 @@ impl NativeModule for IOFileOutputStream {
             Ok(None)
         }
 
-        self.set_method("writeBytes", "([BIIZ)V", instance_method!(write_bytes));
+        self.set_method(("writeBytes", "([BIIZ)V"), instance_method!(write_bytes));
     }
 }
 
@@ -163,11 +165,11 @@ impl NativeModule for IOUnixFileSystem {
         "java/io/UnixFileSystem"
     }
 
-    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods(&self) -> &HashMap<MethodDescriptor, NativeFunction> {
         &self.methods
     }
 
-    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods_mut(&mut self) -> &mut HashMap<MethodDescriptor, NativeFunction> {
         &mut self.methods
     }
 
@@ -180,7 +182,7 @@ impl NativeModule for IOUnixFileSystem {
             Ok(None)
         }
 
-        self.set_method("initIDs", "()V", static_method!(init_ids));
+        self.set_method(("initIDs", "()V"), static_method!(init_ids));
     }
 }
 
@@ -198,13 +200,13 @@ lazy_static::lazy_static! {
 fn get_fd(this: &RefTo<Object>) -> FieldRef<Int> {
     let field: FieldRef<RefTo<Object>> = this
         .unwrap_mut()
-        .field(("fd".to_string(), "Ljava/io/FileDescriptor;".to_string()))
+        .field(&("fd", "Ljava/io/FileDescriptor;").try_into().unwrap())
         .unwrap();
 
     let fd_obj = field.unwrap_ref();
     let fd_int: FieldRef<Int> = fd_obj
         .unwrap_mut()
-        .field(("fd".to_string(), "I".to_string()))
+        .field(&("fd", "I").try_into().unwrap())
         .unwrap();
 
     fd_int
@@ -216,11 +218,11 @@ impl NativeModule for IOFileInputStream {
         "java/io/FileInputStream"
     }
 
-    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods(&self) -> &HashMap<MethodDescriptor, NativeFunction> {
         &self.methods
     }
 
-    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods_mut(&mut self) -> &mut HashMap<MethodDescriptor, NativeFunction> {
         &mut self.methods
     }
 
@@ -233,7 +235,7 @@ impl NativeModule for IOFileInputStream {
             Ok(None)
         }
 
-        self.set_method("initIDs", "()V", static_method!(init_ids));
+        self.set_method(("initIDs", "()V"), static_method!(init_ids));
 
         fn open0(
             this: RefTo<Object>,
@@ -259,7 +261,7 @@ impl NativeModule for IOFileInputStream {
             Ok(None)
         }
 
-        self.set_method("open0", "(Ljava/lang/String;)V", instance_method!(open0));
+        self.set_method(("open0", "(Ljava/lang/String;)V"), instance_method!(open0));
 
         fn length0(
             this: RefTo<Object>,
@@ -275,7 +277,7 @@ impl NativeModule for IOFileInputStream {
             Ok(Some(RuntimeValue::Integral((meta.len() as i64).into())))
         }
 
-        self.set_method("length0", "()J", instance_method!(length0));
+        self.set_method(("length0", "()J"), instance_method!(length0));
 
         fn position0(
             this: RefTo<Object>,
@@ -290,7 +292,7 @@ impl NativeModule for IOFileInputStream {
             Ok(Some(RuntimeValue::Integral((pos as i64).into())))
         }
 
-        self.set_method("position0", "()J", instance_method!(position0));
+        self.set_method(("position0", "()J"), instance_method!(position0));
 
         fn read_bytes(
             this: RefTo<Object>,
@@ -330,7 +332,7 @@ impl NativeModule for IOFileInputStream {
             Ok(Some(RuntimeValue::Integral((read_n as i32).into())))
         }
 
-        self.set_method("readBytes", "([BII)I", instance_method!(read_bytes));
+        self.set_method(("readBytes", "([BII)I"), instance_method!(read_bytes));
 
         fn read0(
             this: RefTo<Object>,
@@ -351,16 +353,16 @@ impl NativeModule for IOFileInputStream {
             }
         }
 
-        self.set_method("read0", "()I", instance_method!(read0));
+        self.set_method(("read0", "()I"), instance_method!(read0));
 
         fn available0(
             _: RefTo<Object>,
             _: Vec<RuntimeValue>,
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
-            // Returns an estimate of the number of remaining bytes that can be read (or skipped over) from this input stream without blocking by the 
+            // Returns an estimate of the number of remaining bytes that can be read (or skipped over) from this input stream without blocking by the
             // next invocation of a method for this input stream.
-            // Returns 0 when the file position is beyond EOF. The next invocation might be the same thread or another thread. 
+            // Returns 0 when the file position is beyond EOF. The next invocation might be the same thread or another thread.
             // A single read or skip of this many bytes will not block, but may read or skip fewer bytes.
 
             // 0 seems to work, idk?
@@ -368,6 +370,6 @@ impl NativeModule for IOFileInputStream {
             Ok(Some(RuntimeValue::Integral((0_i32).into())))
         }
 
-        self.set_method("available0", "()I", instance_method!(available0));
+        self.set_method(("available0", "()I"), instance_method!(available0));
     }
 }

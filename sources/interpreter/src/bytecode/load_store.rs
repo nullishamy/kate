@@ -25,6 +25,7 @@ use runtime::object::mem::RefTo;
 use runtime::object::value::ComputationalType;
 use runtime::object::value::RuntimeValue;
 use support::descriptor::{BaseType, FieldType};
+use support::types::FieldDescriptor;
 
 #[derive(Debug)]
 pub struct PushConst {
@@ -185,78 +186,72 @@ impl Instruction for GetField {
         // TODO: Field resolution (through super classes etc)
 
         let name_and_type = field.name_and_type.resolve();
-        let (name, descriptor) = (
+        let field_ty: FieldDescriptor = (
             name_and_type.name.resolve().string(),
             name_and_type.descriptor.resolve().string(),
-        );
+        )
+            .try_into()
+            .unwrap();
 
         // The objectref, which must be of type reference but not an array
         // type, is popped from the operand stack.
         let objectref = arg!(ctx, "objectref" => Object);
 
         // The value of the reference field in objectref is fetched and pushed onto the operand stack.
-        let value = match FieldType::parse(descriptor.clone())? {
+        let value = match field_ty.descriptor() {
             FieldType::Base(ty) => match ty {
                 BaseType::Boolean => {
-                    let field: FieldRef<Bool> =
-                        objectref.unwrap_ref().field((name, descriptor)).unwrap();
+                    let field: FieldRef<Bool> = objectref.unwrap_ref().field(&field_ty).unwrap();
                     RuntimeValue::Integral(field.copy_out().into())
                 }
                 BaseType::Char => {
-                    let field: FieldRef<Char> =
-                        objectref.unwrap_ref().field((name, descriptor)).unwrap();
+                    let field: FieldRef<Char> = objectref.unwrap_ref().field(&field_ty).unwrap();
 
                     // TODO: Not entirely sure what the behaviour is supposed to be here wrt extension
                     let val = field.copy_out();
                     RuntimeValue::Integral((val as Int).into())
                 }
                 BaseType::Float => {
-                    let field: FieldRef<Float> =
-                        objectref.unwrap_ref().field((name, descriptor)).unwrap();
+                    let field: FieldRef<Float> = objectref.unwrap_ref().field(&field_ty).unwrap();
                     RuntimeValue::Floating(field.copy_out().into())
                 }
                 BaseType::Double => {
-                    let field: FieldRef<Double> =
-                        objectref.unwrap_ref().field((name, descriptor)).unwrap();
+                    let field: FieldRef<Double> = objectref.unwrap_ref().field(&field_ty).unwrap();
                     RuntimeValue::Floating(field.copy_out().into())
                 }
                 BaseType::Byte => {
-                    let field: FieldRef<Byte> =
-                        objectref.unwrap_ref().field((name, descriptor)).unwrap();
+                    let field: FieldRef<Byte> = objectref.unwrap_ref().field(&field_ty).unwrap();
 
                     // TODO: Not entirely sure what the behaviour is supposed to be here wrt extension
                     let val = field.copy_out();
                     RuntimeValue::Integral((val as Int).into())
                 }
                 BaseType::Short => {
-                    let field: FieldRef<Short> =
-                        objectref.unwrap_ref().field((name, descriptor)).unwrap();
+                    let field: FieldRef<Short> = objectref.unwrap_ref().field(&field_ty).unwrap();
 
                     // TODO: Not entirely sure what the behaviour is supposed to be here wrt extension
                     let val = field.copy_out();
                     RuntimeValue::Integral((val as Int).into())
                 }
                 BaseType::Int => {
-                    let field: FieldRef<Int> =
-                        objectref.unwrap_ref().field((name, descriptor)).unwrap();
+                    let field: FieldRef<Int> = objectref.unwrap_ref().field(&field_ty).unwrap();
 
                     RuntimeValue::Integral(field.copy_out().into())
                 }
                 BaseType::Long => {
-                    let field: FieldRef<Long> =
-                        objectref.unwrap_ref().field((name, descriptor)).unwrap();
+                    let field: FieldRef<Long> = objectref.unwrap_ref().field(&field_ty).unwrap();
                     RuntimeValue::Integral(field.copy_out().into())
                 }
                 BaseType::Void => return Err(internal!("cannot read void field")),
             },
             FieldType::Object(_) => {
                 let field: FieldRef<RefTo<Object>> =
-                    objectref.unwrap_ref().field((name, descriptor)).unwrap();
+                    objectref.unwrap_ref().field(&field_ty).unwrap();
                 RuntimeValue::Object(field.unwrap_ref().clone())
             }
             FieldType::Array(_) => {
                 let field: FieldRef<RefTo<Object>> =
-                    objectref.unwrap_ref().field((name, descriptor)).unwrap();
+                    objectref.unwrap_ref().field(&field_ty).unwrap();
                 let value = field.unwrap_ref();
                 RuntimeValue::Object(value.clone())
             }
@@ -291,10 +286,12 @@ impl Instruction for PutField {
         // TODO: Field resolution (through super classes etc)
 
         let name_and_type = field.name_and_type.resolve();
-        let (name, descriptor) = (
+        let field_ty: FieldDescriptor = (
             name_and_type.name.resolve().string(),
-            FieldType::parse(name_and_type.descriptor.resolve().string())?,
-        );
+            name_and_type.descriptor.resolve().string(),
+        )
+            .try_into()
+            .unwrap();
 
         // TODO: Type check & convert as needed
 
@@ -302,67 +299,50 @@ impl Instruction for PutField {
         let value = pop!(ctx);
         let objectref = arg!(ctx, "objectref" => Object);
 
-        macro_rules! set {
-            (int $ty: ty, $o: expr, $name: expr, $desc: expr => $value: expr) => {{
-                let field = $o.field::<$ty>(($name, $desc.to_string())).unwrap();
-                field.write($value.as_integral().unwrap().value as $ty)
-            }};
-            (float $ty: ty, $o: expr, $name: expr, $desc: expr => $value: expr) => {{
-                let field = $o.field::<$ty>(($name, $desc.to_string())).unwrap();
-                field.write($value.as_floating().unwrap().value as $ty)
-            }};
-        }
-
         let o = objectref.unwrap_ref();
-        let name = name.clone();
-
-        match descriptor {
+        match field_ty.descriptor() {
             FieldType::Base(ref base) => match base {
                 BaseType::Boolean => {
-                    set!(int Bool, o, name, descriptor => value);
+                    let field = o.field::<Bool>(&field_ty).unwrap();
+                    field.write(value.as_integral().unwrap().value as Bool)
                 }
                 BaseType::Char => {
-                    set!(int Char, o, name, descriptor => value);
+                    let field = o.field::<Char>(&field_ty).unwrap();
+                    field.write(value.as_integral().unwrap().value as Char)
                 }
                 BaseType::Float => {
-                    set!(float Float, o, name, descriptor => value);
+                    let field = o.field::<Float>(&field_ty).unwrap();
+                    field.write(value.as_floating().unwrap().value as Float)
                 }
                 BaseType::Double => {
-                    set!(float Double, o, name, descriptor => value);
+                    let field = o.field::<Double>(&field_ty).unwrap();
+                    field.write(value.as_floating().unwrap().value as Double)
                 }
                 BaseType::Byte => {
-                    set!(int Byte, o, name, descriptor => value);
+                    let field = o.field::<Byte>(&field_ty).unwrap();
+                    field.write(value.as_integral().unwrap().value as Byte)
                 }
                 BaseType::Short => {
-                    set!(int Short, o, name, descriptor => value);
+                    let field = o.field::<Short>(&field_ty).unwrap();
+                    field.write(value.as_integral().unwrap().value as Short)
                 }
                 BaseType::Int => {
-                    set!(int Int, o, name, descriptor => value);
+                    let field = o.field::<Int>(&field_ty).unwrap();
+                    field.write(value.as_integral().unwrap().value as Int)
                 }
                 BaseType::Long => {
-                    set!(int Long, o, name, descriptor => value);
+                    let field = o.field::<Long>(&field_ty).unwrap();
+                    field.write(value.as_integral().unwrap().value as Long)
                 }
                 BaseType::Void => todo!(),
             },
             FieldType::Object(_) => {
-                let value_as_obj = value.as_object().unwrap();
-                let value_as_obj = value_as_obj.clone();
-
-                let field = o
-                    .field::<RefTo<Object>>((name, descriptor.to_string()))
-                    .unwrap();
-
-                field.write(value_as_obj);
+                let field = o.field::<RefTo<Object>>(&field_ty).unwrap();
+                field.write(value.as_object().unwrap().clone());
             }
             FieldType::Array(_) => {
-                let obj = value.as_object().unwrap();
-                let obj = obj.clone();
-
-                let field = o
-                    .field::<RefTo<Object>>((name, descriptor.to_string()))
-                    .unwrap();
-
-                field.write(obj);
+                let field = o.field::<RefTo<Object>>(&field_ty).unwrap();
+                field.write(value.as_object().unwrap().clone());
             }
         };
 

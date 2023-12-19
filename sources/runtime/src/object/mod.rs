@@ -6,5 +6,4 @@ pub mod mem;
 pub mod numeric;
 pub mod value;
 
-mod tests {
-}
+mod tests {}

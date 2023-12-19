@@ -55,7 +55,11 @@ pub struct ArrayType {
 
 impl ToString for ArrayType {
     fn to_string(&self) -> String {
-        format!("{}{}", "[".repeat(self.dimensions), self.field_type.to_string())
+        format!(
+            "{}{}",
+            "[".repeat(self.dimensions),
+            self.field_type.to_string()
+        )
     }
 }
 
@@ -100,7 +104,7 @@ impl FieldType {
 }
 
 /// <MethodType> ::= '(' { <FieldType> } ')' <FieldType>
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Eq, Hash)]
 pub struct MethodType {
     pub parameters: Vec<FieldType>,
     pub return_type: FieldType,
@@ -172,7 +176,7 @@ impl FieldType {
                 let mut dimensions = 1;
                 while let Some(ch) = chars.peek() {
                     if *ch != '[' {
-                        break
+                        break;
                     }
 
                     chars.next();

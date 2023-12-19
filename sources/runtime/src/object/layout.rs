@@ -224,10 +224,10 @@ pub fn basic_layout(class_file: &ClassFile, base_layout: Layout) -> Result<Basic
     let mut instance_fields = vec![];
     let mut static_fields = vec![];
 
-    for field in class_file.fields.clone().values.into_iter() {
+    for field in class_file.fields.clone().into_iter() {
         if field.flags.has(FieldAccessFlag::STATIC) {
             // Static fields are initialised before clinit is ran
-            
+
             // Try and load from the constant value attribute, falling back to descriptor defaults if no attr exists
             let attr = field
                 .attributes
@@ -243,16 +243,10 @@ pub fn basic_layout(class_file: &ClassFile, base_layout: Layout) -> Result<Basic
                     }
                     ConstantEntry::Integer(data) => {
                         RuntimeValue::Integral((data.bytes as i32).into())
-                    },
-                    ConstantEntry::Float(data) => {
-                        RuntimeValue::Floating(data.bytes.into())
-                    },
-                    ConstantEntry::Long(data) => {
-                        RuntimeValue::Integral((data.bytes as i64).into())
-                    },
-                    ConstantEntry::Double(data) => {
-                        RuntimeValue::Floating(data.bytes.into())
-                    },
+                    }
+                    ConstantEntry::Float(data) => RuntimeValue::Floating(data.bytes.into()),
+                    ConstantEntry::Long(data) => RuntimeValue::Integral((data.bytes as i64).into()),
+                    ConstantEntry::Double(data) => RuntimeValue::Floating(data.bytes.into()),
                     e => return Err(internal!("cannot use {:#?} in constant value", e)),
                 }
             } else {

@@ -1,4 +1,6 @@
-use crate::util::{TestResult, state, builder::using_relative, execute, expected, compare, compile_abs};
+use crate::util::{
+    builder::using_relative, compare, compile_abs, execute, expected, state, TestResult,
+};
 
 #[test]
 pub fn check_for_comodification() -> TestResult {
@@ -12,7 +14,6 @@ pub fn check_for_comodification() -> TestResult {
 
     Ok(())
 }
-
 
 #[test]
 pub fn has_next() -> TestResult {

@@ -2,8 +2,6 @@
 
 use std::{marker::PhantomData, mem::ManuallyDrop};
 
-
-
 use super::{builtins::Object, layout::FieldLocation};
 
 #[derive(Debug)]
@@ -15,7 +13,7 @@ pub struct FieldRef<T> {
     phantom: PhantomData<T>,
 }
 
-impl <T : Copy> FieldRef<T> {
+impl<T: Copy> FieldRef<T> {
     pub fn copy_out(&self) -> T {
         *self.unwrap_ref()
     }
@@ -45,7 +43,7 @@ impl<T> FieldRef<T> {
 
         let offset = self.field.offset;
         let data_ptr = unsafe { self.object.byte_add(offset).cast::<T>() };
-        
+
         // SAFETY:
         // No other aliases can exist at this time because we are holding the write lock
         unsafe { data_ptr.cast_mut().write(value) };
@@ -124,10 +122,10 @@ impl<T: HasObjectHeader<T>> RefTo<T> {
     }
 
     /// ## Safety
-    /// 
+    ///
     /// Caller must ensure the pointer points to a valid heap allocated object.
     /// The object must be brand new, not a pointer to an pre-existing allocation
-    /// This function will take ownership of the pointer. It is up to callers not 
+    /// This function will take ownership of the pointer. It is up to callers not
     /// to use it after this function is called.
     pub unsafe fn from_ptr(object_ptr: *mut Object) -> Self {
         Self {
@@ -167,7 +165,7 @@ impl<T: HasObjectHeader<T>> RefTo<T> {
     }
 
     /// ## Safety
-    /// 
+    ///
     /// Caller must ensure object is of this type
     pub unsafe fn cast<U: HasObjectHeader<U>>(&self) -> RefTo<U> {
         RefTo {

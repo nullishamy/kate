@@ -11,7 +11,6 @@ use parse::pool::ConstantClass;
 use runtime::error::Throwable;
 
 use runtime::error::VMError;
-use runtime::internal;
 
 use runtime::object::builtins::Class;
 

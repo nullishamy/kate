@@ -62,7 +62,8 @@ pub fn using_class(class_name: &str, class_content: impl Into<String>) -> Class<
                     {}
                 }}
             "#,
-            class_name, class_content.into()
+            class_name,
+            class_content.into()
         ),
     }
 }

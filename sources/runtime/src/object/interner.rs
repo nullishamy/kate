@@ -48,7 +48,11 @@ pub struct StringInterner {
 }
 
 impl StringInterner {
-    pub fn new(string_class: RefTo<Class>, super_class: RefTo<Class>, byte_array_ty: RefTo<Class>) -> Self {
+    pub fn new(
+        string_class: RefTo<Class>,
+        super_class: RefTo<Class>,
+        byte_array_ty: RefTo<Class>,
+    ) -> Self {
         Self {
             string_class,
             super_class,
@@ -63,10 +67,7 @@ impl StringInterner {
         }
 
         let (encoding, bytes) = encode_string(value.clone())?;
-        let array = Array::<u8>::from_vec(
-            self.byte_array_ty.clone(),
-            bytes,
-        );
+        let array = Array::<u8>::from_vec(self.byte_array_ty.clone(), bytes);
 
         let obj = BuiltinString {
             object: Object::new(self.string_class.clone(), self.super_class.clone()),

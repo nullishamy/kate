@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use support::types::MethodDescriptor;
+
 use crate::{
     error::Throwable,
     instance_method, module_base,
@@ -11,10 +13,11 @@ use crate::{
         numeric::FALSE,
         value::RuntimeValue,
     },
-    static_method, vm::VM,
+    static_method,
+    vm::VM,
 };
 
-use super::{NameAndDescriptor, NativeFunction, NativeModule};
+use super::{NativeFunction, NativeModule};
 
 module_base!(JdkVM);
 impl NativeModule for JdkVM {
@@ -22,11 +25,11 @@ impl NativeModule for JdkVM {
         "jdk/internal/misc/VM"
     }
 
-    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods(&self) -> &HashMap<MethodDescriptor, NativeFunction> {
         &self.methods
     }
 
-    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods_mut(&mut self) -> &mut HashMap<MethodDescriptor, NativeFunction> {
         &mut self.methods
     }
 
@@ -39,7 +42,7 @@ impl NativeModule for JdkVM {
             Ok(None)
         }
 
-        self.set_method("initialize", "()V", static_method!(initialize));
+        self.set_method(("initialize", "()V"), static_method!(initialize));
     }
 }
 
@@ -49,11 +52,11 @@ impl NativeModule for JdkCDS {
         "jdk/internal/misc/CDS"
     }
 
-    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods(&self) -> &HashMap<MethodDescriptor, NativeFunction> {
         &self.methods
     }
 
-    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods_mut(&mut self) -> &mut HashMap<MethodDescriptor, NativeFunction> {
         &mut self.methods
     }
 
@@ -67,8 +70,7 @@ impl NativeModule for JdkCDS {
         }
 
         self.set_method(
-            "initializeFromArchive",
-            "(Ljava/lang/Class;)V",
+            ("initializeFromArchive", "(Ljava/lang/Class;)V"),
             static_method!(initialize_from_archive),
         );
 
@@ -81,8 +83,7 @@ impl NativeModule for JdkCDS {
         }
 
         self.set_method(
-            "getRandomSeedForDumping",
-            "()J",
+            ("getRandomSeedForDumping", "()J"),
             static_method!(get_random_seed_for_dumping),
         );
 
@@ -95,8 +96,7 @@ impl NativeModule for JdkCDS {
         }
 
         self.set_method(
-            "isDumpingClassList0",
-            "()Z",
+            ("isDumpingClassList0", "()Z"),
             static_method!(is_dumping_class_list0),
         );
 
@@ -109,8 +109,7 @@ impl NativeModule for JdkCDS {
         }
 
         self.set_method(
-            "isDumpingArchive0",
-            "()Z",
+            ("isDumpingArchive0", "()Z"),
             static_method!(is_dumping_archive0),
         );
 
@@ -123,8 +122,7 @@ impl NativeModule for JdkCDS {
         }
 
         self.set_method(
-            "isSharingEnabled0",
-            "()Z",
+            ("isSharingEnabled0", "()Z"),
             static_method!(is_sharing_enabled0),
         );
     }
@@ -136,11 +134,11 @@ impl NativeModule for JdkReflection {
         "jdk/internal/reflect/Reflection"
     }
 
-    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods(&self) -> &HashMap<MethodDescriptor, NativeFunction> {
         &self.methods
     }
 
-    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods_mut(&mut self) -> &mut HashMap<MethodDescriptor, NativeFunction> {
         &mut self.methods
     }
 
@@ -171,8 +169,7 @@ impl NativeModule for JdkReflection {
         }
 
         self.set_method(
-            "getCallerClass",
-            "()Ljava/lang/Class;",
+            ("getCallerClass", "()Ljava/lang/Class;"),
             static_method!(get_caller_class),
         );
     }
@@ -243,11 +240,11 @@ impl NativeModule for JdkSystemPropsRaw {
         "jdk/internal/util/SystemProps$Raw"
     }
 
-    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods(&self) -> &HashMap<MethodDescriptor, NativeFunction> {
         &self.methods
     }
 
-    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods_mut(&mut self) -> &mut HashMap<MethodDescriptor, NativeFunction> {
         &mut self.methods
     }
 
@@ -274,8 +271,7 @@ impl NativeModule for JdkSystemPropsRaw {
         }
 
         self.set_method(
-            "vmProperties",
-            "()[Ljava/lang/String;",
+            ("vmProperties", "()[Ljava/lang/String;"),
             static_method!(vm_properties),
         );
 
@@ -305,15 +301,16 @@ impl NativeModule for JdkSystemPropsRaw {
             arr[fields::FILE_ENCODING_NDX] = intern_string("UTF-8".to_string())?;
             arr[fields::SUN_JNU_ENCODING_NDX] = intern_string("UTF-8".to_string())?;
 
-            let array: RefTo<Array<RefTo<BuiltinString>>> =
-                Array::from_vec(vm.class_loader().for_name("[Ljava/lang/String;".into())?, arr);
+            let array: RefTo<Array<RefTo<BuiltinString>>> = Array::from_vec(
+                vm.class_loader().for_name("[Ljava/lang/String;".into())?,
+                arr,
+            );
 
             Ok(Some(RuntimeValue::Object(array.erase())))
         }
 
         self.set_method(
-            "platformProperties",
-            "()[Ljava/lang/String;",
+            ("platformProperties", "()[Ljava/lang/String;"),
             static_method!(platform_properties),
         );
     }
@@ -324,11 +321,11 @@ impl NativeModule for JdkUnsafe {
         "jdk/internal/misc/Unsafe"
     }
 
-    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods(&self) -> &HashMap<MethodDescriptor, NativeFunction> {
         &self.methods
     }
 
-    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods_mut(&mut self) -> &mut HashMap<MethodDescriptor, NativeFunction> {
         &mut self.methods
     }
 
@@ -360,8 +357,10 @@ impl NativeModule for JdkUnsafe {
         }
 
         self.set_method(
-            "objectFieldOffset1",
-            "(Ljava/lang/Class;Ljava/lang/String;)J",
+            (
+                "objectFieldOffset1",
+                "(Ljava/lang/Class;Ljava/lang/String;)J",
+            ),
             instance_method!(object_field_offset1),
         );
 
@@ -373,7 +372,7 @@ impl NativeModule for JdkUnsafe {
             Ok(None)
         }
 
-        self.set_method("registerNatives", "()V", static_method!(register_natives));
+        self.set_method(("registerNatives", "()V"), static_method!(register_natives));
 
         fn store_fence(
             _: RefTo<Object>,
@@ -383,7 +382,7 @@ impl NativeModule for JdkUnsafe {
             Ok(None)
         }
 
-        self.set_method("storeFence", "()V", instance_method!(store_fence));
+        self.set_method(("storeFence", "()V"), instance_method!(store_fence));
 
         fn compare_and_set_int(
             _: RefTo<Object>,
@@ -429,8 +428,7 @@ impl NativeModule for JdkUnsafe {
         }
 
         self.set_method(
-            "compareAndSetInt",
-            "(Ljava/lang/Object;JII)Z",
+            ("compareAndSetInt", "(Ljava/lang/Object;JII)Z"),
             instance_method!(compare_and_set_int),
         );
 
@@ -477,8 +475,10 @@ impl NativeModule for JdkUnsafe {
         }
 
         self.set_method(
-            "compareAndSetReference",
-            "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
+            (
+                "compareAndSetReference",
+                "(Ljava/lang/Object;JLjava/lang/Object;Ljava/lang/Object;)Z",
+            ),
             instance_method!(compare_and_set_reference),
         );
 
@@ -528,8 +528,7 @@ impl NativeModule for JdkUnsafe {
         }
 
         self.set_method(
-            "compareAndSetLong",
-            "(Ljava/lang/Object;JJJ)Z",
+            ("compareAndSetLong", "(Ljava/lang/Object;JJJ)Z"),
             instance_method!(compare_and_set_long),
         );
 
@@ -557,8 +556,10 @@ impl NativeModule for JdkUnsafe {
         }
 
         self.set_method(
-            "getReferenceVolatile",
-            "(Ljava/lang/Object;J)Ljava/lang/Object;",
+            (
+                "getReferenceVolatile",
+                "(Ljava/lang/Object;J)Ljava/lang/Object;",
+            ),
             instance_method!(get_reference_volatile),
         );
 
@@ -586,8 +587,7 @@ impl NativeModule for JdkUnsafe {
         }
 
         self.set_method(
-            "getReference",
-            "(Ljava/lang/Object;J)Ljava/lang/Object;",
+            ("getReference", "(Ljava/lang/Object;J)Ljava/lang/Object;"),
             instance_method!(get_reference),
         );
 
@@ -615,8 +615,7 @@ impl NativeModule for JdkUnsafe {
         }
 
         self.set_method(
-            "getIntVolatile",
-            "(Ljava/lang/Object;J)I",
+            ("getIntVolatile", "(Ljava/lang/Object;J)I"),
             instance_method!(get_int_volatile),
         );
 
@@ -647,7 +646,7 @@ impl NativeModule for JdkUnsafe {
             // This is because there exists a bug in the unsafe parts of this that I do
             // not want to try and find. Reallllly need to fix this :^)
             if class_name.contains("InnocuousThread") && offset == 80 {
-                return Ok(None)
+                return Ok(None);
             }
 
             let raw_ptr = object.unwrap_mut() as *mut Object;
@@ -659,8 +658,10 @@ impl NativeModule for JdkUnsafe {
         }
 
         self.set_method(
-            "putReferenceVolatile",
-            "(Ljava/lang/Object;JLjava/lang/Object;)V",
+            (
+                "putReferenceVolatile",
+                "(Ljava/lang/Object;JLjava/lang/Object;)V",
+            ),
             instance_method!(put_reference_volatile),
         );
 
@@ -697,8 +698,7 @@ impl NativeModule for JdkUnsafe {
         }
 
         self.set_method(
-            "arrayIndexScale0",
-            "(Ljava/lang/Class;)I",
+            ("arrayIndexScale0", "(Ljava/lang/Class;)I"),
             instance_method!(array_index_scale0),
         );
 
@@ -735,8 +735,7 @@ impl NativeModule for JdkUnsafe {
         }
 
         self.set_method(
-            "arrayBaseOffset0",
-            "(Ljava/lang/Class;)I",
+            ("arrayBaseOffset0", "(Ljava/lang/Class;)I"),
             instance_method!(array_base_offset0),
         );
     }
@@ -748,11 +747,11 @@ impl NativeModule for JdkScopedMemoryAccess {
         "jdk/internal/misc/ScopedMemoryAccess"
     }
 
-    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods(&self) -> &HashMap<MethodDescriptor, NativeFunction> {
         &self.methods
     }
 
-    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods_mut(&mut self) -> &mut HashMap<MethodDescriptor, NativeFunction> {
         &mut self.methods
     }
 
@@ -765,7 +764,7 @@ impl NativeModule for JdkScopedMemoryAccess {
             Ok(None)
         }
 
-        self.set_method("registerNatives", "()V", static_method!(register_natives));
+        self.set_method(("registerNatives", "()V"), static_method!(register_natives));
     }
 }
 
@@ -775,11 +774,11 @@ impl NativeModule for JdkSignal {
         "jdk/internal/misc/Signal"
     }
 
-    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods(&self) -> &HashMap<MethodDescriptor, NativeFunction> {
         &self.methods
     }
 
-    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods_mut(&mut self) -> &mut HashMap<MethodDescriptor, NativeFunction> {
         &mut self.methods
     }
 
@@ -793,7 +792,7 @@ impl NativeModule for JdkSignal {
             Ok(Some(RuntimeValue::Integral(0_i64.into())))
         }
 
-        self.set_method("handle0", "(IJ)J", static_method!(handle0));
+        self.set_method(("handle0", "(IJ)J"), static_method!(handle0));
 
         fn find_signal0(
             _: RefTo<Class>,
@@ -821,8 +820,7 @@ impl NativeModule for JdkSignal {
         }
 
         self.set_method(
-            "findSignal0",
-            "(Ljava/lang/String;)I",
+            ("findSignal0", "(Ljava/lang/String;)I"),
             static_method!(find_signal0),
         );
     }
@@ -834,11 +832,11 @@ impl NativeModule for JdkBootLoader {
         "jdk/internal/loader/BootLoader"
     }
 
-    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods(&self) -> &HashMap<MethodDescriptor, NativeFunction> {
         &self.methods
     }
 
-    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods_mut(&mut self) -> &mut HashMap<MethodDescriptor, NativeFunction> {
         &mut self.methods
     }
 
@@ -852,8 +850,7 @@ impl NativeModule for JdkBootLoader {
         }
 
         self.set_method(
-            "setBootLoaderUnnamedModule0",
-            "(Ljava/lang/Module;)V",
+            ("setBootLoaderUnnamedModule0", "(Ljava/lang/Module;)V"),
             static_method!(set_boot_loader_unnamed_module0),
         );
     }

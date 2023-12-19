@@ -5,10 +5,7 @@ use args::Cli;
 use clap::Parser;
 
 use interpreter::{Context, Interpreter};
-use parse::{
-    attributes::CodeAttribute,
-    classfile::{Method, Resolvable},
-};
+use parse::{attributes::CodeAttribute, classfile::Method};
 use runtime::{
     error::{Frame, Throwable, ThrownState},
     native::{DefaultNativeModule, NativeFunction},
@@ -84,7 +81,7 @@ fn test_init(cls: RefTo<Class>) {
 
             let string = string.unwrap_ref();
             let bytes: FieldRef<RefTo<Array<u8>>> = string
-                .field(("value".to_string(), "[B".to_string()))
+                .field(&("value", "[B").try_into().unwrap())
                 .expect("could not locate value field");
 
             let bytes = bytes.unwrap_ref().unwrap_ref().slice().to_vec();
@@ -120,7 +117,7 @@ fn test_init(cls: RefTo<Class>) {
 
         let module = cls.native_module().as_ref().unwrap();
         let mut module = module.borrow_mut();
-        module.set_method("print", printer.0, printer.1);
+        module.set_method(("print", printer.0), printer.1);
     }
 }
 
@@ -136,7 +133,7 @@ fn boot_system(vm: &mut Interpreter, cls: RefTo<Class>) {
         .unwrap_ref()
         .class_file()
         .methods
-        .locate("initPhase1".to_string(), "()V".to_string())
+        .locate(&("initPhase1", "()V").try_into().unwrap())
         .cloned()
         .unwrap();
 
@@ -179,7 +176,7 @@ fn boot_system(vm: &mut Interpreter, cls: RefTo<Class>) {
     }
 }
 
-fn run_method(vm: &mut Interpreter, ctx: Context, method: &Method, args: &Cli) {
+fn run_method(vm: &mut Interpreter, ctx: Context, args: &Cli) {
     let code = ctx.code.clone();
     let cls = ctx.class.clone();
 
@@ -221,7 +218,7 @@ fn run_method(vm: &mut Interpreter, ctx: Context, method: &Method, args: &Cli) {
 
                 info!("Re-entering main at {}", re_enter_context.pc);
 
-                return run_method(vm, re_enter_context, method, args);
+                return run_method(vm, re_enter_context, args);
             } else {
                 println!("Uncaught exception in main: {}", rte);
                 for source in rte.sources.iter().rev() {
@@ -318,7 +315,7 @@ fn main() {
             .unwrap_ref()
             .class_file()
             .methods
-            .locate("main".to_string(), "([Ljava/lang/String;)V".to_string())
+            .locate(&("main", "([Ljava/lang/String;)V").try_into().unwrap())
             .unwrap();
 
         let code = method
@@ -356,6 +353,7 @@ fn main() {
             class_name: cls.unwrap_ref().name().to_string(),
             method_name: "main".to_string(),
         });
-        run_method(&mut vm, main_ctx, method, &args);
+
+        run_method(&mut vm, main_ctx, &args);
     }
 }

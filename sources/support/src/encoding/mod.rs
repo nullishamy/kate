@@ -22,7 +22,7 @@ impl CompactEncoding {
         match coder {
             0 => CompactEncoding::Latin1,
             1 => CompactEncoding::Utf16,
-            p => panic!("bogus coder {p}")
+            p => panic!("bogus coder {p}"),
         }
     }
 }

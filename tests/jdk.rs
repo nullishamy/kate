@@ -1,2 +1,2 @@
-mod util;
 pub mod java;
+mod util;

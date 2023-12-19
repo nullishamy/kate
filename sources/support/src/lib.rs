@@ -1,6 +1,7 @@
 pub mod bytes_ext;
 pub mod descriptor;
 pub mod encoding;
+pub mod types;
 
 #[cfg(test)]
 mod tests {

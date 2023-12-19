@@ -1,11 +1,15 @@
 use std::fmt;
 
 use enum_as_inner::EnumAsInner;
-use support::descriptor::{FieldType, BaseType};
+use support::descriptor::{BaseType, FieldType};
 
 use crate::object::numeric::Floating;
 
-use super::{builtins::Object, mem::RefTo, numeric::{Integral, IntegralType, FloatingType}};
+use super::{
+    builtins::Object,
+    mem::RefTo,
+    numeric::{FloatingType, Integral, IntegralType},
+};
 
 pub enum ComputationalType {
     Category1,
@@ -81,7 +85,7 @@ impl fmt::Debug for RuntimeValue {
                 } else {
                     write!(f, "{:#?}", o)
                 }
-            },
+            }
             RuntimeValue::Integral(data) => write!(f, "{}", data.value),
             RuntimeValue::Floating(data) => {
                 // Just our custom implementation of floats, so we get reasonable output
@@ -106,7 +110,7 @@ impl fmt::Display for RuntimeValue {
                 } else {
                     write!(f, "[object Object]")
                 }
-            },
+            }
             RuntimeValue::Integral(data) => write!(f, "{}", data.value),
             RuntimeValue::Floating(data) => {
                 // Just our custom implementation of floats, so we get reasonable output

@@ -1,6 +1,9 @@
 use std::{collections::HashMap, process::exit, time::SystemTime};
 
-use support::encoding::{decode_string, CompactEncoding};
+use support::{
+    encoding::{decode_string, CompactEncoding},
+    types::MethodDescriptor,
+};
 
 use crate::{
     error::Throwable,
@@ -17,7 +20,7 @@ use crate::{
     vm::VM,
 };
 
-use super::{NameAndDescriptor, NativeFunction, NativeModule};
+use super::{NativeFunction, NativeModule};
 
 module_base!(LangClass);
 impl NativeModule for LangClass {
@@ -25,11 +28,11 @@ impl NativeModule for LangClass {
         "java/lang/Class"
     }
 
-    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods(&self) -> &HashMap<MethodDescriptor, NativeFunction> {
         &self.methods
     }
 
-    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods_mut(&mut self) -> &mut HashMap<MethodDescriptor, NativeFunction> {
         &mut self.methods
     }
 
@@ -70,8 +73,7 @@ impl NativeModule for LangClass {
         }
 
         self.set_method(
-            "getPrimitiveClass",
-            "(Ljava/lang/String;)Ljava/lang/Class;",
+            ("getPrimitiveClass", "(Ljava/lang/String;)Ljava/lang/Class;"),
             instance_method!(get_primitive_class),
         );
 
@@ -83,7 +85,7 @@ impl NativeModule for LangClass {
             Ok(None)
         }
 
-        self.set_method("registerNatives", "()V", static_method!(register_natives));
+        self.set_method(("registerNatives", "()V"), static_method!(register_natives));
 
         fn desired_assertion_status0(
             _: RefTo<Class>,
@@ -94,8 +96,7 @@ impl NativeModule for LangClass {
         }
 
         self.set_method(
-            "desiredAssertionStatus0",
-            "(Ljava/lang/Class;)Z",
+            ("desiredAssertionStatus0", "(Ljava/lang/Class;)Z"),
             static_method!(desired_assertion_status0),
         );
 
@@ -114,7 +115,7 @@ impl NativeModule for LangClass {
             Ok(Some(RuntimeValue::Integral(result.into())))
         }
 
-        self.set_method("isArray", "()Z", instance_method!(is_array));
+        self.set_method(("isArray", "()Z"), instance_method!(is_array));
 
         fn is_interface(
             this: RefTo<Object>,
@@ -131,7 +132,7 @@ impl NativeModule for LangClass {
             Ok(Some(RuntimeValue::Integral(result.into())))
         }
 
-        self.set_method("isInterface", "()Z", instance_method!(is_interface));
+        self.set_method(("isInterface", "()Z"), instance_method!(is_interface));
 
         fn is_primitive(
             this: RefTo<Object>,
@@ -148,7 +149,7 @@ impl NativeModule for LangClass {
             Ok(Some(RuntimeValue::Integral(result.into())))
         }
 
-        self.set_method("isPrimitive", "()Z", instance_method!(is_primitive));
+        self.set_method(("isPrimitive", "()Z"), instance_method!(is_primitive));
 
         fn init_class_name(
             this: RefTo<Object>,
@@ -165,8 +166,7 @@ impl NativeModule for LangClass {
         }
 
         self.set_method(
-            "initClassName",
-            "()Ljava/lang/String;",
+            ("initClassName", "()Ljava/lang/String;"),
             instance_method!(init_class_name),
         );
     }
@@ -178,11 +178,11 @@ impl NativeModule for LangSystem {
         "java/lang/System"
     }
 
-    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods(&self) -> &HashMap<MethodDescriptor, NativeFunction> {
         &self.methods
     }
 
-    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods_mut(&mut self) -> &mut HashMap<MethodDescriptor, NativeFunction> {
         &mut self.methods
     }
 
@@ -195,7 +195,7 @@ impl NativeModule for LangSystem {
             Ok(None)
         }
 
-        self.set_method("registerNatives", "()V", static_method!(register_natives));
+        self.set_method(("registerNatives", "()V"), static_method!(register_natives));
 
         fn nano_time(
             _: RefTo<Class>,
@@ -210,7 +210,7 @@ impl NativeModule for LangSystem {
             Ok(Some(RuntimeValue::Integral(timestamp_nanos.into())))
         }
 
-        self.set_method("nanoTime", "()J", static_method!(nano_time));
+        self.set_method(("nanoTime", "()J"), static_method!(nano_time));
 
         fn identity_hash_code(
             _: RefTo<Class>,
@@ -224,8 +224,7 @@ impl NativeModule for LangSystem {
         }
 
         self.set_method(
-            "identityHashCode",
-            "(Ljava/lang/Object;)I",
+            ("identityHashCode", "(Ljava/lang/Object;)I"),
             static_method!(identity_hash_code),
         );
 
@@ -247,8 +246,7 @@ impl NativeModule for LangSystem {
         }
 
         self.set_method(
-            "setIn0",
-            "(Ljava/io/InputStream;)V",
+            ("setIn0", "(Ljava/io/InputStream;)V"),
             static_method!(set_in0),
         );
 
@@ -270,8 +268,7 @@ impl NativeModule for LangSystem {
         }
 
         self.set_method(
-            "setOut0",
-            "(Ljava/io/PrintStream;)V",
+            ("setOut0", "(Ljava/io/PrintStream;)V"),
             static_method!(set_out0),
         );
 
@@ -293,8 +290,7 @@ impl NativeModule for LangSystem {
         }
 
         self.set_method(
-            "setErr0",
-            "(Ljava/io/PrintStream;)V",
+            ("setErr0", "(Ljava/io/PrintStream;)V"),
             static_method!(set_err0),
         );
 
@@ -411,8 +407,7 @@ impl NativeModule for LangSystem {
         }
 
         self.set_method(
-            "arraycopy",
-            "(Ljava/lang/Object;ILjava/lang/Object;II)V",
+            ("arraycopy", "(Ljava/lang/Object;ILjava/lang/Object;II)V"),
             static_method!(arraycopy),
         );
     }
@@ -424,11 +419,11 @@ impl NativeModule for LangShutdown {
         "java/lang/Shutdown"
     }
 
-    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods(&self) -> &HashMap<MethodDescriptor, NativeFunction> {
         &self.methods
     }
 
-    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods_mut(&mut self) -> &mut HashMap<MethodDescriptor, NativeFunction> {
         &mut self.methods
     }
 
@@ -441,7 +436,7 @@ impl NativeModule for LangShutdown {
             Ok(None)
         }
 
-        self.set_method("beforeHalt", "()V", static_method!(before_halt));
+        self.set_method(("beforeHalt", "()V"), static_method!(before_halt));
 
         fn halt0(
             _: RefTo<Class>,
@@ -456,7 +451,7 @@ impl NativeModule for LangShutdown {
             exit(exit_code.value as i32);
         }
 
-        self.set_method("halt0", "(I)V", static_method!(halt0));
+        self.set_method(("halt0", "(I)V"), static_method!(halt0));
     }
 }
 
@@ -466,11 +461,11 @@ impl NativeModule for LangObject {
         "java/lang/Object"
     }
 
-    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods(&self) -> &HashMap<MethodDescriptor, NativeFunction> {
         &self.methods
     }
 
-    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods_mut(&mut self) -> &mut HashMap<MethodDescriptor, NativeFunction> {
         &mut self.methods
     }
 
@@ -483,7 +478,7 @@ impl NativeModule for LangObject {
             Ok(None)
         }
 
-        self.set_method("notifyAll", "()V", instance_method!(notify_all));
+        self.set_method(("notifyAll", "()V"), instance_method!(notify_all));
 
         fn clone(
             this: RefTo<Object>,
@@ -494,7 +489,7 @@ impl NativeModule for LangObject {
             Ok(Some(RuntimeValue::Object(this.clone())))
         }
 
-        self.set_method("clone", "()Ljava/lang/Object;", instance_method!(clone));
+        self.set_method(("clone", "()Ljava/lang/Object;"), instance_method!(clone));
 
         fn hash_code(
             this: RefTo<Object>,
@@ -507,7 +502,7 @@ impl NativeModule for LangObject {
             Ok(Some(RuntimeValue::Integral(hash.into())))
         }
 
-        self.set_method("hashCode", "()I", instance_method!(hash_code));
+        self.set_method(("hashCode", "()I"), instance_method!(hash_code));
 
         fn get_class(
             this: RefTo<Object>,
@@ -520,8 +515,7 @@ impl NativeModule for LangObject {
         }
 
         self.set_method(
-            "getClass",
-            "()Ljava/lang/Class;",
+            ("getClass", "()Ljava/lang/Class;"),
             instance_method!(get_class),
         );
     }
@@ -533,11 +527,11 @@ impl NativeModule for LangStringUtf16 {
         "java/lang/StringUTF16"
     }
 
-    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods(&self) -> &HashMap<MethodDescriptor, NativeFunction> {
         &self.methods
     }
 
-    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods_mut(&mut self) -> &mut HashMap<MethodDescriptor, NativeFunction> {
         &mut self.methods
     }
 
@@ -551,7 +545,7 @@ impl NativeModule for LangStringUtf16 {
             Ok(Some(RuntimeValue::Integral(TRUE)))
         }
 
-        self.set_method("isBigEndian", "()Z", static_method!(is_big_endian));
+        self.set_method(("isBigEndian", "()Z"), static_method!(is_big_endian));
     }
 }
 
@@ -561,11 +555,11 @@ impl NativeModule for LangString {
         "java/lang/String"
     }
 
-    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods(&self) -> &HashMap<MethodDescriptor, NativeFunction> {
         &self.methods
     }
 
-    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods_mut(&mut self) -> &mut HashMap<MethodDescriptor, NativeFunction> {
         &mut self.methods
     }
 
@@ -582,7 +576,7 @@ impl NativeModule for LangString {
             Ok(Some(RuntimeValue::Object(interned.erase())))
         }
 
-        self.set_method("intern", "()Ljava/lang/String;", instance_method!(intern));
+        self.set_method(("intern", "()Ljava/lang/String;"), instance_method!(intern));
     }
 }
 
@@ -592,11 +586,11 @@ impl NativeModule for LangRuntime {
         "java/lang/Runtime"
     }
 
-    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods(&self) -> &HashMap<MethodDescriptor, NativeFunction> {
         &self.methods
     }
 
-    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods_mut(&mut self) -> &mut HashMap<MethodDescriptor, NativeFunction> {
         &mut self.methods
     }
 
@@ -611,8 +605,7 @@ impl NativeModule for LangRuntime {
         }
 
         self.set_method(
-            "availableProcessors",
-            "()I",
+            ("availableProcessors", "()I"),
             instance_method!(available_processors),
         );
 
@@ -625,7 +618,7 @@ impl NativeModule for LangRuntime {
             Ok(Some(RuntimeValue::Integral(1024_i64.into())))
         }
 
-        self.set_method("maxMemory", "()J", instance_method!(max_memory));
+        self.set_method(("maxMemory", "()J"), instance_method!(max_memory));
 
         fn gc(
             _: RefTo<Object>,
@@ -636,7 +629,7 @@ impl NativeModule for LangRuntime {
             Ok(None)
         }
 
-        self.set_method("gc", "()V", instance_method!(gc));
+        self.set_method(("gc", "()V"), instance_method!(gc));
     }
 }
 
@@ -646,11 +639,11 @@ impl NativeModule for LangStackTraceElement {
         "java/lang/StackTraceElement"
     }
 
-    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods(&self) -> &HashMap<MethodDescriptor, NativeFunction> {
         &self.methods
     }
 
-    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods_mut(&mut self) -> &mut HashMap<MethodDescriptor, NativeFunction> {
         &mut self.methods
     }
 
@@ -664,8 +657,10 @@ impl NativeModule for LangStackTraceElement {
         }
 
         self.set_method(
-            "initStackTraceElements",
-            "([Ljava/lang/StackTraceElement;Ljava/lang/Throwable;)V",
+            (
+                "initStackTraceElements",
+                "([Ljava/lang/StackTraceElement;Ljava/lang/Throwable;)V",
+            ),
             static_method!(init_stack_trace_elements),
         );
     }
@@ -677,11 +672,11 @@ impl NativeModule for LangThrowable {
         "java/lang/Throwable"
     }
 
-    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods(&self) -> &HashMap<MethodDescriptor, NativeFunction> {
         &self.methods
     }
 
-    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods_mut(&mut self) -> &mut HashMap<MethodDescriptor, NativeFunction> {
         &mut self.methods
     }
 
@@ -695,8 +690,7 @@ impl NativeModule for LangThrowable {
         }
 
         self.set_method(
-            "fillInStackTrace",
-            "(I)Ljava/lang/Throwable;",
+            ("fillInStackTrace", "(I)Ljava/lang/Throwable;"),
             instance_method!(fill_in_stack_trace),
         );
     }
@@ -708,11 +702,11 @@ impl NativeModule for LangFloat {
         "java/lang/Float"
     }
 
-    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods(&self) -> &HashMap<MethodDescriptor, NativeFunction> {
         &self.methods
     }
 
-    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods_mut(&mut self) -> &mut HashMap<MethodDescriptor, NativeFunction> {
         &mut self.methods
     }
 
@@ -730,8 +724,7 @@ impl NativeModule for LangFloat {
         }
 
         self.set_method(
-            "floatToRawIntBits",
-            "(F)I",
+            ("floatToRawIntBits", "(F)I"),
             static_method!(float_to_raw_int_bits),
         );
     }
@@ -743,11 +736,11 @@ impl NativeModule for LangDouble {
         "java/lang/Double"
     }
 
-    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods(&self) -> &HashMap<MethodDescriptor, NativeFunction> {
         &self.methods
     }
 
-    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods_mut(&mut self) -> &mut HashMap<MethodDescriptor, NativeFunction> {
         &mut self.methods
     }
 
@@ -765,8 +758,7 @@ impl NativeModule for LangDouble {
         }
 
         self.set_method(
-            "doubleToRawLongBits",
-            "(D)J",
+            ("doubleToRawLongBits", "(D)J"),
             static_method!(double_to_raw_long_bits),
         );
 
@@ -783,8 +775,7 @@ impl NativeModule for LangDouble {
         }
 
         self.set_method(
-            "longBitsToDouble",
-            "(J)D",
+            ("longBitsToDouble", "(J)D"),
             static_method!(long_bits_to_double),
         );
     }
@@ -796,11 +787,11 @@ impl NativeModule for LangThread {
         "java/lang/Thread"
     }
 
-    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods(&self) -> &HashMap<MethodDescriptor, NativeFunction> {
         &self.methods
     }
 
-    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods_mut(&mut self) -> &mut HashMap<MethodDescriptor, NativeFunction> {
         &mut self.methods
     }
 
@@ -813,7 +804,7 @@ impl NativeModule for LangThread {
             Ok(None)
         }
 
-        self.set_method("registerNatives", "()V", static_method!(register_natives));
+        self.set_method(("registerNatives", "()V"), static_method!(register_natives));
 
         fn is_alive(
             _: RefTo<Object>,
@@ -824,7 +815,7 @@ impl NativeModule for LangThread {
             Ok(Some(RuntimeValue::Integral(FALSE)))
         }
 
-        self.set_method("isAlive", "()Z", instance_method!(is_alive));
+        self.set_method(("isAlive", "()Z"), instance_method!(is_alive));
 
         fn start0(
             _: RefTo<Object>,
@@ -835,7 +826,7 @@ impl NativeModule for LangThread {
             Ok(None)
         }
 
-        self.set_method("start0", "()V", instance_method!(start0));
+        self.set_method(("start0", "()V"), instance_method!(start0));
 
         fn set_priority0(
             _: RefTo<Object>,
@@ -846,7 +837,7 @@ impl NativeModule for LangThread {
             Ok(None)
         }
 
-        self.set_method("setPriority0", "(I)V", instance_method!(set_priority0));
+        self.set_method(("setPriority0", "(I)V"), instance_method!(set_priority0));
 
         fn current_thread(
             _: RefTo<Class>,
@@ -858,8 +849,7 @@ impl NativeModule for LangThread {
         }
 
         self.set_method(
-            "currentThread",
-            "()Ljava/lang/Thread;",
+            ("currentThread", "()Ljava/lang/Thread;"),
             static_method!(current_thread),
         );
     }
@@ -871,11 +861,11 @@ impl NativeModule for LangClassLoader {
         "java/lang/ClassLoader"
     }
 
-    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods(&self) -> &HashMap<MethodDescriptor, NativeFunction> {
         &self.methods
     }
 
-    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods_mut(&mut self) -> &mut HashMap<MethodDescriptor, NativeFunction> {
         &mut self.methods
     }
 
@@ -888,6 +878,6 @@ impl NativeModule for LangClassLoader {
             Ok(None)
         }
 
-        self.set_method("registerNatives", "()V", static_method!(register_natives));
+        self.set_method(("registerNatives", "()V"), static_method!(register_natives));
     }
 }

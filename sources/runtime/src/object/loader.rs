@@ -1,6 +1,10 @@
 use std::{alloc::Layout, cell::RefCell, collections::HashMap, fs, path::PathBuf};
 
-use crate::{error::Throwable, internal, internalise, native::{lang::LangObject, NativeModule}};
+use crate::{
+    error::Throwable,
+    internal, internalise,
+    native::{lang::LangObject, NativeModule},
+};
 
 use super::{
     builtins::{Class, Object},

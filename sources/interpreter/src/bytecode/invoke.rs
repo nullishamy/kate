@@ -38,6 +38,7 @@ use parse::{
     flags::{FieldAccessFlag, MethodAccessFlag},
     pool::ConstantEntry,
 };
+use support::types::MethodDescriptor;
 use support::{
     descriptor::{BaseType, FieldType, MethodType},
     encoding::{decode_string, CompactEncoding},
@@ -46,8 +47,8 @@ use tracing::{debug, info};
 
 #[derive(Debug)]
 pub struct InvokeDynamic {
-    pub(crate) index: u16,
-    pub(crate) zeroes: u16,
+    pub(crate) _index: u16,
+    pub(crate) _zeroes: u16,
 }
 
 impl Instruction for InvokeDynamic {
@@ -84,7 +85,7 @@ impl Instruction for InvokeVirtual {
         // the name and descriptor (§4.3.3) of the method or interface method
         // as well as a symbolic reference to the class or interface in which
         // the method or interface method is to be found.
-        let (method_name, method_descriptor, class_name, _) = to_method_info(pool_entry)?;
+        let (method_ty, class_name, _) = to_method_info(pool_entry)?;
 
         // The named method is resolved (§5.4.3.3, §5.4.3.4).
         let class_name_desc = if !class_name.starts_with('[') {
@@ -95,19 +96,14 @@ impl Instruction for InvokeVirtual {
 
         let loaded_class = vm.class_loader().for_name(class_name_desc)?;
 
-        let loaded_method = resolve_class_method(
-            vm,
-            loaded_class.clone(),
-            method_name.clone(),
-            method_descriptor.to_string(),
-        )?;
+        let loaded_method = resolve_class_method(vm, loaded_class.clone(), &method_ty)?;
 
         // If the resolved method is not signature polymorphic (§2.9.3), then
         // the invokevirtual instruction proceeds as follows.
         // TODO: Support signature polymorphic methods
 
         vm.push_frame(Frame {
-            method_name: method_name.clone(),
+            method_name: method_ty.name().clone(),
             class_name,
         });
 
@@ -116,7 +112,7 @@ impl Instruction for InvokeVirtual {
         // NOTE: We must get the args before relative resolution.
         // This is because the `objectref` lives at the "bottom" of the stack,
         // below all of the args.
-        let mut args_for_call = clone_args_from_operands(method_descriptor.clone(), ctx)?;
+        let mut args_for_call = clone_args_from_operands(method_ty.descriptor(), ctx)?;
         let objectref = arg!(ctx, "objectref" => Object);
 
         // Let C be the class of objectref. A method is selected with respect
@@ -124,18 +120,15 @@ impl Instruction for InvokeVirtual {
         let objectclass = objectref
             .to_ref()
             .ok_or(vm.try_make_error(VMError::NullPointerException {
-                ctx: format!("cannot invoke method '{}' on null", &method_name),
+                ctx: format!("cannot invoke method '{}' on null", &method_ty.name()),
             })?)?
             .header()
             .class
             .clone();
 
         let (selected_class, selected_method) =
-            select_method(vm, objectclass, loaded_class, loaded_method)?.ok_or(internal!(
-                "could not resolve method {} {}",
-                method_name,
-                method_descriptor.to_string()
-            ))?;
+            select_method(vm, objectclass, loaded_class, loaded_method)?
+                .ok_or(internal!("could not resolve method {}", method_ty))?;
 
         args_for_call.push(RuntimeValue::Object(objectref));
         args_for_call.reverse();
@@ -182,21 +175,17 @@ impl Instruction for InvokeSpecial {
         // the name and descriptor (§4.3.3) of the method or interface method
         // as well as a symbolic reference to the class or interface in which
         // the method or interface method is to be found.
-        let (method_name, method_descriptor, class_name, _) = to_method_info(pool_entry)?;
+        let (method_ty, class_name, _) = to_method_info(pool_entry)?;
 
         // The named method is resolved (§5.4.3.3, §5.4.3.4).
         let loaded_class = vm
             .class_loader()
             .for_name(format!("L{};", class_name).into())?;
-        let loaded_method = resolve_class_method(
-            vm,
-            loaded_class.clone(),
-            method_name.clone(),
-            method_descriptor.to_string(),
-        )?;
+
+        let loaded_method = resolve_class_method(vm, loaded_class.clone(), &method_ty)?;
 
         vm.push_frame(Frame {
-            method_name: method_name.clone(),
+            method_name: method_ty.name().clone(),
             class_name,
         });
 
@@ -205,18 +194,13 @@ impl Instruction for InvokeSpecial {
         // NOTE: We must get the args before resolution.
         // This is because the `objectref` lives at the "bottom" of the stack,
         // below all of the args.
-        let mut args_for_call = clone_args_from_operands(method_descriptor.clone(), ctx)?;
+        let mut args_for_call = clone_args_from_operands(method_ty.descriptor(), ctx)?;
 
         let objectref = arg!(ctx, "objectref" => Object);
 
         let (selected_class, selected_method) =
-            select_special_method(vm, loaded_class.clone(), loaded_class, loaded_method)?.ok_or(
-                internal!(
-                    "could not resolve special method {} {}",
-                    method_name,
-                    method_descriptor.to_string()
-                ),
-            )?;
+            select_special_method(vm, loaded_class.clone(), loaded_class, loaded_method)?
+                .ok_or(internal!("could not resolve special method {}", method_ty))?;
 
         args_for_call.push(RuntimeValue::Object(objectref));
         args_for_call.reverse();
@@ -262,7 +246,7 @@ impl Instruction for InvokeStatic {
         // the name and descriptor (§4.3.3) of the method or interface method
         // as well as a symbolic reference to the class or interface in which
         // the method or interface method is to be found.
-        let (method_name, method_descriptor, class_name, location) = to_method_info(pool_entry)?;
+        let (method_ty, class_name, location) = to_method_info(pool_entry)?;
 
         // The named method is resolved (§5.4.3.3, §5.4.3.4).
         let loaded_class = vm
@@ -270,26 +254,18 @@ impl Instruction for InvokeStatic {
             .for_name(format!("L{};", class_name).into())?;
 
         let loaded_method = match location {
-            MethodLocation::Interface => resolve_interface_method(
-                vm,
-                loaded_class.clone(),
-                method_name.clone(),
-                method_descriptor.to_string(),
-            ),
-            MethodLocation::Class => resolve_class_method(
-                vm,
-                loaded_class.clone(),
-                method_name.clone(),
-                method_descriptor.to_string(),
-            ),
+            MethodLocation::Interface => {
+                resolve_interface_method(vm, loaded_class.clone(), &method_ty)
+            }
+            MethodLocation::Class => resolve_class_method(vm, loaded_class.clone(), &method_ty),
         }?;
 
         // The resolved method must not be an instance initialization method,
         // or the class or interface initialization method (§2.9.1, §2.9.2).
-        if method_name == "<clinit>" || method_name == "<init>" {
+        if method_ty.name() == "<clinit>" || method_ty.name() == "<init>" {
             return Err(internal!(
                 "cannot call static method {}, it is a class initialisation method",
-                method_name
+                method_ty
             ));
         }
 
@@ -306,13 +282,13 @@ impl Instruction for InvokeStatic {
         // long or double, in local variables 0 and 1) and so on.
 
         vm.push_frame(Frame {
-            method_name,
+            method_name: method_ty.name().clone(),
             class_name,
         });
 
         debug!("Invoking: {:#?}", vm.frames().last());
 
-        let mut args_for_call = clone_args_from_operands(method_descriptor, ctx)?;
+        let mut args_for_call = clone_args_from_operands(method_ty.descriptor(), ctx)?;
         args_for_call.reverse();
 
         let exec_result = do_call(vm, loaded_method, loaded_class, args_for_call)?;
@@ -363,32 +339,27 @@ impl Instruction for InvokeInterface {
         // the name and descriptor (§4.3.3) of the method or interface method
         // as well as a symbolic reference to the class or interface in which
         // the method or interface method is to be found.
-        let (method_name, method_descriptor, class_name, _) = to_method_info(pool_entry)?;
+        let (method_ty, class_name, _) = to_method_info(pool_entry)?;
 
         // The named method is resolved (§5.4.3.3, §5.4.3.4).
         let loaded_class = vm
             .class_loader()
             .for_name(format!("L{};", class_name).into())?;
-        let loaded_method = resolve_interface_method(
-            vm,
-            loaded_class.clone(),
-            method_name.clone(),
-            method_descriptor.to_string(),
-        )?;
+        let loaded_method = resolve_interface_method(vm, loaded_class.clone(), &method_ty)?;
 
         // The resolved method must not be an instance initialization method,
         // or the class or interface initialization method (§2.9.1, §2.9.2).
-        if method_name == "<clinit>" || method_name == "<init>" {
+        if method_ty.name() == "<clinit>" || method_ty.name() == "<init>" {
             return Err(internal!(
                 "cannot call interface method {}, it is a class initialisation method",
-                method_name
+                method_ty
             ));
         }
 
         // NOTE: We must get the args before relative resolution.
         // This is because the `objectref` lives at the "bottom" of the stack,
         // below all of the args.
-        let mut args_for_call = clone_args_from_operands(method_descriptor.clone(), ctx)?;
+        let mut args_for_call = clone_args_from_operands(method_ty.descriptor(), ctx)?;
         let objectref = arg!(ctx, "objectref" => Object);
 
         // Let C be the class of objectref. A method is selected with respect
@@ -396,14 +367,11 @@ impl Instruction for InvokeInterface {
         let objectclass = objectref.unwrap_ref().header().class.clone();
 
         let (selected_class, selected_method) =
-            select_method(vm, objectclass, loaded_class, loaded_method)?.ok_or(internal!(
-                "could not resolve method {} {}",
-                method_name,
-                method_descriptor.to_string()
-            ))?;
+            select_method(vm, objectclass, loaded_class, loaded_method)?
+                .ok_or(internal!("could not resolve method {}", method_ty))?;
 
         vm.push_frame(Frame {
-            method_name,
+            method_name: method_ty.name().clone(),
             class_name,
         });
 
@@ -428,8 +396,7 @@ impl Instruction for InvokeInterface {
 fn resolve_class_method(
     vm: &mut Interpreter,
     class: RefTo<Class>,
-    method_name: String,
-    method_descriptor: String,
+    method_ty: &MethodDescriptor,
 ) -> Result<Method, Throwable> {
     // To resolve an unresolved symbolic reference from D to a method in a class C, the
     // symbolic reference to C given by the method reference is first resolved (§5.4.3.1).
@@ -455,7 +422,7 @@ fn resolve_class_method(
         .unwrap_ref()
         .class_file()
         .methods
-        .locate(method_name.clone(), method_descriptor.clone())
+        .locate(method_ty)
         .cloned();
 
     if let Some(class_method) = class_method {
@@ -470,7 +437,7 @@ fn resolve_class_method(
             .class_loader()
             .for_name(format!("L{};", class_name).into())?;
 
-        return resolve_class_method(vm, super_class, method_name, method_descriptor);
+        return resolve_class_method(vm, super_class, method_ty);
     }
 
     // Otherwise, method resolution attempts to locate the referenced method in the
@@ -489,9 +456,8 @@ fn resolve_class_method(
     // • Otherwise, method lookup fails.
 
     Err(internal!(
-        "could not resolve method {} ({}) in {}",
-        method_name,
-        method_descriptor,
+        "could not resolve method {} in {}",
+        method_ty,
         class.unwrap_ref().name()
     ))
 }
@@ -499,8 +465,7 @@ fn resolve_class_method(
 fn resolve_interface_method(
     vm: &mut Interpreter,
     class: RefTo<Class>,
-    method_name: String,
-    method_descriptor: String,
+    method_ty: &MethodDescriptor,
 ) -> Result<Method, Throwable> {
     // To resolve an unresolved symbolic reference from D to an interface method in an
     // interface C, the symbolic reference to C given by the interface method reference is first resolved (§5.4.3.1)
@@ -517,7 +482,7 @@ fn resolve_interface_method(
         .unwrap_ref()
         .class_file()
         .methods
-        .locate(method_name.clone(), method_descriptor.clone())
+        .locate(method_ty)
         .cloned();
 
     if let Some(own_method) = own_method {
@@ -534,7 +499,7 @@ fn resolve_interface_method(
             .class_loader()
             .for_name(format!("L{};", class_name).into())?;
 
-        return resolve_interface_method(vm, super_class, method_name, method_descriptor);
+        return resolve_interface_method(vm, super_class, method_ty);
     }
 
     // 4. Otherwise, if the maximally-specific superinterface methods (§5.4.3.3) of C
@@ -552,9 +517,8 @@ fn resolve_interface_method(
     // • Otherwise, method lookup fails.
 
     Err(internal!(
-        "could not resolve method {} ({}) in {}",
-        method_name,
-        method_descriptor,
+        "could not resolve method {} in {}",
+        method_ty,
         class.unwrap_ref().name()
     ))
 }
@@ -565,10 +529,12 @@ fn select_special_method(
     declared_class: RefTo<Class>,
     method: Method,
 ) -> Result<Option<(RefTo<Class>, Method)>, Throwable> {
-    let (method_name, method_descriptor) = (
+    let method_ty: MethodDescriptor = (
         method.name.resolve().try_string()?,
         method.descriptor.resolve().try_string()?,
-    );
+    )
+        .try_into()
+        .unwrap();
 
     // Let C be the class or interface named by the symbolic reference.
 
@@ -579,7 +545,7 @@ fn select_special_method(
         .unwrap_ref()
         .class_file()
         .methods
-        .locate(method_name.clone(), method_descriptor.clone())
+        .locate(&method_ty)
         .cloned();
 
     if let Some(instance_method) = instance_method {
@@ -628,10 +594,12 @@ fn select_method(
     // method that was previously resolved by the instruction. The rules to select a method
     // with respect to a class or interface C and a method mR are as follows:
 
-    let (method_name, method_descriptor) = (
+    let method_ty: MethodDescriptor = (
         method.name.resolve().try_string()?,
         method.descriptor.resolve().try_string()?,
-    );
+    )
+        .try_into()
+        .unwrap();
 
     // 1. If mR is marked ACC_PRIVATE, then it is the selected method.
     if method.flags.has(MethodAccessFlag::PRIVATE) {
@@ -639,7 +607,7 @@ fn select_method(
             .unwrap_ref()
             .class_file()
             .methods
-            .locate(method_name, method_descriptor)
+            .locate(&method_ty)
             .cloned()
             .ok_or(internal!("could not resolve method"))?;
 
@@ -652,7 +620,7 @@ fn select_method(
         .unwrap_ref()
         .class_file()
         .methods
-        .locate(method_name.clone(), method_descriptor.clone())
+        .locate(&method_ty)
         .cloned();
 
     if let Some(instance_method) = instance_method {
@@ -831,7 +799,7 @@ enum MethodLocation {
 
 fn to_method_info(
     pool_entry: ConstantEntry,
-) -> Result<(String, MethodType, String, MethodLocation), Throwable> {
+) -> Result<(MethodDescriptor, String, MethodLocation), Throwable> {
     match pool_entry {
         ConstantEntry::Method(data) => {
             let name_and_type = data.name_and_type.resolve();
@@ -843,7 +811,11 @@ fn to_method_info(
             let class = data.class.resolve();
             let class = class.name.resolve().try_string()?;
 
-            Ok((method_name, method_descriptor, class, MethodLocation::Class))
+            Ok((
+                MethodDescriptor::new(method_name, method_descriptor),
+                class,
+                MethodLocation::Class,
+            ))
         }
         ConstantEntry::InterfaceMethod(data) => {
             let name_and_type = data.name_and_type.resolve();
@@ -856,8 +828,7 @@ fn to_method_info(
             let class = class.name.resolve().try_string()?;
 
             Ok((
-                method_name,
-                method_descriptor,
+                MethodDescriptor::new(method_name, method_descriptor),
                 class,
                 MethodLocation::Interface,
             ))
@@ -870,7 +841,7 @@ fn to_method_info(
 }
 
 fn clone_args_from_operands(
-    descriptor: MethodType,
+    descriptor: &MethodType,
     ctx: &mut Context,
 ) -> Result<Vec<RuntimeValue>, Throwable> {
     let mut reversed_descriptor = descriptor.clone();
@@ -978,7 +949,11 @@ fn do_call(
 
         let mut module = module.borrow_mut();
         let lookup = module
-            .get_method((method_name.clone(), method_descriptor.clone()))
+            .get_method(
+                (method_name.clone(), method_descriptor.clone())
+                    .try_into()
+                    .unwrap(),
+            )
             .ok_or(internal!(
                 "no native method {} {:?} {} / {}",
                 class.unwrap_ref().name(),
@@ -1019,10 +994,7 @@ impl Instruction for Athrow {
         let class_name = class.unwrap_ref().name();
 
         let message: FieldRef<RefTo<Object>> = throwable
-            .field((
-                "detailMessage".to_string(),
-                "Ljava/lang/String;".to_string(),
-            ))
+            .field(&("detailMessage", "Ljava/lang/String;").try_into().unwrap())
             .unwrap();
 
         let message = message.unwrap_ref();

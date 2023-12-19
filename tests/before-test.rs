@@ -1,4 +1,4 @@
-use std::{path::PathBuf, process::Command, env::args};
+use std::{env::args, path::PathBuf, process::Command};
 
 pub const SOURCE_DIR: &str = env!("CARGO_MANIFEST_DIR");
 
@@ -14,7 +14,8 @@ fn main() {
         .arg("-d")
         .arg(&tmp_dir)
         .arg(include_dir.join("kate/Util.java"))
-        .output().unwrap();
+        .output()
+        .unwrap();
 
     if !compilation.status.success() {
         let stderr = String::from_utf8(compilation.stderr).unwrap();

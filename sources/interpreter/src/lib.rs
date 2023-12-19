@@ -2,7 +2,10 @@
 #![feature(offset_of)]
 #![allow(clippy::new_without_default)]
 
-use std::{cell::RefCell, ops::{Deref, DerefMut}};
+use std::{
+    cell::RefCell,
+    ops::{Deref, DerefMut},
+};
 
 use bytecode::decode_instruction;
 use bytes::BytesMut;
@@ -11,7 +14,12 @@ use parse::attributes::CodeAttribute;
 
 use runtime::{
     error::{Frame, Throwable, ThrownState, VMError},
-    object::{builtins::{Class, BuiltinThread, Object, BuiltinThreadGroup}, mem::RefTo, value::RuntimeValue, interner::intern_string},
+    object::{
+        builtins::{BuiltinThread, BuiltinThreadGroup, Class, Object},
+        interner::intern_string,
+        mem::RefTo,
+        value::RuntimeValue,
+    },
     vm::VM,
 };
 use tracing::{debug, info, trace};
@@ -73,8 +81,24 @@ impl Interpreter {
             return Err(self
                 .vm
                 .try_make_error(VMError::StackOverflowError {})
-                .map_err(|e| (e, ThrownState { pc: ctx.pc, locals: ctx.locals.clone() }))
-                .map(|e| (e, ThrownState { pc: ctx.pc, locals: ctx.locals.clone() }))?);
+                .map_err(|e| {
+                    (
+                        e,
+                        ThrownState {
+                            pc: ctx.pc,
+                            locals: ctx.locals.clone(),
+                        },
+                    )
+                })
+                .map(|e| {
+                    (
+                        e,
+                        ThrownState {
+                            pc: ctx.pc,
+                            locals: ctx.locals.clone(),
+                        },
+                    )
+                })?);
         }
 
         while ctx.pc < ctx.code.code.len() as i32 {
@@ -87,8 +111,16 @@ impl Interpreter {
             let mut instruction_bytes = BytesMut::new();
             instruction_bytes.extend_from_slice(slice);
 
-            let instruction = decode_instruction(self, &mut instruction_bytes, &ctx)
-                .map_err(|e| (e, ThrownState { pc: ctx.pc, locals: ctx.locals.clone() }))?;
+            let instruction =
+                decode_instruction(self, &mut instruction_bytes, &ctx).map_err(|e| {
+                    (
+                        e,
+                        ThrownState {
+                            pc: ctx.pc,
+                            locals: ctx.locals.clone(),
+                        },
+                    )
+                })?;
 
             let consumed_bytes_post = instruction_bytes.len();
             let bytes_consumed_by_opcode = (consumed_bytes_prev - consumed_bytes_post) as i32;
@@ -98,9 +130,15 @@ impl Interpreter {
                 bytes_consumed_by_opcode
             );
 
-            let progression = instruction
-                .handle(self, &mut ctx)
-                .map_err(|e| (e, ThrownState { pc: ctx.pc, locals: ctx.locals.clone() }))?;
+            let progression = instruction.handle(self, &mut ctx).map_err(|e| {
+                (
+                    e,
+                    ThrownState {
+                        pc: ctx.pc,
+                        locals: ctx.locals.clone(),
+                    },
+                )
+            })?;
 
             match progression {
                 bytecode::Progression::JumpAbs(new_pc) => {
@@ -129,7 +167,13 @@ impl Interpreter {
                 }
                 bytecode::Progression::Throw(err) => {
                     info!("Throwing {}", err);
-                    return Err((err, ThrownState { pc: ctx.pc, locals: ctx.locals.clone() }));
+                    return Err((
+                        err,
+                        ThrownState {
+                            pc: ctx.pc,
+                            locals: ctx.locals.clone(),
+                        },
+                    ));
                 }
             };
         }
@@ -153,7 +197,7 @@ impl Interpreter {
             .unwrap_ref()
             .class_file()
             .methods
-            .locate("<clinit>".to_string(), "()V".to_string())
+            .locate(&("<clinit>", "()V").try_into().unwrap())
             .cloned();
 
         if let Some(clinit) = clinit {

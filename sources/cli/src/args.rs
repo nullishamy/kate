@@ -68,7 +68,9 @@ impl Cli {
     }
 
     pub fn has_option_value(&self, key: &str, value: &str) -> bool {
-        self.options.iter().any(|o| o.key == key && o.value == value)
+        self.options
+            .iter()
+            .any(|o| o.key == key && o.value == value)
     }
 }
 

@@ -1,27 +1,27 @@
 use std::collections::HashMap;
 
+use support::types::MethodDescriptor;
+
 use crate::{
-    error::Throwable, module_base,
-    object::{
-        builtins::Class,
-        mem::RefTo,
-        value::RuntimeValue,
-    },
-    static_method, vm::VM,
+    error::Throwable,
+    module_base,
+    object::{builtins::Class, mem::RefTo, value::RuntimeValue},
+    static_method,
+    vm::VM,
 };
 
-use super::{NameAndDescriptor, NativeFunction, NativeModule};
+use super::{NativeFunction, NativeModule};
 module_base!(SecurityAccessController);
 impl NativeModule for SecurityAccessController {
     fn classname(&self) -> &'static str {
         "java/security/AccessController"
     }
 
-    fn methods(&self) -> &HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods(&self) -> &HashMap<MethodDescriptor, NativeFunction> {
         &self.methods
     }
 
-    fn methods_mut(&mut self) -> &mut HashMap<NameAndDescriptor, NativeFunction> {
+    fn methods_mut(&mut self) -> &mut HashMap<MethodDescriptor, NativeFunction> {
         &mut self.methods
     }
 
@@ -36,8 +36,10 @@ impl NativeModule for SecurityAccessController {
         }
 
         self.set_method(
-            "getStackAccessControlContext",
-            "()Ljava/security/AccessControlContext;",
+            (
+                "getStackAccessControlContext",
+                "()Ljava/security/AccessControlContext;",
+            ),
             static_method!(get_stack_access_control_context),
         );
     }

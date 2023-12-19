@@ -202,8 +202,7 @@ impl Instruction for ANewArray {
                     format!("[L{};", class_name)
                 };
 
-                vm.class_loader()
-                    .for_name(class_name.into())?
+                vm.class_loader().for_name(class_name.into())?
             }
             e => return Err(internal!("{:#?} cannot be used as an array type", e)),
         };
