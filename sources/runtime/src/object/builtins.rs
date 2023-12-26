@@ -569,6 +569,10 @@ impl<T> HasObjectHeader<Array<T>> for Array<T> {
     fn header(&self) -> &Object {
         &self.object
     }
+
+    fn type_name() -> &'static str {
+        "array"
+    }
 }
 
 impl HasObjectHeader<Class> for Class {
@@ -578,6 +582,10 @@ impl HasObjectHeader<Class> for Class {
 
     fn header(&self) -> &Object {
         &self.object
+    }
+
+    fn type_name() -> &'static str {
+        "java/lang/Class"
     }
 }
 
@@ -589,6 +597,10 @@ impl HasObjectHeader<BuiltinString> for BuiltinString {
     fn header(&self) -> &Object {
         &self.object
     }
+
+    fn type_name() -> &'static str {
+        "java/lang/String"
+    }
 }
 
 impl HasObjectHeader<Object> for Object {
@@ -598,6 +610,10 @@ impl HasObjectHeader<Object> for Object {
 
     fn header(&self) -> &Object {
         self
+    }
+
+    fn type_name() -> &'static str {
+        "java/lang/Object"
     }
 }
 
@@ -637,6 +653,10 @@ impl HasObjectHeader<BuiltinThread> for BuiltinThread {
     fn header_mut(&mut self) -> &mut Object {
         &mut self.object
     }
+
+    fn type_name() -> &'static str {
+        "java/lang/Thread"
+    }
 }
 #[repr(C)]
 #[derive(Debug)]
@@ -664,5 +684,9 @@ impl HasObjectHeader<BuiltinThreadGroup> for BuiltinThreadGroup {
 
     fn header_mut(&mut self) -> &mut Object {
         &mut self.object
+    }
+
+    fn type_name() -> &'static str {
+        "java/lang/ThreadGroup"
     }
 }

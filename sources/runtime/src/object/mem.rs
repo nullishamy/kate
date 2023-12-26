@@ -89,6 +89,8 @@ pub struct RefTo<T: HasObjectHeader<T>> {
     phantom: PhantomData<T>,
 }
 
+unsafe impl <T : HasObjectHeader<T>> Send for RefTo<T> {}
+
 impl<T: HasObjectHeader<T>> PartialEq for RefTo<T> {
     fn eq(&self, other: &Self) -> bool {
         self.object == other.object
@@ -100,6 +102,7 @@ impl<T: HasObjectHeader<T>> Eq for RefTo<T> {}
 pub trait HasObjectHeader<T> {
     fn header(&self) -> &Object;
     fn header_mut(&mut self) -> &mut Object;
+    fn type_name() -> &'static str;
 }
 
 impl<T: HasObjectHeader<T> + Copy> RefTo<T> {
@@ -167,10 +170,55 @@ impl<T: HasObjectHeader<T>> RefTo<T> {
     /// ## Safety
     ///
     /// Caller must ensure object is of this type
+    #[track_caller]
     pub unsafe fn cast<U: HasObjectHeader<U>>(&self) -> RefTo<U> {
-        RefTo {
-            object: self.object,
-            phantom: PhantomData,
+        if let Some(obj) = self.to_ref() {
+            // Type name must exactly match for builtins, for now. We don't want to deal with subclassing layout nonsense
+            let to_type_name = &U::type_name().to_string();
+
+            let from_cls = obj.header().class();
+
+            // FIXME: Not sure if this is the right path if we cannot determine a source class? 
+            if from_cls.is_null() {
+                return RefTo {
+                    object: self.object,
+                    phantom: PhantomData,
+                }
+            }
+
+            let from_type_name = from_cls.unwrap_ref().name();
+
+            // TODO: Type check array components
+            if to_type_name == "array" {
+                if !from_cls.unwrap_ref().is_array() {
+                    panic!(
+                        "attempted to cast non array type {} to array",
+                        from_type_name
+                    );
+                } else {
+                    return RefTo {
+                        object: self.object,
+                        phantom: PhantomData,
+                    }
+                }
+            }
+
+            if to_type_name != from_type_name {
+                panic!(
+                    "attempted invalid cast from {} to {}",
+                    from_type_name, to_type_name
+                );
+            }
+
+            RefTo {
+                object: self.object,
+                phantom: PhantomData,
+            }
+        } else {
+            RefTo {
+                object: self.object,
+                phantom: PhantomData,
+            }
         }
     }
 

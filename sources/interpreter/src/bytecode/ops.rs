@@ -113,7 +113,6 @@ macro_rules! arg {
             .as_object()
             .context(format!("{} was not an object", $side))?;
 
-        // Safety: We have checked the type.
         unsafe { val.cast::<Array<$comp>>().clone() }
     }};
 }

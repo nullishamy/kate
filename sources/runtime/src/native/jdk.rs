@@ -252,12 +252,13 @@ impl NativeModule for JdkSystemPropsRaw {
         fn vm_properties(
             _: RefTo<Class>,
             _: Vec<RuntimeValue>,
-            _: &mut VM,
+            vm: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
             // TODO: Populate these properly
 
+            let array_ty = vm.class_loader().for_name("[Ljava/lang/String;".try_into().unwrap())?;
             let array: RefTo<Array<RefTo<BuiltinString>>> = Array::from_vec(
-                interner_meta_class(),
+                array_ty,
                 vec![
                     intern_string("java.home".to_string())?,
                     intern_string("unknown".to_string())?,
@@ -301,8 +302,9 @@ impl NativeModule for JdkSystemPropsRaw {
             arr[fields::FILE_ENCODING_NDX] = intern_string("UTF-8".to_string())?;
             arr[fields::SUN_JNU_ENCODING_NDX] = intern_string("UTF-8".to_string())?;
 
+            let array_ty = vm.class_loader().for_name("[Ljava/lang/String;".try_into().unwrap())?;
             let array: RefTo<Array<RefTo<BuiltinString>>> = Array::from_vec(
-                vm.class_loader().for_name("[Ljava/lang/String;".into())?,
+                array_ty,
                 arr,
             );
 

@@ -1,4 +1,8 @@
-use std::{cell::RefCell, process::exit};
+use std::{
+    cell::RefCell,
+    panic::{catch_unwind, AssertUnwindSafe},
+    process::exit,
+};
 
 use anyhow::anyhow;
 use args::Cli;
@@ -306,42 +310,60 @@ fn main() {
     info!("Bootstrap complete");
 
     for class_name in &args.classes {
-        let cls = vm
-            .class_loader()
-            .for_name(format!("L{};", class_name).into())
-            .unwrap();
+        // FIXME: When we introduce threading this assertion will not hold :^)
+        let res = catch_unwind(AssertUnwindSafe(|| {
+            let cls = vm
+                .class_loader()
+                .for_name(format!("L{};", class_name).into())
+                .unwrap();
 
-        if args.has_option(opts::TEST_BOOT) {
-            boot_system(&mut vm, cls.clone());
+            if args.has_option(opts::TEST_BOOT) {
+                boot_system(&mut vm, cls.clone());
+            }
+
+            let string_array_ty = vm
+                .class_loader()
+                .for_name("[Ljava/lang/String;".into())
+                .unwrap();
+
+            let cli_args = args
+                .extras
+                .iter()
+                .map(|s| intern_string(s.to_string()))
+                .collect::<Result<_, Throwable>>()
+                .unwrap();
+
+            let cli_args: RefTo<Array<RefTo<BuiltinString>>> =
+                Array::from_vec(string_array_ty, cli_args);
+
+            let main_ty: MethodDescriptor = ("main", "([Ljava/lang/String;)V").try_into().unwrap();
+            let mut ctx = Context::for_method(&main_ty, cls.clone());
+
+            ctx.set_locals(vec![RuntimeValue::Object(cli_args.erase())]);
+
+            info!("Entering main");
+
+            vm.push_frame(Frame {
+                class_name: cls.unwrap_ref().name().to_string(),
+                method_name: "main".to_string(),
+            });
+
+            run_method(&mut vm, ctx, &args);
+        }));
+
+        if let Err(err) = res {
+            println!("/----------------------------------------------------------\\");
+            println!("|The VM encountered an unrecoverable error and had to abort.|");
+            println!("\\----------------------------------------------------------/");
+            println!("Uncaught panic in main: {:#?}", err);
+
+            for source in vm.frames().iter().rev() {
+                println!("  {}", source);
+            }
+
+            exit(1);
+        } else {
+            info!("Execution concluded without error")
         }
-
-        let string_array_ty = vm
-            .class_loader()
-            .for_name("[Ljava/lang/String;".into())
-            .unwrap();
-
-        let cli_args = args
-            .extras
-            .iter()
-            .map(|s| intern_string(s.to_string()))
-            .collect::<Result<_, Throwable>>()
-            .unwrap();
-
-        let cli_args: RefTo<Array<RefTo<BuiltinString>>> =
-            Array::from_vec(string_array_ty, cli_args);
-
-        let main_ty: MethodDescriptor = ("main", "([Ljava/lang/String;)V").try_into().unwrap();
-        let mut ctx = Context::for_method(&main_ty, cls.clone());
-
-        ctx.set_locals(vec![RuntimeValue::Object(cli_args.erase())]);
-
-        info!("Entering main");
-
-        vm.push_frame(Frame {
-            class_name: cls.unwrap_ref().name().to_string(),
-            method_name: "main".to_string(),
-        });
-
-        run_method(&mut vm, ctx, &args);
     }
 }
