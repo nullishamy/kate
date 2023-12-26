@@ -39,7 +39,7 @@ impl<T> FieldRef<T> {
     pub fn write(&self, value: T) {
         assert!(!self.object.is_null(), "cannot write to null");
         let object = self.object().unwrap();
-        let _field_lock = object.field_lock.write();
+        let _field_lock = object.lock.write();
 
         let offset = self.field.offset;
         let data_ptr = unsafe { self.object.byte_add(offset).cast::<T>() };

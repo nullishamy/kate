@@ -17,7 +17,7 @@ pub fn is_empty() -> TestResult {
 }
 
 #[test]
-#[ignore = "broken, throws assertion errors in j.l.CharacterData00.<clinit>. the string length is wrong. see also comments in class"]
+#[ignore = "broken, throws assertion errors in j.l.CharacterData00.<clinit>. the string length is wrong. see also comments in test class"]
 pub fn is_blank() -> TestResult {
     let state = state().init().init_std();
 

@@ -105,13 +105,13 @@ impl NativeModule for IOFileOutputStream {
         ) -> Result<Option<RuntimeValue>, Throwable> {
             let fd = {
                 let field: FieldRef<RefTo<Object>> = this
-                    .unwrap_mut()
+                    .unwrap_ref()
                     .field(&("fd", "Ljava/io/FileDescriptor;").try_into().unwrap())
                     .unwrap();
 
                 let fd_obj = field.unwrap_ref();
                 let fd_int: FieldRef<Int> = fd_obj
-                    .unwrap_mut()
+                    .unwrap_ref()
                     .field(&("fd", "I").try_into().unwrap())
                     .unwrap();
 
@@ -199,13 +199,13 @@ lazy_static::lazy_static! {
 
 fn get_fd(this: &RefTo<Object>) -> FieldRef<Int> {
     let field: FieldRef<RefTo<Object>> = this
-        .unwrap_mut()
+        .unwrap_ref()
         .field(&("fd", "Ljava/io/FileDescriptor;").try_into().unwrap())
         .unwrap();
 
     let fd_obj = field.unwrap_ref();
     let fd_int: FieldRef<Int> = fd_obj
-        .unwrap_mut()
+        .unwrap_ref()
         .field(&("fd", "I").try_into().unwrap())
         .unwrap();
 

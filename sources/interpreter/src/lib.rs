@@ -22,6 +22,7 @@ use runtime::{
     },
     vm::VM,
 };
+use support::types::MethodDescriptor;
 use tracing::{debug, info, trace};
 
 pub mod bytecode;
@@ -34,6 +35,31 @@ pub struct Context {
     pub is_reentry: bool,
     pub operands: Vec<RuntimeValue>,
     pub locals: Vec<RuntimeValue>,
+}
+
+impl Context {
+    pub fn for_method(descriptor: &MethodDescriptor, class: RefTo<Class>) -> Self {
+        let class_file = class.unwrap_ref().class_file();
+        let method = class_file.methods.locate(descriptor).unwrap();
+
+        let code = method
+            .attributes
+            .known_attribute::<CodeAttribute>(&class_file.constant_pool)
+            .unwrap();
+
+        Self {
+            class,
+            code,
+            pc: 0,
+            is_reentry: false,
+            operands: vec![],
+            locals: vec![],
+        }
+    }
+
+    pub fn set_locals(&mut self, args: Vec<RuntimeValue>) {
+        self.locals = args;
+    }
 }
 
 pub struct BootOptions {

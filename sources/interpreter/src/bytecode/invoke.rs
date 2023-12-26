@@ -777,7 +777,7 @@ impl Instruction for New {
         unsafe {
             (*ptr).class = object_ty.clone();
             (*ptr).ref_count = AtomicU64::new(0);
-            (*ptr).field_lock = RwLock::new(());
+            (*ptr).lock = RwLock::new(());
             (*ptr).super_class = super_class;
         }
 

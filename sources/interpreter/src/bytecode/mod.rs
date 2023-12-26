@@ -30,10 +30,12 @@ pub trait Instruction: fmt::Debug {
 }
 
 /// Utility to box a value. Used below to box each instruction that we decode
+#[inline(always)]
 fn b<T>(v: T) -> Box<T> {
     Box::new(v)
 }
 
+#[inline(always)]
 pub fn decode_instruction(
     vm: &mut Interpreter,
     bytes: &mut BytesMut,

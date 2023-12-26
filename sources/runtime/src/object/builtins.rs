@@ -32,7 +32,7 @@ pub struct Object {
     pub class: RefTo<Class>,
     pub super_class: RefTo<Class>,
     pub ref_count: AtomicU64,
-    pub field_lock: RwLock<()>,
+    pub lock: RwLock<()>,
 }
 
 impl Object {
@@ -41,7 +41,7 @@ impl Object {
             class,
             super_class,
             ref_count: AtomicU64::new(0),
-            field_lock: RwLock::new(()),
+            lock: RwLock::new(()),
         }
     }
 
