@@ -1,6 +1,6 @@
 use std::{
     cell::RefCell,
-    panic::{self, catch_unwind, AssertUnwindSafe},
+    panic::{self, AssertUnwindSafe},
     process::exit,
 };
 
@@ -9,7 +9,7 @@ use args::Cli;
 use clap::Parser;
 
 use interpreter::{Context, Interpreter};
-use parse::{attributes::CodeAttribute, classfile::Method};
+use parse::attributes::CodeAttribute;
 use runtime::{
     error::{Frame, Throwable, ThrownState},
     native::{DefaultNativeModule, NativeFunction},

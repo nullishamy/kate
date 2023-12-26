@@ -7,7 +7,7 @@ use crate::{
     instance_method, module_base,
     object::{
         builtins::{Array, BuiltinString, Class, Object},
-        interner::{intern_string, interner_meta_class},
+        interner::intern_string,
         layout::types,
         mem::RefTo,
         numeric::FALSE,
