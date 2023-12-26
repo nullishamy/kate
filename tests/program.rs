@@ -134,6 +134,44 @@ mod system {
 
         Ok(())
     }
+
+    #[test]
+    pub fn internal_panic() -> TestResult {
+        let state = state().init().opt("test.panicinternal", "true");
+
+        let source = using_main(
+            "PanicError",
+            r#"
+                assertNotReached();
+            "#,
+        );
+
+        let got = execute(state, inline(source)?)?;
+        // Yes this is brittle but the panic logs need to be improved first
+        let expected = expected()
+            .with_exit(1)
+            .with_output("/----------------------------------------------------------\\")
+            .with_output("|The VM encountered an unrecoverable error and had to abort.|")
+            .with_output("\\----------------------------------------------------------/")
+            .with_output("Uncaught panic in main: PanicInfo {")
+            .with_output("    payload: Any { .. },")
+            .with_output("    message: Some(")
+            .with_output("        Internal errors!,")
+            .with_output("    ),")
+            .with_output("    location: Location {")
+            .with_output(r#"        file: "sources/cli/src/main.rs","#)
+            .with_output("        line: 324,")
+            .with_output("        col: 17,")
+            .with_output("    },")
+            .with_output("    can_unwind: true,")
+            .with_output("    force_no_backtrace: false,")
+            .with_output("}")
+            .with_output("Java callstack:");
+
+        compare(got, expected);
+
+        Ok(())
+    }
 }
 
 mod io {

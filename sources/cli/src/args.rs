@@ -25,10 +25,17 @@ impl FromStr for VmOption {
 
 // Known vm option keys go here. Allows easy renaming & stops typos.
 pub mod opts {
-    pub const TEST_INIT: &str = "test.init";
-    pub const TEST_BOOT: &str = "test.boot";
-    pub const TEST_THROW_INTERNAL: &str = "test.throwinternal";
-    pub const MAX_STACK: &str = "vm.maxstack";
+    pub mod test {
+        pub const INIT: &str = "test.init";
+        pub const BOOT: &str = "test.boot";
+        pub const THROW_INTERNAL: &str = "test.throwinternal";
+        pub const PANIC_INTERNAL: &str = "test.panicinternal";
+    }
+
+    pub mod vm {
+        pub const MAX_STACK: &str = "vm.maxstack";
+    }
+
 }
 
 #[derive(Parser)]

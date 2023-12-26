@@ -1,6 +1,6 @@
 use std::{
     cell::RefCell,
-    panic::{catch_unwind, AssertUnwindSafe},
+    panic::{self, catch_unwind, AssertUnwindSafe},
     process::exit,
 };
 
@@ -187,7 +187,7 @@ fn run_method(vm: &mut Interpreter, ctx: Context, args: &Cli) {
     let code = ctx.code.clone();
     let cls = ctx.class.clone();
 
-    let res = if args.has_option(opts::TEST_THROW_INTERNAL) {
+    let res = if args.has_option(opts::test::THROW_INTERNAL) {
         Err((
             Throwable::Internal(anyhow!("testing, internal errors")),
             ThrownState {
@@ -252,7 +252,7 @@ fn main() {
         .with_source_location(true)
         .compact();
 
-    if args.has_option(opts::TEST_INIT) {
+    if args.has_option(opts::test::INIT) {
         format = format.with_ansi(false).with_source_location(false);
     }
 
@@ -280,7 +280,7 @@ fn main() {
     }
 
     // Init the natives that we declare in kate/Util
-    if args.has_option(opts::TEST_INIT) {
+    if args.has_option(opts::test::INIT) {
         let kate_util = class_loader.for_name("Lkate/Util;".into()).unwrap();
         test_init(kate_util)
     }
@@ -296,7 +296,7 @@ fn main() {
     set_interner(interner);
 
     let max_stack = args
-        .get_option(opts::MAX_STACK)
+        .get_option(opts::vm::MAX_STACK)
         .and_then(|f| f.parse::<u64>().ok())
         .unwrap_or(128);
 
@@ -309,15 +309,27 @@ fn main() {
 
     info!("Bootstrap complete");
 
+    panic::set_hook(Box::new(|info| {
+        println!("/----------------------------------------------------------\\");
+        println!("|The VM encountered an unrecoverable error and had to abort.|");
+        println!("\\----------------------------------------------------------/");
+        println!("Uncaught panic in main: {:#?}", info);
+    }));
+
     for class_name in &args.classes {
         // FIXME: When we introduce threading this assertion will not hold :^)
-        let res = catch_unwind(AssertUnwindSafe(|| {
+
+        let res = panic::catch_unwind(AssertUnwindSafe(|| {
+            if args.has_option(opts::test::PANIC_INTERNAL) {
+                panic!("Internal errors!");
+            }
+
             let cls = vm
                 .class_loader()
                 .for_name(format!("L{};", class_name).into())
                 .unwrap();
 
-            if args.has_option(opts::TEST_BOOT) {
+            if args.has_option(opts::test::BOOT) {
                 boot_system(&mut vm, cls.clone());
             }
 
@@ -351,11 +363,8 @@ fn main() {
             run_method(&mut vm, ctx, &args);
         }));
 
-        if let Err(err) = res {
-            println!("/----------------------------------------------------------\\");
-            println!("|The VM encountered an unrecoverable error and had to abort.|");
-            println!("\\----------------------------------------------------------/");
-            println!("Uncaught panic in main: {:#?}", err);
+        if res.is_err() {
+            println!("Java callstack:");
 
             for source in vm.frames().iter().rev() {
                 println!("  {}", source);
