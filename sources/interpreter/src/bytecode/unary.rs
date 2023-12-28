@@ -284,11 +284,12 @@ impl Instruction for InstanceOf {
             .address(self.type_index)
             .resolve();
 
-        // TODO: Properly check the types
         let ty_class_name = ty.name.resolve().string();
+        let ty_class_name = FieldType::parse(ty_class_name.clone())
+            .or_else(|_| FieldType::parse(format!("L{};", ty_class_name)))?;
         let ty_class = vm
             .class_loader()
-            .for_name(format!("L{};", ty_class_name).into())?;
+            .for_name(ty_class_name)?;
 
         let class = val.unwrap_ref().class.clone();
 
