@@ -373,6 +373,13 @@ impl Instruction for ArrayLoad {
     fn handle(&self, vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
         let index = arg!(ctx, "index" => i32);
         let ty = self.ty.unwrap_ref();
+
+        if index.value < 0 {
+            return Ok(Progression::Throw(vm.try_make_error(
+                VMError::ArrayIndexOutOfBounds { at: index.value },
+            )?));
+        }
+
         let value = if ty.is_primitive() {
             match ty.name() {
                 n if { n == types::CHAR.name } => {
@@ -422,6 +429,13 @@ impl Instruction for ArrayLoad {
                 n if { n == types::INT.name } => {
                     let array = arg!(ctx, "array" => Array<Int>);
                     let array = array.unwrap_ref().slice();
+
+                    if index.value >= array.len() as i64 {
+                        return Ok(Progression::Throw(vm.try_make_error(
+                            VMError::ArrayIndexOutOfBounds { at: index.value },
+                        )?));
+                    }
+
                     let value = array[index.value as usize];
 
                     RuntimeValue::Integral(value.into())
@@ -432,6 +446,7 @@ impl Instruction for ArrayLoad {
             let array = arg!(ctx, "array" => Array<RefTo<Object>>);
             let array = array.unwrap_ref().slice();
             let value = array[index.value as usize].clone();
+
             RuntimeValue::Object(value)
         };
 
