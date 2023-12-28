@@ -133,6 +133,9 @@ impl ClassLoader {
         }
 
         // Add our layout to the end of the layout
+        // This should be integrated into the main loop above at some point, but for now we
+        // keep it separate so we can apply the statics here. Really just need to cleanup
+        // the layout APIs so that they can support this sort of usecase
         {
             let mut super_layout = full_layout(&class_file, Layout::new::<()>())?;
 
@@ -161,7 +164,6 @@ impl ClassLoader {
         }
 
         let name = field_type.name();
-        dbg!(&name, &layout);
         let cls = Class::new(
             Object::new(
                 self.meta_class.clone(),
