@@ -56,39 +56,42 @@ impl ClassLoader {
             super_class = Some(self.for_name(super_class_name)?);
         }
 
-        // Layout for the actual class we are loading
-        let mut layout = full_layout(&class_file, base_layout())?;
+        /*
+            In order for inheritance to work properly, and to allow future caching of offsets, we must layout from top to bottom
+            in terms of inheritance. E.g:
 
-        // Add all the superclass fields after our own
+            class A {
+                int x;
+                int y;
+            }
+
+            class B {
+                int z;
+            }
+
+            would get the layout (only representing order):
+            {
+                x: 0,
+                y: 4,
+                z: 8
+            }
+        */
+
+        // Start with an empty layout
+        let mut layout = {
+            // Setup the base at the start
+            let mut cfl = ClassFileLayout::empty();
+            cfl.layout = base_layout();
+
+            cfl
+        };
+
+        // Figure out all of our superclasses so we can work backwards later
+        let mut super_classes = vec![];
         {
             let mut _super = super_class.clone();
             while let Some(sup) = &_super {
-                // Get the superclass layout
-                let super_classfile = sup.unwrap_ref().class_file();
-
-                // We need to construct our own instead of just using the one stored by the class
-                // because it includes the header, which is not relevant for inherited fields.
-                let mut super_layout = full_layout(super_classfile, Layout::new::<()>())?;
-
-                // Extend our layout based on it
-                let (mut our_new_layout, offset_from_base) = layout
-                    .layout()
-                    .extend(super_layout.layout())
-                    .map_err(internalise!())?;
-
-                // Align the new layout
-                our_new_layout = our_new_layout.pad_to_align();
-
-                // Adjust the offset of the superclass fields to be based on the new offsets
-                super_layout.field_info.iter_mut().for_each(|(_, field)| {
-                    field.location.offset += offset_from_base;
-                });
-
-                // Push superclass fields into our layout
-                layout.field_info.extend(super_layout.field_info);
-
-                // Assign our layout to the newly computed one
-                layout.layout = our_new_layout;
+                super_classes.push(sup.clone());
 
                 let next_super = sup.unwrap_ref().super_class();
                 if !next_super.is_null() {
@@ -99,8 +102,66 @@ impl ClassLoader {
             }
         }
 
-        let name = field_type.name();
+        // Iterate all our parents, in reverse, and layout each of them
+        for sup in super_classes.iter().rev() {
+            // Get the superclass layout
+            let super_classfile = sup.unwrap_ref().class_file();
 
+            // We need to construct our own instead of just using the one stored by the class
+            // because that includes the header, which, if included, would mess up inheritance.
+            let mut super_layout = full_layout(super_classfile, Layout::new::<()>())?;
+
+            // Extend our layout based on it
+            let (mut our_new_layout, offset_from_base) = layout
+                .layout()
+                .extend(super_layout.layout())
+                .map_err(internalise!())?;
+
+            // Align the new layout
+            our_new_layout = our_new_layout.pad_to_align();
+
+            // Adjust the offset of the superclass fields to be based on the new offsets
+            super_layout.field_info.iter_mut().for_each(|(_, field)| {
+                field.location.offset += offset_from_base;
+            });
+
+            // Push superclass fields into our layout
+            layout.field_info.extend(super_layout.field_info);
+
+            // Assign our layout to the newly computed one
+            layout.layout = our_new_layout;
+        }
+
+        // Add our layout to the end of the layout
+        {
+            let mut super_layout = full_layout(&class_file, Layout::new::<()>())?;
+
+            // Extend our layout based on it
+            let (mut our_new_layout, offset_from_base) = layout
+                .layout()
+                .extend(super_layout.layout())
+                .map_err(internalise!())?;
+
+            // Align the new layout
+            our_new_layout = our_new_layout.pad_to_align();
+
+            // Adjust the offset of the superclass fields to be based on the new offsets
+            super_layout.field_info.iter_mut().for_each(|(_, field)| {
+                field.location.offset += offset_from_base;
+            });
+
+            // Push superclass fields into our layout
+            layout.field_info.extend(super_layout.field_info);
+
+            // FIXME: Make a better full/basic API so that we can move the statics out instead of having to clone them here
+            layout.statics.write().extend(super_layout.statics.read().clone());
+
+            // Assign our layout to the newly computed one
+            layout.layout = our_new_layout;
+        }
+
+        let name = field_type.name();
+        dbg!(&name, &layout);
         let cls = Class::new(
             Object::new(
                 self.meta_class.clone(),

@@ -769,3 +769,61 @@ pub fn multidimensional_arrays() -> TestResult {
 
     Ok(())
 }
+
+#[test]
+pub fn derived_with_field_caused_layout_bugs() -> TestResult {
+    let state = state().init();
+
+    let source = direct(
+        "DerivedLayoutBug",
+        r#"
+            import static kate.Util.*;
+
+            class Parent {
+                Object firstObject;
+                Object secondObject;
+
+                public Parent(Object firstObject) {
+                    this.firstObject = firstObject;
+
+                    if (this.firstObject == null) {
+                        throw new NullPointerException("firstObject in constructor");
+                    }
+
+                    if (this.secondObject != null) {
+                        throw new IllegalStateException("secondObject should be null at construction");
+                    }
+                }
+            }
+
+            final class Child extends Parent {
+                private boolean dummyField;
+
+                public Child(Object firstObject, Object secondObject) {
+                    super(firstObject);
+
+                    jdk.internal.misc.Unsafe unsafe = jdk.internal.misc.Unsafe.getUnsafe();
+                    long offset = unsafe.objectFieldOffset(Parent.class, "secondObject");
+                    unsafe.putReferenceVolatile(this, offset, secondObject);
+                }
+            }
+
+            public class DerivedLayoutBug {
+                public static void main(String[] args) {
+                    Child child = new Child(new Object(), null);
+
+                    if (child.firstObject == null) {
+                        throw new NullPointerException("firstObject was null. The inheritance layout logic must have broken.");
+                    }
+                }
+            }
+        "#,
+    );
+
+    let got = execute(state, inline(source)?)?;
+    let expected = expected().has_success();
+
+    compare(got, expected);
+
+    Ok(())
+}

@@ -641,16 +641,6 @@ impl NativeModule for JdkUnsafe {
                 val.as_object().unwrap()
             };
 
-            let class = object.unwrap_ref().class();
-            let class_name = class.unwrap_ref().name();
-
-            // HACK: Noop if you're trying to set contextClassLoader on an innoc thread
-            // This is because there exists a bug in the unsafe parts of this that I do
-            // not want to try and find. Reallllly need to fix this :^)
-            if class_name.contains("InnocuousThread") && offset == 80 {
-                return Ok(None);
-            }
-
             let raw_ptr = object.unwrap_mut() as *mut Object;
             let raw_ptr = unsafe { raw_ptr.byte_add(offset as usize) };
             let raw_ptr = raw_ptr.cast::<RefTo<Object>>();
