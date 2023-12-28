@@ -432,8 +432,6 @@ mod instruction {
         Ok(())
     }
 
-    // TODO:
-    #[ignore = "1) Not sure how to test. 2) Checkcast is not properly implemented"]
     #[test]
     fn checkcast() -> TestResult {
         let state = state().init();
@@ -441,6 +439,85 @@ mod instruction {
         let source = using_main(
             "CheckCast",
             r#"
+                Object o = "string";
+                String s = (String) o;
+                assertEqual(s, "string");
+
+                // We can re-erase it
+                Object o2 = (Object) s;
+                String s2 = (String) o2;
+                assertEqual(s2, "string");
+
+                // It doesn't mistake the component for the incoming type
+                try {
+                    String[] arr = (String[]) o;
+                    assertNotReached();
+                }
+                catch (ClassCastException cce) {
+                    print("Caught String[] cce");
+                }
+
+                // It doesn't get confused with other object types
+                try {
+                    Class cls = (Class) o;
+                    assertNotReached();
+                }
+                catch (ClassCastException cce) {
+                    print("Caught Class cce");
+                }
+                
+                // It doesn't get confused with primitive arrays
+                try {
+                    byte[] arr = (byte[]) o;
+                    assertNotReached();
+                }
+                catch (ClassCastException cce) {
+                    print("Caught byte[] cce");
+                }
+
+                // It doesn't get confused with primitives
+                try {
+                    byte arr = (byte) o;
+                    assertNotReached();
+                }
+                catch (ClassCastException cce) {
+                    print("Caught byte cce");
+                }
+
+                int[] intarray = (int[]) o;
+            "#,
+        );
+
+        let got = execute(state, inline(source)?)?;
+        let expected = expected()
+            .has_error()
+            .with_output("Caught String[] cce")
+            .with_output("Caught Class cce")
+            .with_output("Caught byte[] cce")
+            .with_output("Caught byte cce")
+            .with_output("Uncaught exception in main: java/lang/ClassCastException: invalid cast from java/lang/String to [I")
+            .with_output("  at CheckCast.main");
+
+        compare(got, expected);
+
+        Ok(())
+    }
+
+    #[test]
+    #[ignore = "broken, we cannot apppend doubles to string builders, which our assertion relies on"]
+    fn d2f() -> TestResult {
+        let state = state().init();
+
+        let source = using_main(
+            "D2F",
+            r#"
+                double smallDouble = 1.2;
+                float smallFloat = (float) smallDouble;
+                assertEqual(smallFloat, 1.2);
+
+                double largeDouble = 1.234567891011;
+                float largeFloat = (float) smallDouble;
+                assertEqual(largeFloat, 1.2);
             "#,
         );
 
@@ -452,8 +529,6 @@ mod instruction {
         Ok(())
     }
 
-    // TODO:
-    #[ignore = "instanceof is not properly implemented"]
     #[test]
     fn instanceof() -> TestResult {
         let state = state().init();
@@ -461,6 +536,26 @@ mod instruction {
         let source = using_main(
             "InstanceOf",
             r#"
+                Object o = "string";
+
+                // It doesn't mistake the component for the incoming type
+                if (o instanceof String[]) {
+                    assertNotReached();
+                }
+
+                // It doesn't get confused with other object types
+                if (o instanceof Class) {
+                    assertNotReached();
+                }
+
+                // It doesn't get confused with primitive arrays
+                if (o instanceof byte[]) {
+                    assertNotReached();
+                }
+
+                if (!(o instanceof String)) {
+                    assertNotReached();
+                }
             "#,
         );
 
