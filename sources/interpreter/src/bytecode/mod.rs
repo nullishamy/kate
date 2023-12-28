@@ -9,6 +9,8 @@ use runtime::object::layout::types;
 use runtime::object::value::RuntimeValue;
 use support::bytes_ext::SafeBuf;
 
+use self::ops::WideFormat;
+
 mod binary;
 mod invoke;
 mod load_store;
@@ -359,16 +361,16 @@ pub fn decode_instruction(
         }),
         0x85 => b(ops::I2l),
         0x86 => b(ops::I2f),
-        //  0x87 => Opcode::I2D,
+        0x87 => b(ops::I2d),
         0x88 => b(ops::L2i),
         0x89 => b(ops::L2f),
         0x8a => b(ops::L2d),
         0x8b => b(ops::F2i),
         //  0x8c => Opcode::F2L,
         0x8d => b(ops::F2d),
-        //  0x8e => Opcode::D2I,
+        0x8e => b(ops::D2i),
         0x8f => b(ops::D2l),
-        //  0x90 => Opcode::D2F,
+        0x90 => b(ops::D2f),
         0x91 => b(ops::I2b),
         0x92 => b(ops::I2c),
         // 0x93 => Opcode::I2S,
@@ -523,7 +525,19 @@ pub fn decode_instruction(
         0xc3 => b(ops::MonitorExit),
 
         // Extended
-        //  0xc4 => Opcode::WIDE,
+        0xc4 => {
+            let opcode = bytes.try_get_u8()?;
+            let format = match opcode {
+                // iinc form
+                0x84 => WideFormat::Format2 {
+                    index: bytes.try_get_u16()?,
+                    const_val: bytes.try_get_i16()?,
+                },
+                e => panic!("unknown opcode {} for WIDE", e),
+            };
+
+            b(ops::Wide { format })
+        }
         //  0xc5 => Opcode::MULTIANEWARRAY,
         0xc6 => b(ops::IfNull {
             jump_to: bytes.try_get_i16()?,

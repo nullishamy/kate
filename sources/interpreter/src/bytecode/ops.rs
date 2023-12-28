@@ -460,3 +460,33 @@ impl Instruction for MonitorExit {
         Ok(Progression::Next)
     }
 }
+
+#[derive(Debug)]
+pub enum WideFormat {
+    Format1 { opcode: u8, index: u16 },
+    Format2 { index: u16, const_val: i16 },
+}
+
+#[derive(Debug)]
+pub struct Wide {
+    pub(crate) format: WideFormat,
+}
+
+impl Instruction for Wide {
+    fn handle(&self, _vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
+        match self.format {
+            WideFormat::Format1 { opcode, index } => todo!(),
+            WideFormat::Format2 { index, const_val } => {
+                let local = ctx
+                    .locals
+                    .get_mut(index as usize)
+                    .context(format!("no local @ {}", index))?;
+
+                let int = local.as_integral_mut().context("not an int")?;
+                int.value += const_val as i64;
+            }
+        }
+
+        Ok(Progression::Next)
+    }
+}

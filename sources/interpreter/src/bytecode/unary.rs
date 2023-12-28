@@ -88,6 +88,9 @@ macro_rules! unop {
     ($ins: ident (int => float) => $op: expr) => {
       unop!($ins, i32, |result: f32| RuntimeValue::Floating(result.into()) => $op);
     };
+    ($ins: ident (int => double) => $op: expr) => {
+      unop!($ins, i32, |result: f64| RuntimeValue::Floating(result.into()) => $op);
+    };
     ($ins: ident (long => int) => $op: expr) => {
       unop!($ins, i64, |result: i32| RuntimeValue::Integral(result.into()) => $op);
     };
@@ -105,6 +108,12 @@ macro_rules! unop {
     };
     ($ins: ident (double => long) => $op: expr) => {
       unop!($ins, f64, |result: i64| RuntimeValue::Integral(result.into()) => $op);
+    };
+    ($ins: ident (double => int) => $op: expr) => {
+      unop!($ins, f64, |result: i32| RuntimeValue::Integral(result.into()) => $op);
+    };
+    ($ins: ident (double => float) => $op: expr) => {
+      unop!($ins, f64, |result: f32| RuntimeValue::Floating(result.into()) => $op);
     };
     ($ins: ident (long) => $op: expr) => {
       unop!(x2 $ins, i64, |result: i64| RuntimeValue::Integral(result.into()) => $op);
@@ -139,6 +148,10 @@ unop!(I2l (int => long) => |val: Integral| {
     val.value as i32 as i64
 });
 
+unop!(I2d (int => double) => |val: Integral| {
+    val.value as i32 as f64
+});
+
 unop!(I2c (int) => |val: Integral| {
     val.value as i16 as i32
 });
@@ -161,6 +174,14 @@ unop!(F2d (float => double) => |val: Floating| {
 
 unop!(D2l (double => long) => |val: Floating| {
     val.value as i64
+});
+
+unop!(D2i (double => int) => |val: Floating| {
+    val.value as i32
+});
+
+unop!(D2f (double => float) => |val: Floating| {
+    val.value as f32
 });
 
 unop!(L2i (long => int) => |val: Integral| {
