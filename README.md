@@ -13,3 +13,4 @@ For the most part, it assumes well-formedness of classfiles, and will not handle
 
 - [ASM Tools](https://wiki.openjdk.java.net/display/CodeTools/asmtools)
 - [jasm](https://github.com/roscopeco/jasm)
+- [assert_cmd](https://docs.rs/crate/assert_cmd/latest)
