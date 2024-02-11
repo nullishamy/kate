@@ -1,13 +1,13 @@
 use std::{
     collections::HashMap,
-    sync::atomic::{AtomicPtr, Ordering}, fmt, os::linux::raw,
+    sync::atomic::{AtomicPtr, Ordering}, fmt,
 };
 
 use support::types::MethodDescriptor;
 
 use crate::{
     error::Throwable,
-    instance_method, internalise, module_base,
+    instance_method, module_base,
     object::{
         builtins::{Array, BuiltinString, Class, Object},
         interner::intern_string,
@@ -393,8 +393,8 @@ impl NativeModule for JdkUnsafe {
         fn compare_and_set<T: PartialEq + fmt::Debug>(
             object: &RefTo<Object>,
             offset: usize,
-            mut expected: T,
-            mut desired: T,
+            expected: T,
+            desired: T,
         ) -> bool {
             let ptr = object.unwrap_mut() as *mut Object;
             let ptr = unsafe { ptr.byte_add(offset) };

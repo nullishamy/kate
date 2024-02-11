@@ -18,7 +18,7 @@ use runtime::{
         interner::{set_interner, StringInterner},
         layout::types::Byte,
         loader::ClassLoader,
-        mem::{FieldRef, JavaObject, RefTo},
+        mem::{FieldRef, RefTo},
         value::RuntimeValue,
     },
     vm::VM,

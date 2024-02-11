@@ -2,7 +2,7 @@
 
 use std::{marker::PhantomData, mem::ManuallyDrop};
 
-use parking_lot::RwLock;
+
 
 use super::{builtins::Object, layout::FieldLocation};
 

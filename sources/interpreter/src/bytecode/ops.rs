@@ -24,7 +24,7 @@ use runtime::object::layout::types::Long;
 use runtime::object::layout::types::Short;
 
 use runtime::object::mem::RefTo;
-use runtime::object::numeric::Integral;
+
 use runtime::object::numeric::IntegralType;
 
 use runtime::object::value::RuntimeValue;
@@ -505,7 +505,7 @@ pub struct Wide {
 impl Instruction for Wide {
     fn handle(&self, _vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
         match self.format {
-            WideFormat::Format1 { opcode, index } => todo!(),
+            WideFormat::Format1 { opcode: _, index: _ } => todo!(),
             WideFormat::Format2 { index, const_val } => {
                 let local = ctx
                     .locals
