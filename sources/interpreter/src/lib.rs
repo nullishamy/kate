@@ -231,7 +231,10 @@ impl Interpreter {
 
             // Need to drop our lock on the class object before running the class initialiser
             // as it could call instructions which access class data
-            class.unwrap_mut().set_initialised(true);
+            class.with_lock(|class| {
+                class.set_initialised(true);
+            });
+
             let code = clinit
                 .attributes
                 .known_attribute(&class.unwrap_ref().class_file().constant_pool)?;
@@ -259,7 +262,9 @@ impl Interpreter {
             debug!("No clinit in {}", class_name);
             // Might as well mark this as initialised to avoid future
             // needless method lookups
-            class.unwrap_mut().set_initialised(true);
+            class.with_lock(|class| {
+                class.set_initialised(true);
+            });
         }
 
         Ok(())
@@ -275,15 +280,16 @@ impl Interpreter {
 
             // Load the class specified by this module
             let cls = m.get_class(&mut interpreter.vm).unwrap();
-            let cls = cls.unwrap_mut();
 
             // Just to stop us making errors with registration.
-            if cls.native_module().is_some() {
+            if cls.unwrap_ref().native_module().is_some() {
                 panic!("attempted to re-register module {}", m.classname());
             }
 
             // Apply the module to the class
-            cls.set_native_module(Box::new(RefCell::new(m)));
+            cls.with_lock(|cls| {
+                cls.set_native_module(Box::new(RefCell::new(m)));
+            });
         }
 
         load_module(self, lang::LangClass::new());

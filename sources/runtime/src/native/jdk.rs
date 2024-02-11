@@ -1,10 +1,13 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    sync::atomic::{AtomicPtr, Ordering}, fmt, os::linux::raw,
+};
 
 use support::types::MethodDescriptor;
 
 use crate::{
     error::Throwable,
-    instance_method, module_base,
+    instance_method, internalise, module_base,
     object::{
         builtins::{Array, BuiltinString, Class, Object},
         interner::intern_string,
@@ -256,7 +259,9 @@ impl NativeModule for JdkSystemPropsRaw {
         ) -> Result<Option<RuntimeValue>, Throwable> {
             // TODO: Populate these properly
 
-            let array_ty = vm.class_loader().for_name("[Ljava/lang/String;".try_into().unwrap())?;
+            let array_ty = vm
+                .class_loader()
+                .for_name("[Ljava/lang/String;".try_into().unwrap())?;
             let array: RefTo<Array<RefTo<BuiltinString>>> = Array::from_vec(
                 array_ty,
                 vec![
@@ -302,11 +307,10 @@ impl NativeModule for JdkSystemPropsRaw {
             arr[fields::FILE_ENCODING_NDX] = intern_string("UTF-8".to_string())?;
             arr[fields::SUN_JNU_ENCODING_NDX] = intern_string("UTF-8".to_string())?;
 
-            let array_ty = vm.class_loader().for_name("[Ljava/lang/String;".try_into().unwrap())?;
-            let array: RefTo<Array<RefTo<BuiltinString>>> = Array::from_vec(
-                array_ty,
-                arr,
-            );
+            let array_ty = vm
+                .class_loader()
+                .for_name("[Ljava/lang/String;".try_into().unwrap())?;
+            let array: RefTo<Array<RefTo<BuiltinString>>> = Array::from_vec(array_ty, arr);
 
             Ok(Some(RuntimeValue::Object(array.erase())))
         }
@@ -386,11 +390,50 @@ impl NativeModule for JdkUnsafe {
 
         self.set_method(("storeFence", "()V"), instance_method!(store_fence));
 
-        fn compare_and_set_int(
-            _: RefTo<Object>,
-            args: Vec<RuntimeValue>,
-            _: &mut VM,
-        ) -> Result<Option<RuntimeValue>, Throwable> {
+        fn compare_and_set<T: PartialEq + fmt::Debug>(
+            object: &RefTo<Object>,
+            offset: usize,
+            mut expected: T,
+            mut desired: T,
+        ) -> bool {
+            let ptr = object.unwrap_mut() as *mut Object;
+            let ptr = unsafe { ptr.byte_add(offset) };
+            let ptr = ptr.cast::<T>();
+
+            let val = unsafe { ptr.read() };
+            if expected == val {
+                unsafe { ptr.write(desired) };
+                true
+            } else {
+                false
+            }
+            // FIXME: Make atomic. Cannot figure out the semantics for this one. compare_exchange writes into the expected, which isn't what we want
+
+            // let atomic_ptr = make_atomic_field_ptr(object, offset);
+
+            // let old_value = atomic_ptr.load(Ordering::SeqCst);
+            // dbg!(old_value, &expected as *const T);
+            // if old_value == &mut expected {
+            //     dbg!("here");
+            //     atomic_ptr.store(&mut desired, Ordering::SeqCst);
+            //     true
+            // } else {
+            //     false
+            // }
+        }
+
+        fn make_atomic_field_ptr<T>(object: &RefTo<Object>, offset: usize) -> AtomicPtr<T> {
+            let raw_ptr = object.unwrap_mut() as *mut Object;
+            let raw_ptr = unsafe { raw_ptr.byte_add(offset) };
+            let raw_ptr = raw_ptr.cast::<T>();
+
+            AtomicPtr::new(raw_ptr)
+        }
+
+        fn check_cmp_args<T>(
+            args: &[RuntimeValue],
+            val_to_t: impl Fn(RuntimeValue) -> T,
+        ) -> (&RefTo<Object>, usize, T, T) {
             let object = {
                 let val = args.get(1).unwrap();
                 val.as_object().unwrap()
@@ -401,32 +444,31 @@ impl NativeModule for JdkUnsafe {
                 val.as_integral().unwrap().value
             };
 
+            // Careful. Skip a slot (don't use 3), `long`s (offset) take 2 slots.
             let expected = {
-                let val = args.get(4).unwrap();
-                val.as_integral().unwrap().value as i32
+                let val = args.get(4).unwrap().clone();
+                val_to_t(val)
             };
 
             let desired = {
-                let val = args.get(5).unwrap();
-                val.as_integral().unwrap().value as i32
+                let val = args.get(5).unwrap().clone();
+                val_to_t(val)
             };
 
-            let raw_ptr = object.unwrap_mut() as *mut Object;
-            let raw_ptr = unsafe { raw_ptr.byte_add(offset as usize) };
-            let raw_ptr = raw_ptr.cast::<i32>();
+            (object, offset as usize, expected, desired)
+        }
 
-            // TODO: Make this atomic when we do MT
-            let success = {
-                let current = unsafe { raw_ptr.read() };
-                if current == expected {
-                    unsafe { raw_ptr.write(desired) };
-                    true
-                } else {
-                    false
-                }
-            };
+        fn compare_and_set_int(
+            _: RefTo<Object>,
+            args: Vec<RuntimeValue>,
+            _: &mut VM,
+        ) -> Result<Option<RuntimeValue>, Throwable> {
+            let (object, offset, expected, desired) =
+                check_cmp_args(&args, |v| v.as_integral().unwrap().value as types::Int);
 
-            Ok(Some(RuntimeValue::Integral((success as i32).into())))
+            let did_write = compare_and_set::<types::Int>(object, offset, expected, desired);
+
+            Ok(Some(RuntimeValue::Integral((did_write as i32).into())))
         }
 
         self.set_method(
@@ -439,41 +481,12 @@ impl NativeModule for JdkUnsafe {
             args: Vec<RuntimeValue>,
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
-            let object = {
-                let val = args.get(1).unwrap();
-                val.as_object().unwrap()
-            };
+            let (object, offset, expected, desired) =
+                check_cmp_args(&args, |v| v.as_object().unwrap().clone());
 
-            let offset = {
-                let val = args.get(2).unwrap();
-                val.as_integral().unwrap().value
-            };
+            let did_write = compare_and_set::<RefTo<Object>>(object, offset, expected, desired);
 
-            let expected = {
-                let val = args.get(4).unwrap();
-                val.as_object().unwrap()
-            };
-
-            let desired = {
-                let val = args.get(5).unwrap();
-                val.as_object().unwrap()
-            };
-
-            let raw_ptr = object.unwrap_mut() as *mut Object;
-            let raw_ptr = unsafe { raw_ptr.byte_add(offset as usize) };
-            let raw_ptr = raw_ptr.cast::<RefTo<Object>>();
-
-            // TODO: Make this atomic when we do MT
-            let success = {
-                let current = unsafe { raw_ptr.read() };
-                if current.as_ptr() == expected.as_ptr() {
-                    unsafe { raw_ptr.write(desired.clone()) };
-                    true
-                } else {
-                    false
-                }
-            };
-            Ok(Some(RuntimeValue::Integral((success as i32).into())))
+            Ok(Some(RuntimeValue::Integral((did_write as i32).into())))
         }
 
         self.set_method(
@@ -489,6 +502,8 @@ impl NativeModule for JdkUnsafe {
             args: Vec<RuntimeValue>,
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
+            // Don't use the helpers, longs are finicky.
+
             let object = {
                 let val = args.get(1).unwrap();
                 val.as_object().unwrap()
@@ -507,26 +522,13 @@ impl NativeModule for JdkUnsafe {
 
             // Careful. Skip a slot. `long`s take up 2.
             let desired = {
-                let val = args.get(5).unwrap();
+                let val = args.get(6).unwrap();
                 val.as_integral().unwrap().value
             };
 
-            let raw_ptr = object.unwrap_mut() as *mut Object;
-            let raw_ptr = unsafe { raw_ptr.byte_add(offset as usize) };
-            let raw_ptr = raw_ptr.cast::<i64>();
+                let did_write = compare_and_set::<types::Long>(object, offset as usize, expected, desired);
 
-            // TODO: Make this atomic when we do MT
-            let success = {
-                let current = unsafe { raw_ptr.read() };
-                if current == expected {
-                    unsafe { raw_ptr.write(desired) };
-                    true
-                } else {
-                    false
-                }
-            };
-
-            Ok(Some(RuntimeValue::Integral((success as i32).into())))
+            Ok(Some(RuntimeValue::Integral((did_write as i32).into())))
         }
 
         self.set_method(
@@ -549,10 +551,8 @@ impl NativeModule for JdkUnsafe {
                 val.as_integral().unwrap().value
             };
 
-            let raw_ptr = object.unwrap_mut() as *mut Object;
-            let raw_ptr = unsafe { raw_ptr.byte_add(offset as usize) };
-            let raw_ptr = raw_ptr.cast::<RefTo<Object>>();
-            let val = unsafe { raw_ptr.as_ref().unwrap() }.clone();
+            let atomic_ptr = make_atomic_field_ptr::<RefTo<Object>>(object, offset as usize);
+            let val = unsafe { atomic_ptr.load(Ordering::SeqCst).as_ref().unwrap().clone() };
 
             Ok(Some(RuntimeValue::Object(val)))
         }
@@ -608,10 +608,8 @@ impl NativeModule for JdkUnsafe {
                 val.as_integral().unwrap().value
             };
 
-            let raw_ptr = object.unwrap_mut() as *mut Object;
-            let raw_ptr = unsafe { raw_ptr.byte_add(offset as usize) };
-            let raw_ptr = raw_ptr.cast::<types::Int>();
-            let val = unsafe { raw_ptr.read() };
+            let atomic_ptr = make_atomic_field_ptr::<types::Int>(object, offset as usize);
+            let val = unsafe { atomic_ptr.load(Ordering::SeqCst).read() };
 
             Ok(Some(RuntimeValue::Integral(val.into())))
         }
@@ -638,13 +636,13 @@ impl NativeModule for JdkUnsafe {
 
             let value = {
                 let val = args.get(4).unwrap();
-                val.as_object().unwrap()
+                val.as_object().unwrap().clone()
             };
 
             let raw_ptr = object.unwrap_mut() as *mut Object;
             let raw_ptr = unsafe { raw_ptr.byte_add(offset as usize) };
             let raw_ptr = raw_ptr.cast::<RefTo<Object>>();
-            unsafe { raw_ptr.write(value.clone()) };
+            unsafe { raw_ptr.write(value) };
 
             Ok(None)
         }

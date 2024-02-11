@@ -24,6 +24,7 @@ use runtime::object::layout::types::Long;
 use runtime::object::layout::types::Short;
 
 use runtime::object::mem::RefTo;
+use runtime::object::numeric::Integral;
 use runtime::object::numeric::IntegralType;
 
 use runtime::object::value::RuntimeValue;
@@ -317,47 +318,61 @@ impl Instruction for ArrayStore {
             match ty.name() {
                 n if { n == types::LONG.name } => {
                     let array = arg!(ctx, "array" => Array<Long>);
-                    let array = array.unwrap_mut().slice_mut();
-                    let value = value.as_integral().expect("array store exception").value;
-                    array[index.value as usize] = value
+                    array.with_lock(|array| {
+                        let array = array.slice_mut();
+                        let value = value.as_integral().expect("array store exception").value;
+                        array[index.value as usize] = value as Long;
+                    });
                 }
                 n if { n == types::DOUBLE.name } => {
                     let array = arg!(ctx, "array" => Array<Double>);
-                    let array = array.unwrap_mut().slice_mut();
-                    let value = value.as_floating().expect("array store exception").value;
-                    array[index.value as usize] = value
+                    array.with_lock(|array| {
+                        let array = array.slice_mut();
+                        let value = value.as_floating().expect("array store exception").value;
+                        array[index.value as usize] = value as Double;
+                    });
                 }
                 n if { n == types::FLOAT.name } => {
                     let array = arg!(ctx, "array" => Array<Float>);
-                    let array = array.unwrap_mut().slice_mut();
-                    let value = value.as_floating().expect("array store exception").value;
-                    array[index.value as usize] = value as Float
+                    array.with_lock(|array| {
+                        let array = array.slice_mut();
+                        let value = value.as_floating().expect("array store exception").value;
+                        array[index.value as usize] = value as Float;
+                    });
                 }
                 n if { n == types::BYTE.name } => {
                     let array = arg!(ctx, "array" => Array<Byte>);
-                    let array = array.unwrap_mut().slice_mut();
-                    let value = value.as_integral().expect("array store exception").value;
-                    array[index.value as usize] = value as Byte
+                    array.with_lock(|array| {
+                        let array = array.slice_mut();
+                        let value = value.as_integral().expect("array store exception").value;
+                        array[index.value as usize] = value as Byte;
+                    });
                 }
                 n if { n == types::CHAR.name } => {
                     let array = arg!(ctx, "array" => Array<Char>);
-                    let array = array.unwrap_mut().slice_mut();
-                    let value = value.as_integral().expect("array store exception").value;
-                    array[index.value as usize] = value as Char
+                    array.with_lock(|array| {
+                        let array = array.slice_mut();
+                        let value = value.as_integral().expect("array store exception").value;
+                        array[index.value as usize] = value as Char;
+                    });
                 }
                 n if { n == types::INT.name } => {
                     let array = arg!(ctx, "array" => Array<Int>);
-                    let array = array.unwrap_mut().slice_mut();
-                    let value = value.as_integral().expect("array store exception").value;
-                    array[index.value as usize] = value as Int
+                    array.with_lock(|array| {
+                        let array = array.slice_mut();
+                        let value = value.as_integral().expect("array store exception").value;
+                        array[index.value as usize] = value as Int;
+                    });
                 }
                 ty => return Err(internal!("cannot encode {:#?}", ty)),
             }
         } else {
             let array = arg!(ctx, "array" => Array<RefTo<Object>>);
-            let array = array.unwrap_mut().slice_mut();
-            let value = value.as_object().expect("array store exception").clone();
-            array[index.value as usize] = value;
+            array.with_lock(|array| {
+                let array = array.slice_mut();
+                let value = value.as_object().expect("array store exception").clone();
+                array[index.value as usize] = value;
+            });
         }
 
         Ok(Progression::Next)

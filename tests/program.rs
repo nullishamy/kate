@@ -160,7 +160,7 @@ mod system {
             .with_output("    ),")
             .with_output("    location: Location {")
             .with_output(r#"        file: "sources/cli/src/main.rs","#)
-            .with_output("        line: 324,")
+            .with_output("        line: 325,")
             .with_output("        col: 17,")
             .with_output("    },")
             .with_output("    can_unwind: true,")
@@ -385,6 +385,53 @@ mod math {
 
 mod exceptions {
     use super::*;
+
+    #[test]
+    pub fn fill_in_stack_trace() -> TestResult {
+        let state = state().init().init_std();
+
+        let source = using_helpers(
+            "FillInStackTrace",
+            r#"
+                static void l3()  {
+                    var ex = new RuntimeException();
+
+                    // Print to stdout, we capture our test output there
+                    ex.printStackTrace(System.out);
+                }
+
+                static void l2() {
+                    l3();
+                }
+
+                static void l1() {
+                    l2();
+                }
+
+                public static void main(String[] args) {
+                    l1();
+                }
+            "#,
+        );
+
+        let got = execute(state, inline(source)?)?;
+        let expected = expected()
+            .has_success()
+            .with_output("java/lang/RuntimeException")
+            .with_output("\tat java/lang/Throwable.fillInStackTrace(Unknown Source)")
+            .with_output("\tat java/lang/Throwable.fillInStackTrace(Unknown Source)")
+            .with_output("\tat java/lang/Throwable.<init>(Unknown Source)")
+            .with_output("\tat java/lang/Exception.<init>(Unknown Source)")
+            .with_output("\tat java/lang/RuntimeException.<init>(Unknown Source)")
+            .with_output("\tat FillInStackTrace.l3(Unknown Source)")
+            .with_output("\tat FillInStackTrace.l2(Unknown Source)")
+            .with_output("\tat FillInStackTrace.l1(Unknown Source)")
+            .with_output("\tat FillInStackTrace.main(Unknown Source)");
+
+        compare(got, expected);
+
+        Ok(())
+    }
 
     #[test]
     pub fn stack_overflow() -> TestResult {

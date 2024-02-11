@@ -25,7 +25,7 @@ use runtime::object::layout::types::Int;
 use runtime::object::layout::types::Long;
 use runtime::object::layout::types::Short;
 use runtime::object::mem::FieldRef;
-use runtime::object::mem::HasObjectHeader;
+use runtime::object::mem::JavaObject;
 use runtime::object::mem::RefTo;
 use runtime::object::numeric::FloatingType;
 use runtime::object::numeric::IntegralType;

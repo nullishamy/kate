@@ -2,6 +2,8 @@
 
 use std::{marker::PhantomData, mem::ManuallyDrop};
 
+use parking_lot::RwLock;
+
 use super::{builtins::Object, layout::FieldLocation};
 
 #[derive(Debug)]
@@ -84,35 +86,35 @@ impl<T> Clone for FieldRef<T> {
 }
 
 #[derive(Debug)]
-pub struct RefTo<T: HasObjectHeader<T>> {
+pub struct RefTo<T: JavaObject<T>> {
     object: *mut Object,
     phantom: PhantomData<T>,
 }
 
-unsafe impl <T : HasObjectHeader<T>> Send for RefTo<T> {}
+unsafe impl <T : JavaObject<T>> Send for RefTo<T> {}
 
-impl<T: HasObjectHeader<T>> PartialEq for RefTo<T> {
+impl<T: JavaObject<T>> PartialEq for RefTo<T> {
     fn eq(&self, other: &Self) -> bool {
         self.object == other.object
     }
 }
 
-impl<T: HasObjectHeader<T>> Eq for RefTo<T> {}
+impl<T: JavaObject<T>> Eq for RefTo<T> {}
 
-pub trait HasObjectHeader<T> {
+pub trait JavaObject<T> {
     fn header(&self) -> &Object;
     fn header_mut(&mut self) -> &mut Object;
     fn type_name() -> &'static str;
 }
 
-impl<T: HasObjectHeader<T> + Copy> RefTo<T> {
+impl<T: JavaObject<T> + Copy> RefTo<T> {
     pub fn copy_out(&self) -> T {
         *self.unwrap_ref()
     }
 }
 
-impl<T: HasObjectHeader<T>> RefTo<T> {
-    pub fn new(object: impl HasObjectHeader<T> + 'static) -> Self {
+impl<T: JavaObject<T>> RefTo<T> {
+    pub fn new(object: impl JavaObject<T> + 'static) -> Self {
         let b = Box::new(object);
         let leak = Box::leak::<'static>(b);
         let object = leak.header_mut();
@@ -135,6 +137,19 @@ impl<T: HasObjectHeader<T>> RefTo<T> {
             object: object_ptr,
             phantom: PhantomData,
         }
+    }
+
+    pub fn with_lock<U>(&self, func: impl FnOnce(&mut T) -> U) -> U {
+        if self.is_null() {
+            panic!("attempted to lock null");
+        }
+
+        // FIXME: Verify that this actually obeys the strict aliasing rules. Not sure if `self.unwrap_mut()` is allowed here.
+        let object = unsafe { self.as_ptr().as_ref().unwrap() };
+        // FIXME: Don't immediately acquire once we go into MT land
+        let _lock = object.lock.try_write().expect("could not acquire lock, presumed deadlock.");
+
+        func(self.unwrap_mut())
     }
 
     #[track_caller]
@@ -171,7 +186,7 @@ impl<T: HasObjectHeader<T>> RefTo<T> {
     ///
     /// Caller must ensure object is of this type
     #[track_caller]
-    pub unsafe fn cast<U: HasObjectHeader<U>>(&self) -> RefTo<U> {
+    pub unsafe fn cast<U: JavaObject<U>>(&self) -> RefTo<U> {
         if let Some(obj) = self.to_ref() {
             // Type name must exactly match for builtins, for now. We don't want to deal with subclassing layout nonsense
             let to_type_name = &U::type_name().to_string();
@@ -252,7 +267,7 @@ impl<T: HasObjectHeader<T>> RefTo<T> {
     }
 }
 
-impl<T: HasObjectHeader<T>> Clone for RefTo<T> {
+impl<T: JavaObject<T>> Clone for RefTo<T> {
     fn clone(&self) -> Self {
         // Null ptrs are all really the same.
         // They don't need ref counting.

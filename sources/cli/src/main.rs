@@ -18,7 +18,7 @@ use runtime::{
         interner::{set_interner, StringInterner},
         layout::types::Byte,
         loader::ClassLoader,
-        mem::{FieldRef, RefTo},
+        mem::{FieldRef, JavaObject, RefTo},
         value::RuntimeValue,
     },
     vm::VM,
@@ -36,7 +36,6 @@ use crate::args::opts;
 mod args;
 
 fn test_init(cls: RefTo<Class>) {
-    let cls = cls.unwrap_mut();
     macro_rules! printer {
         ($desc: expr, $printer: expr) => {
             (
@@ -113,16 +112,18 @@ fn test_init(cls: RefTo<Class>) {
             );
         }),
     ] {
-        if cls.native_module().is_none() {
-            cls.set_native_module(Box::new(RefCell::new(DefaultNativeModule::new(
-                // Leaking is fine. The class that spawned the test will live for the whole test.
-                // We need this because the class name is required to be a &'static str, just so we can use
-                // string literals without worrying about lifetimes
-                cls.name().clone().leak(),
-            ))));
+        if cls.unwrap_ref().native_module().is_none() {
+            cls.with_lock(|cls| {
+                cls.set_native_module(Box::new(RefCell::new(DefaultNativeModule::new(
+                    // Leaking is fine. The class that spawned the test will live for the whole test.
+                    // We need this because the class name is required to be a &'static str, just so we can use
+                    // string literals without worrying about lifetimes
+                    cls.name().clone().leak(),
+                ))));
+            })
         }
 
-        let module = cls.native_module().as_ref().unwrap();
+        let module = cls.unwrap_ref().native_module().as_ref().unwrap();
         let mut module = module.borrow_mut();
         module.set_method(("print", printer.0), printer.1);
     }
@@ -372,7 +373,7 @@ fn main() {
 
             exit(1);
         } else {
-            info!("Execution concluded without error")
+            info!("Program concluded")
         }
     }
 }

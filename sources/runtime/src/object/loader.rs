@@ -9,7 +9,7 @@ use crate::{
 use super::{
     builtins::{Class, Object},
     layout::{full_layout, types, ClassFileLayout},
-    mem::{HasObjectHeader, RefTo},
+    mem::{JavaObject, RefTo},
 };
 use parse::{classfile::Resolvable, parser::Parser};
 use support::descriptor::FieldType;
@@ -322,7 +322,9 @@ impl ClassLoader {
         insert!(primitive!(DOUBLE, "D"));
 
         self.classes.iter_mut().for_each(|(_, value)| {
-            value.unwrap_mut().header_mut().class = self.meta_class.clone();
+            value.with_lock(|value| {
+                value.header_mut().class = self.meta_class.clone();
+            });
         });
 
         Ok(BootstrappedClasses {

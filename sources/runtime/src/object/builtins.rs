@@ -23,7 +23,7 @@ use crate::{
 
 use super::{
     layout::{types, ClassFileLayout, FieldInfo},
-    mem::{FieldRef, HasObjectHeader, RefTo},
+    mem::{FieldRef, JavaObject, RefTo},
 };
 
 #[repr(C)]
@@ -561,7 +561,7 @@ impl<T> Array<T> {
     }
 }
 
-impl<T> HasObjectHeader<Array<T>> for Array<T> {
+impl<T> JavaObject<Array<T>> for Array<T> {
     fn header_mut(&mut self) -> &mut Object {
         &mut self.object
     }
@@ -575,7 +575,7 @@ impl<T> HasObjectHeader<Array<T>> for Array<T> {
     }
 }
 
-impl HasObjectHeader<Class> for Class {
+impl JavaObject<Class> for Class {
     fn header_mut(&mut self) -> &mut Object {
         &mut self.object
     }
@@ -589,7 +589,7 @@ impl HasObjectHeader<Class> for Class {
     }
 }
 
-impl HasObjectHeader<BuiltinString> for BuiltinString {
+impl JavaObject<BuiltinString> for BuiltinString {
     fn header_mut(&mut self) -> &mut Object {
         &mut self.object
     }
@@ -603,7 +603,7 @@ impl HasObjectHeader<BuiltinString> for BuiltinString {
     }
 }
 
-impl HasObjectHeader<Object> for Object {
+impl JavaObject<Object> for Object {
     fn header_mut(&mut self) -> &mut Object {
         self
     }
@@ -645,7 +645,7 @@ pub struct BuiltinThread {
     pub thread_local_random_secondary_seed: types::Int,
 }
 
-impl HasObjectHeader<BuiltinThread> for BuiltinThread {
+impl JavaObject<BuiltinThread> for BuiltinThread {
     fn header(&self) -> &Object {
         &self.object
     }
@@ -677,7 +677,7 @@ pub struct BuiltinThreadGroup {
     pub groups: RefTo<Array<RefTo<Object>>>,
 }
 
-impl HasObjectHeader<BuiltinThreadGroup> for BuiltinThreadGroup {
+impl JavaObject<BuiltinThreadGroup> for BuiltinThreadGroup {
     fn header(&self) -> &Object {
         &self.object
     }

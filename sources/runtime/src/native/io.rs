@@ -322,12 +322,14 @@ impl NativeModule for IOFileInputStream {
                 return Ok(Some(RuntimeValue::Integral(0_i32.into())));
             }
 
-            let subslice = {
-                let slice = output_array.unwrap_mut().slice_mut();
-                &mut slice[(offset as usize)..(len as usize)]
-            };
+            let read_n = output_array.with_lock(|array| {
+                let subslice = {
+                    let slice = array.slice_mut();
+                    &mut slice[(offset as usize)..(len as usize)]
+                };
 
-            let read_n = file.read(subslice).unwrap();
+                file.read(subslice).unwrap()
+            });
 
             Ok(Some(RuntimeValue::Integral((read_n as i32).into())))
         }

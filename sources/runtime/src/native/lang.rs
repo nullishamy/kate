@@ -12,7 +12,7 @@ use crate::{
         builtins::{Array, BuiltinString, Class, ClassType, Object},
         interner::intern_string,
         layout::types::{self},
-        mem::RefTo,
+        mem::{JavaObject, RefTo},
         numeric::{FALSE, TRUE},
         value::RuntimeValue,
     },
@@ -365,27 +365,60 @@ impl NativeModule for LangSystem {
             let dest_pos = dest_pos as usize;
             let len = len as usize;
 
+            fn write_prim<T: Copy>(
+                src: &RefTo<Object>,
+                dest: &RefTo<Object>,
+                src_pos: usize,
+                dest_pos: usize,
+                len: usize,
+            ) {
+                let src = unsafe { src.cast::<Array<T>>() };
+                let dest = unsafe { dest.cast::<Array<T>>() };
+
+                // Same array special casing
+                // If the src and dest arguments refer to the same array object, then the copying is performed as if the components at positions srcPos through srcPos+length-1 were
+                // first copied to a temporary array with length components and then the contents of the temporary array were copied into positions destPos through destPos+length-1 of
+                // the destination array.
+                if src == dest {
+                    let temp_array = src.with_lock(|src| {
+                        let copy = src.slice().to_vec();
+                        let ty = src.header().class();
+
+                        Array::from_vec(ty, copy)
+                    });
+
+                    temp_array.with_lock(|tmp| {
+                        dest.with_lock(|dest| {
+                            let src_slice = tmp.slice();
+                            let dest_slice = dest.slice_mut();
+                            dest_slice[dest_pos..dest_pos + len]
+                                .copy_from_slice(&src_slice[src_pos..src_pos + len]);
+                        });
+                    });
+
+                    return;
+                }
+
+                src.with_lock(|src| {
+                    dest.with_lock(|dest| {
+                        let src_slice = src.slice();
+                        let dest_slice = dest.slice_mut();
+
+                        dest_slice[dest_pos..dest_pos + len]
+                            .copy_from_slice(&src_slice[src_pos..src_pos + len]);
+                    });
+                });
+            }
+
             if src_component.is_primitive() {
                 assert!(dest_component.is_primitive());
 
                 match src_component.name() {
                     n if { n == types::BOOL.name } => {
-                        let src = unsafe { src.cast::<Array<Bool>>() };
-                        let src_slice = src.unwrap_mut().slice_mut();
-
-                        let dest = unsafe { dest.cast::<Array<Bool>>() };
-                        let dest_slice = dest.unwrap_mut().slice_mut();
-                        dest_slice[dest_pos..dest_pos + len]
-                            .copy_from_slice(&src_slice[src_pos..src_pos + len]);
+                        write_prim::<Bool>(src, dest, src_pos, dest_pos, len);
                     }
                     n if { n == types::BYTE.name } => {
-                        let src = unsafe { src.cast::<Array<Byte>>() };
-                        let src_slice = src.unwrap_mut().slice_mut();
-
-                        let dest = unsafe { dest.cast::<Array<Byte>>() };
-                        let dest_slice = dest.unwrap_mut().slice_mut();
-                        dest_slice[dest_pos..dest_pos + len]
-                            .copy_from_slice(&src_slice[src_pos..src_pos + len]);
+                        write_prim::<Byte>(src, dest, src_pos, dest_pos, len);
                     }
                     n => todo!("implement {n}"),
                 }
@@ -395,12 +428,40 @@ impl NativeModule for LangSystem {
                 }
 
                 let src = unsafe { src.cast::<Array<RefTo<Object>>>() };
-                let src_slice = src.unwrap_mut().slice_mut();
-
                 let dest = unsafe { dest.cast::<Array<RefTo<Object>>>() };
-                let dest_slice = dest.unwrap_mut().slice_mut();
-                dest_slice[dest_pos..dest_pos + len]
-                    .clone_from_slice(&src_slice[src_pos..src_pos + len]);
+
+                // Same array special casing
+                // If the src and dest arguments refer to the same array object, then the copying is performed as if the components at positions srcPos through srcPos+length-1 were
+                // first copied to a temporary array with length components and then the contents of the temporary array were copied into positions destPos through destPos+length-1 of
+                // the destination array.
+                if src == dest {
+                    let temp_array = src.with_lock(|src| {
+                        let copy = src.slice().to_vec();
+                        let ty = src.header().class();
+
+                        Array::from_vec(ty, copy)
+                    });
+
+                    temp_array.with_lock(|tmp| {
+                        dest.with_lock(|dest| {
+                            let src_slice = tmp.slice();
+                            let dest_slice = dest.slice_mut();
+                            dest_slice[dest_pos..dest_pos + len]
+                                .clone_from_slice(&src_slice[src_pos..src_pos + len]);
+                        });
+                    });
+
+                    return Ok(None);
+                }
+
+                src.with_lock(|src| {
+                    dest.with_lock(|dest| {
+                        let src_slice = src.slice_mut();
+                        let dest_slice = dest.slice_mut();
+                        dest_slice[dest_pos..dest_pos + len]
+                            .clone_from_slice(&src_slice[src_pos..src_pos + len]);
+                    });
+                });
             }
 
             Ok(None)
@@ -649,10 +710,45 @@ impl NativeModule for LangStackTraceElement {
 
     fn init(&mut self) {
         fn init_stack_trace_elements(
-            _: RefTo<Class>,
-            _: Vec<RuntimeValue>,
+            cls: RefTo<Class>,
+            args: Vec<RuntimeValue>,
             _: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
+            let (elements, throwable) = (
+                unsafe {
+                    args.get(0)
+                        .unwrap()
+                        .as_object()
+                        .unwrap()
+                        .cast::<Array<RefTo<StackTraceElement>>>()
+                },
+                args.get(1).unwrap().as_object().unwrap(),
+            );
+
+            let backtrace_field = throwable
+                .unwrap_ref()
+                .field::<RefTo<Object>>(&("backtrace", "Ljava/lang/Object;").try_into().unwrap())
+                .unwrap();
+
+            let back_trace = backtrace_field.unwrap_ref();
+            let back_trace = unsafe { back_trace.cast::<Array<RefTo<StackTraceElement>>>() };
+
+            // Move all of the backtrace data into the stackTrace (passed as elements) field.
+            // This works because we set our internal backtrace field to just an array of StackTraceElement.
+            // Note: The above assumption must hold for this to be safe.
+            for (element, bt) in elements
+                .unwrap_mut()
+                .slice_mut()
+                .iter_mut()
+                .zip(back_trace.unwrap_ref().slice())
+            {
+                *element = bt.clone();
+
+                // Garbage value, just so that it wont throw
+                // FIXME: Find out what this is supposed to be set to.
+                element.unwrap_mut().declaring_class_object = cls.clone();
+            }
+
             Ok(None)
         }
 
@@ -663,6 +759,36 @@ impl NativeModule for LangStackTraceElement {
             ),
             static_method!(init_stack_trace_elements),
         );
+    }
+}
+
+#[repr(C)]
+#[derive(Debug)]
+struct StackTraceElement {
+    object: Object,
+
+    declaring_class_object: RefTo<Class>,
+    class_loader_name: RefTo<BuiltinString>,
+    module_name: RefTo<BuiltinString>,
+    module_version: RefTo<BuiltinString>,
+    declaring_class: RefTo<BuiltinString>,
+    method_name: RefTo<BuiltinString>,
+    file_name: RefTo<BuiltinString>,
+    line_number: types::Int,
+    format: types::Byte,
+}
+
+impl JavaObject<StackTraceElement> for StackTraceElement {
+    fn header(&self) -> &Object {
+        &self.object
+    }
+
+    fn header_mut(&mut self) -> &mut Object {
+        &mut self.object
+    }
+
+    fn type_name() -> &'static str {
+        "java/lang/StackTraceElement"
     }
 }
 
@@ -681,12 +807,61 @@ impl NativeModule for LangThrowable {
     }
 
     fn init(&mut self) {
+
+        fn build_frames(vm: &mut VM) -> Vec<RefTo<StackTraceElement>> {
+            let stack_trace_element_ty = vm
+                .class_loader()
+                .for_name("Ljava/lang/StackTraceElement;".try_into().unwrap())
+                .unwrap();
+
+            let mut raw_elements = vec![];
+            for frame in vm.frames().iter().rev() {
+                raw_elements.push(RefTo::new(StackTraceElement {
+                    object: Object::new(
+                        stack_trace_element_ty.clone(),
+                        stack_trace_element_ty.unwrap_ref().super_class(),
+                    ),
+                    declaring_class_object: RefTo::null(),
+                    class_loader_name: RefTo::null(),
+                    module_name: RefTo::null(),
+                    module_version: RefTo::null(),
+                    declaring_class: intern_string(frame.class_name.clone()).unwrap(),
+                    method_name: intern_string(frame.method_name.clone()).unwrap(),
+                    file_name: RefTo::null(),
+                    line_number: -1,
+                    format: 0,
+                }))
+            }
+
+            raw_elements
+        }
+
         fn fill_in_stack_trace(
-            this: RefTo<Object>,
+            _this: RefTo<Object>,
             _: Vec<RuntimeValue>,
-            _: &mut VM,
+            vm: &mut VM,
         ) -> Result<Option<RuntimeValue>, Throwable> {
-            Ok(Some(RuntimeValue::Object(this)))
+            let this = _this.unwrap_ref();
+
+            let raw_elements = build_frames(vm);
+            let depth_field = this
+                .field::<types::Int>(&("depth", "I").try_into().unwrap())
+                .unwrap();
+            depth_field.write(raw_elements.len() as i32);
+
+            let stack_trace_element_arr_ty = vm
+                .class_loader()
+                .for_name("[Ljava/lang/StackTraceElement;".try_into().unwrap())
+                .unwrap();
+            let elements = Array::from_vec(stack_trace_element_arr_ty, raw_elements);
+
+            // Internal field to store backtrace state. We will just store StackTraceElement data here for now.
+            let backtrace_field = this
+                .field::<RefTo<Object>>(&("backtrace", "Ljava/lang/Object;").try_into().unwrap())
+                .unwrap();
+            backtrace_field.write(elements.erase());
+
+            Ok(Some(RuntimeValue::Object(_this)))
         }
 
         self.set_method(
