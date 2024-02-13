@@ -14,5 +14,5 @@ anyhow = { workspace = true }
 bytes = { workspace = true }
 tracing = { workspace = true }
 parking_lot = { workspace = true }
-lazy_static = "1.4.0"
+lazy_static = { workspace = true } 
 send_wrapper = "0.6.0"

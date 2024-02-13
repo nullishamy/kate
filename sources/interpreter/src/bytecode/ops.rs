@@ -493,7 +493,8 @@ impl Instruction for MonitorExit {
 
 #[derive(Debug)]
 pub enum WideFormat {
-    Format1 { opcode: u8, index: u16 },
+    // FIXME: Add back when we support this
+    // Format1 { opcode: u8, index: u16 },
     Format2 { index: u16, const_val: i16 },
 }
 
@@ -505,7 +506,6 @@ pub struct Wide {
 impl Instruction for Wide {
     fn handle(&self, _vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
         match self.format {
-            WideFormat::Format1 { opcode: _, index: _ } => todo!(),
             WideFormat::Format2 { index, const_val } => {
                 let local = ctx
                     .locals

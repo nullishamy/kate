@@ -73,12 +73,6 @@ impl Cli {
     pub fn get_option(&self, key: &str) -> Option<&String> {
         self.options.iter().find(|o| o.key == key).map(|o| &o.value)
     }
-
-    pub fn has_option_value(&self, key: &str, value: &str) -> bool {
-        self.options
-            .iter()
-            .any(|o| o.key == key && o.value == value)
-    }
 }
 
 #[derive(Subcommand)]

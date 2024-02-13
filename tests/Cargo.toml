@@ -3,24 +3,16 @@ name = "tests"
 version = "0.1.0"
 edition = "2021"
 publish = false
+test = true
 
 
 [dev-dependencies]
 interpreter = { path = "../sources/interpreter/" }
-
-# Small utility to pre-compile all our test dependencies (assertions, native printers, ...)
-[[bin]]
-name = "before-test"
-path = "before-test.rs"
-
-[[test]]
-name = "execution"
-path = "execution.rs"
+runtime = { path = "../sources/runtime/" }
+support = { path = "../sources/support/" }
+proc = { path = "../sources/proc/" }
+lazy_static = { workspace = true }
 
 [[test]]
-name = "program"
-path = "program.rs"
-
-[[test]]
-name = "openjdk"
-path = "jdk.rs"
+name = "captures"
+path = "captures.rs"
