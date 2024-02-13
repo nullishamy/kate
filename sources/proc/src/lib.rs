@@ -1,5 +1,4 @@
 extern crate proc_macro;
-use std::borrow::BorrowMut;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
@@ -9,9 +8,8 @@ use std::{env, fs};
 use proc_macro::TokenStream;
 use regex::Regex;
 use syn::parse::{Parse, ParseStream};
-use syn::token::Comma;
 use syn::parse_macro_input;
-use syn::{Ident, LitStr, Result};
+use syn::{LitStr, Result};
 
 struct JavaInput {
     code: LitStr,
