@@ -23,7 +23,7 @@ pub fn make_vm() -> Interpreter {
     let mut class_loader = ClassLoader::new();
 
     class_loader.add_path(format!("{SOURCE_DIR}/../std/java.base"));
-    let bootstrapped_classes = class_loader.bootstrap().unwrap();
+    let bootstrapped_classes = class_loader.bootstrap().expect("classloader bootstrap to succeed");
 
     let interner = StringInterner::new(
         bootstrapped_classes.java_lang_string.clone(),
@@ -38,7 +38,7 @@ pub fn make_vm() -> Interpreter {
         interpreter::BootOptions { max_stack: 50 },
     );
 
-    vm.bootstrap().unwrap();
+    vm.bootstrap().expect("vm bootstrap to succeed");
 
     vm
 }
@@ -66,7 +66,7 @@ pub struct CapturedOutput {
 
 impl CapturedOutput {
     pub fn get(&self, index: usize) -> RuntimeValue {
-        self.values.get(index).cloned().unwrap()
+        self.values.get(index).cloned().expect("index to be in range")
     }
 }
 
@@ -78,9 +78,9 @@ lazy_static::lazy_static! {
 }
 
 pub fn get_captures(id: usize) -> CapturedOutput {
-    let states = CAPTURE_STATE.lock().unwrap();
+    let states = CAPTURE_STATE.lock().expect("capture lock to be not poisoned");
     let state = states.get(&id);
-    state.unwrap().clone()
+    state.expect("state to exist after test execution").clone()
 }
 
 impl NativeModule for TestCaptures {
@@ -96,9 +96,9 @@ impl NativeModule for TestCaptures {
             args: Vec<RuntimeValue>,
             _: &mut VM,
         | -> Result<Option<RuntimeValue>, Throwable> {
-            let mut states = CAPTURE_STATE.lock().unwrap();
-            let state = states.get_mut(&id).unwrap();
-            state.values.push(args.get(0).unwrap().clone());
+            let mut states = CAPTURE_STATE.lock().expect("capture lock to be not poisoned");
+            let state = states.get_mut(&id).expect("state to exist during test execution");
+            state.values.push(args.get(0).expect("capture arg to be passed").clone());
 
             Ok(None)
         };
@@ -138,7 +138,7 @@ pub fn attach_utils(class: RefTo<Class>) -> usize {
 
     module.init();
 
-    let mut states = CAPTURE_STATE.lock().unwrap();
+    let mut states = CAPTURE_STATE.lock().expect("capture lock to not be poisoned");
     states.insert(id, CapturedOutput { values: vec![] });
     class.unwrap_mut().set_native_module(Box::new(RefCell::new(module)));
 
@@ -146,7 +146,6 @@ pub fn attach_utils(class: RefTo<Class>) -> usize {
 }
 
 pub fn execute_test(vm: &mut Interpreter, cls: RefTo<Class>, capture_id: usize) -> CapturedOutput {
-
     let main_ty: MethodDescriptor = ("runTest", "()V").try_into().unwrap();
     let ctx = Context::for_method(&main_ty, cls.clone());
 
@@ -156,7 +155,7 @@ pub fn execute_test(vm: &mut Interpreter, cls: RefTo<Class>, capture_id: usize) 
     });
 
     let res = vm.run(ctx);
-    res.unwrap();
+    res.expect("execution to not throw");
 
     
     get_captures(capture_id)
