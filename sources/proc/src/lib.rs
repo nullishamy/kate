@@ -1,4 +1,5 @@
 extern crate proc_macro;
+use std::borrow::BorrowMut;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
@@ -6,40 +7,45 @@ use std::process::Command;
 use std::{env, fs};
 
 use proc_macro::TokenStream;
+use regex::Regex;
 use syn::parse::{Parse, ParseStream};
 use syn::token::Comma;
 use syn::parse_macro_input;
 use syn::{Ident, LitStr, Result};
 
 struct JavaInput {
-    name: Ident,
-    _sep: Comma,
     code: LitStr,
 }
 
 impl Parse for JavaInput {
     fn parse(input: ParseStream) -> Result<Self> {
         Ok(JavaInput {
-            name: input.parse()?,
-            _sep: input.parse()?,
             code: input.parse()?,
         })
     }
 }
 
+
 #[proc_macro]
 pub fn java(input: TokenStream) -> TokenStream {
+    let class_name_regex = Regex::new(r"(?:public)?\s+class\s+(\w+)\s+\{").unwrap();
+
     let tmp_dir: PathBuf = env::var("CARGO_TARGET_TMPDIR")
         .expect("the tmp dir to be set")
         .into();
 
     let input = parse_macro_input!(input as JavaInput);
-    let path = tmp_dir.join(input.name.to_string());
+    let code = input.code.value();
 
-    let class_path = tmp_dir.join(format!("{}.java", input.name));
+    // Extract the class name from the passed code
+    let class_name = class_name_regex.captures(code.as_str()).unwrap().get(1).unwrap().as_str();
+
+    let path = tmp_dir.join(class_name);
+
+    let class_path = tmp_dir.join(format!("{}.java", class_name));
     let mut class_file = File::create(class_path).expect("file creation to succeed");
     class_file
-        .write_all(input.code.value().as_bytes())
+        .write_all(code.as_bytes())
         .expect("file to write");
 
     // https://stackoverflow.com/questions/2441760/differences-between-classpath-and-sourcepath-options-of-javac
@@ -64,11 +70,11 @@ pub fn java(input: TokenStream) -> TokenStream {
         panic!("compilation failed.\n{}\n{}", stdout, stderr);
     }
 
-    let classfile_path = tmp_dir.join(format!("{}.class", input.name));
+    let classfile_path = tmp_dir.join(format!("{}.class", class_name));
     let bytes = fs::read(classfile_path).expect("classfile to be read");
 
     let val = bytes.iter().map(|b| format!("{}_u8", b.to_string())).collect::<Vec<_>>();
 
-    let array_lit = format!("(&[{}], \"{}\".to_string())", val.join(", "), input.name);
+    let array_lit = format!("(&[{}], \"{}\".to_string())", val.join(", "), class_name);
     array_lit.parse().unwrap()
 }

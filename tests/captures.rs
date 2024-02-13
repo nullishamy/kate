@@ -5,7 +5,7 @@ use common::{make_vm, load_test, attach_utils, execute_test, iassert_eq, dassert
 
 #[test]
 fn simple_capture() {
-    let compiled = java!(SimpleCapture, "
+    let compiled = java!("
         public class SimpleCapture {
             static native void capture(int i);
 
@@ -25,7 +25,7 @@ fn simple_capture() {
 
 #[test]
 fn many_capture() {
-    let compiled = java!(ManyCapture, "
+    let compiled = java!("
         public class ManyCapture {
             static native void capture(int i);
 
@@ -49,7 +49,7 @@ fn many_capture() {
 
 #[test]
 fn capture_doubles() {
-    let compiled = java!(CaptureDoubles, "
+    let compiled = java!("
         public class CaptureDoubles {
             static native void capture(double d);
 
