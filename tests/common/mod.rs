@@ -136,6 +136,7 @@ impl NativeModule for TestCaptures {
         self.set_method(("capture", "(D)V"), static_method!(capture));
         self.set_method(("capture", "(I)V"), static_method!(capture));
         self.set_method(("capture", "(Ljava/lang/String;)V"), static_method!(capture));
+        self.set_method(("capture", "(Ljava/lang/Object;)V"), static_method!(capture));
     }
 
     fn methods(&self) -> &HashMap<MethodDescriptor, NativeFunction> {

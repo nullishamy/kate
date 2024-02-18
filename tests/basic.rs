@@ -1,6 +1,6 @@
 mod common;
 use proc::java;
-use common::{make_vm, load_test, attach_utils, execute_test, iassert_eq, dassert_eq, sassert_eq, assert_null};
+use common::{make_vm, load_test, attach_utils, execute_test, iassert_eq, dassert_eq, sassert_eq, assert_null, assert_not_null};
 
 #[test]
 fn reference_arrays() {
@@ -342,4 +342,128 @@ fn cast_values() {
     sassert_eq("Caught Class cce", captures.next());
     sassert_eq("Caught byte[] cce", captures.next());
     sassert_eq("Caught byte cce", captures.next());
+}
+
+#[test]
+fn instance_of() {
+    let compiled = java!(r#"
+        public class InstanceOf {
+            static native void capture(int i);
+            static native void capture(String s);
+
+            static void runTest() {
+                Object o = "string";
+
+                // It doesn't mistake the component for the incoming type
+                if (o instanceof String[]) {
+                    throw new IllegalStateException("array");
+                }
+
+                // It doesn't get confused with other object types
+                if (o instanceof Class) {
+                    throw new IllegalStateException("object");
+                }
+
+                // It doesn't get confused with primitive arrays
+                if (o instanceof byte[]) {
+                    throw new IllegalStateException("prim");
+                }
+
+                if (!(o instanceof String)) {
+                    throw new IllegalStateException("self");
+                }
+
+                if (o instanceof String) {
+                    capture("hit");
+                }
+            }
+        }"#
+    );
+
+    let mut vm = make_vm();
+    let cls = load_test(&mut vm, compiled);
+    let capture_id = attach_utils(cls.clone());
+    let mut captures = execute_test(&mut vm, cls, capture_id);
+
+    sassert_eq("hit", captures.next());
+}
+
+#[test]
+fn static_members() {
+    let compiled = java!(r#"
+        public class StaticMembers {
+            static native void capture(int i);
+            static native void capture(String s);
+
+            static int initMember = 32;
+            static int uninitMember;
+
+            static void mutate() {
+                initMember = 12;
+            }
+
+            static void runTest() {
+                capture(initMember);
+
+                capture(uninitMember);
+                uninitMember = 10;
+                capture(uninitMember);
+
+                mutate();
+                capture(initMember);
+            }
+        }"#
+    );
+
+    let mut vm = make_vm();
+    let cls = load_test(&mut vm, compiled);
+    let capture_id = attach_utils(cls.clone());
+    let mut captures = execute_test(&mut vm, cls, capture_id);
+
+    iassert_eq(32, captures.next());
+
+    iassert_eq(0, captures.next());
+    iassert_eq(10, captures.next());
+
+    iassert_eq(12, captures.next());
+}
+#[test]
+fn instance_members() {
+    let compiled = java!(r#"
+        public class StaticMembers {
+            static native void capture(int i);
+            static native void capture(Object o);
+
+            static int intMember = 32;
+            static Object objectMember;
+
+            void mutate() {
+                intMember = 12;
+            }
+
+            static void runTest() {
+                StaticMembers s = new StaticMembers();
+                capture(s.intMember);
+
+                capture(s.objectMember);
+                s.objectMember = new Object();
+                capture(s.objectMember);
+
+                s.mutate();
+                capture(s.intMember);
+            }
+        }"#
+    );
+
+    let mut vm = make_vm();
+    let cls = load_test(&mut vm, compiled);
+    let capture_id = attach_utils(cls.clone());
+    let mut captures = execute_test(&mut vm, cls, capture_id);
+
+    iassert_eq(32, captures.next());
+
+    assert_null(captures.next());
+    assert_not_null(captures.next());
+
+    iassert_eq(12, captures.next());
 }
