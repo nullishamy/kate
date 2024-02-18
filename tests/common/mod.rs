@@ -1,16 +1,25 @@
-use std::{collections::HashMap, sync::{Mutex, atomic::{AtomicUsize, Ordering}}, cell::RefCell};
+use std::{
+    cell::RefCell,
+    collections::HashMap,
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Mutex,
+    },
+};
 
-use interpreter::{Interpreter, Context};
+use interpreter::{Context, Interpreter};
 use runtime::{
+    error::{Frame, Throwable},
     native::{NativeFunction, NativeModule},
     object::{
-        builtins::Class,
+        builtins::{BuiltinString, Class},
         interner::{set_interner, StringInterner},
         loader::ClassLoader,
-        mem::RefTo, value::RuntimeValue,
+        mem::RefTo,
+        value::RuntimeValue,
     },
     static_method,
-    vm::VM, error::{Throwable, Frame},
+    vm::VM,
 };
 use support::{
     descriptor::{FieldType, ObjectType},
@@ -23,7 +32,9 @@ pub fn make_vm() -> Interpreter {
     let mut class_loader = ClassLoader::new();
 
     class_loader.add_path(format!("{SOURCE_DIR}/../std/java.base"));
-    let bootstrapped_classes = class_loader.bootstrap().expect("classloader bootstrap to succeed");
+    let bootstrapped_classes = class_loader
+        .bootstrap()
+        .expect("classloader bootstrap to succeed");
 
     let interner = StringInterner::new(
         bootstrapped_classes.java_lang_string.clone(),
@@ -61,12 +72,15 @@ pub struct TestCaptures {
 
 #[derive(Clone, Debug)]
 pub struct CapturedOutput {
-    values: Vec<RuntimeValue>
+    values: Vec<RuntimeValue>,
 }
 
 impl CapturedOutput {
     pub fn get(&self, index: usize) -> RuntimeValue {
-        self.values.get(index).cloned().expect("index to be in range")
+        self.values
+            .get(index)
+            .cloned()
+            .expect("index to be in range")
     }
 }
 
@@ -78,7 +92,9 @@ lazy_static::lazy_static! {
 }
 
 pub fn get_captures(id: usize) -> CapturedOutput {
-    let states = CAPTURE_STATE.lock().expect("capture lock to be not poisoned");
+    let states = CAPTURE_STATE
+        .lock()
+        .expect("capture lock to be not poisoned");
     let state = states.get(&id);
     state.expect("state to exist after test execution").clone()
 }
@@ -91,33 +107,26 @@ impl NativeModule for TestCaptures {
     fn init(&mut self) {
         let id = self.id;
 
-        let capture = move |
-            _: RefTo<Class>,
-            args: Vec<RuntimeValue>,
-            _: &mut VM,
-        | -> Result<Option<RuntimeValue>, Throwable> {
-            let mut states = CAPTURE_STATE.lock().expect("capture lock to be not poisoned");
-            let state = states.get_mut(&id).expect("state to exist during test execution");
-            state.values.push(args.get(0).expect("capture arg to be passed").clone());
+        let capture = move |_: RefTo<Class>,
+                            args: Vec<RuntimeValue>,
+                            _: &mut VM|
+              -> Result<Option<RuntimeValue>, Throwable> {
+            let mut states = CAPTURE_STATE
+                .lock()
+                .expect("capture lock to be not poisoned");
+            let state = states
+                .get_mut(&id)
+                .expect("state to exist during test execution");
+            state
+                .values
+                .push(args.get(0).expect("capture arg to be passed").clone());
 
             Ok(None)
         };
 
-        self.set_method(
-            (
-                "capture",
-                "(D)V",
-            ),
-            static_method!(capture),
-        );
-
-        self.set_method(
-            (
-                "capture",
-                "(I)V",
-            ),
-            static_method!(capture),
-        );
+        self.set_method(("capture", "(D)V"), static_method!(capture));
+        self.set_method(("capture", "(I)V"), static_method!(capture));
+        self.set_method(("capture", "(Ljava/lang/String;)V"), static_method!(capture));
     }
 
     fn methods(&self) -> &HashMap<MethodDescriptor, NativeFunction> {
@@ -133,14 +142,18 @@ pub fn attach_utils(class: RefTo<Class>) -> usize {
     let id = CAPTURE_COUNTER.fetch_add(1, Ordering::SeqCst);
     let mut module = TestCaptures {
         id,
-        methods: HashMap::new()
+        methods: HashMap::new(),
     };
 
     module.init();
 
-    let mut states = CAPTURE_STATE.lock().expect("capture lock to not be poisoned");
+    let mut states = CAPTURE_STATE
+        .lock()
+        .expect("capture lock to not be poisoned");
     states.insert(id, CapturedOutput { values: vec![] });
-    class.unwrap_mut().set_native_module(Box::new(RefCell::new(module)));
+    class
+        .unwrap_mut()
+        .set_native_module(Box::new(RefCell::new(module)));
 
     id
 }
@@ -157,16 +170,39 @@ pub fn execute_test(vm: &mut Interpreter, cls: RefTo<Class>, capture_id: usize) 
     let res = vm.run(ctx);
     res.expect("execution to not throw");
 
-    
     get_captures(capture_id)
 }
 
+#[track_caller]
 pub fn iassert_eq(lhs: i64, rhs: RuntimeValue) {
     let val = rhs.as_integral().expect("was not an integral").value;
     assert_eq!(lhs, val);
 }
 
+#[track_caller]
 pub fn dassert_eq(lhs: f64, rhs: RuntimeValue) {
     let val = rhs.as_floating().expect("was not a floating value").value;
     assert_eq!(lhs, val);
+}
+
+#[track_caller]
+pub fn sassert_eq(lhs: impl Into<String>, rhs: RuntimeValue) {
+    let val = rhs.as_object().expect("was not an object").clone();
+    let str = unsafe { val.cast::<BuiltinString>() };
+    let str_val = str.unwrap_ref().string().expect("could not decode string");
+
+    assert_eq!(lhs.into(), str_val);
+}
+
+
+#[track_caller]
+pub fn assert_null(val: RuntimeValue) {
+    let obj = val.as_object().expect("not an object");
+    assert!(obj.is_null());
+}
+
+#[track_caller]
+pub fn assert_not_null(val: RuntimeValue) {
+    let obj = val.as_object().expect("not an object");
+    assert!(obj.is_not_null());
 }

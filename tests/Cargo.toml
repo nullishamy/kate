@@ -3,8 +3,6 @@ name = "tests"
 version = "0.1.0"
 edition = "2021"
 publish = false
-test = true
-
 
 [dev-dependencies]
 interpreter = { path = "../sources/interpreter/" }
@@ -16,3 +14,7 @@ lazy_static = { workspace = true }
 [[test]]
 name = "captures"
 path = "captures.rs"
+
+[[test]]
+name = "basic"
+path = "basic.rs"

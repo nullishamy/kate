@@ -4,12 +4,15 @@ use crate::pop;
 use crate::Context;
 use crate::Interpreter;
 use anyhow::Context as AnyhowContext;
+use parse::pool::ConstantClass;
 use parse::{
     classfile::Resolvable,
     pool::{ConstantEntry, ConstantField},
 };
 use runtime::error::Throwable;
 use runtime::internal;
+use runtime::object::builtins::Array;
+use runtime::object::builtins::Class;
 use runtime::object::builtins::Object;
 use runtime::object::interner::intern_string;
 use runtime::object::layout::types::Bool;
@@ -21,9 +24,13 @@ use runtime::object::layout::types::Int;
 use runtime::object::layout::types::Long;
 use runtime::object::layout::types::Short;
 use runtime::object::mem::FieldRef;
+use runtime::object::mem::JavaObject;
 use runtime::object::mem::RefTo;
+use runtime::object::numeric::Integral;
+use runtime::object::numeric::IntegralType;
 use runtime::object::value::ComputationalType;
 use runtime::object::value::RuntimeValue;
+use support::descriptor::ArrayType;
 use support::descriptor::{BaseType, FieldType};
 use support::types::FieldDescriptor;
 
@@ -571,6 +578,86 @@ impl Instruction for Dup2 {
                 ctx.operands.push(value);
             }
         }
+
+        Ok(Progression::Next)
+    }
+}
+
+#[derive(Debug)]
+pub struct MultiANewArray {
+    pub(crate) type_index: u16,
+    pub(crate) dimensions: u8,
+}
+
+impl Instruction for MultiANewArray {
+    fn handle(&self, vm: &mut Interpreter, ctx: &mut Context) -> Result<Progression, Throwable> {
+        let mut counts = vec![];
+
+        for _ in 0..self.dimensions {
+            counts.push(arg!(ctx, "" => i32).value)
+        }
+
+        let class: ConstantClass = ctx
+            .class
+            .unwrap_ref()
+            .class_file()
+            .constant_pool
+            .address(self.type_index)
+            .try_resolve()?;
+
+        let class_name = class.name.resolve().string();
+        let array_type = FieldType::parse(class_name.clone())
+            .or_else(|_| FieldType::parse(format!("L{};", class_name)))?;
+
+        let array_type = ArrayType {
+            field_type: Box::new(array_type),
+            dimensions: self.dimensions as usize,
+        };
+
+        fn make_layers(
+            ty: ArrayType,
+            vm: &mut Interpreter,
+            mut counts: &mut [i64],
+        ) -> RefTo<Object> {
+            let len = counts.len();
+            let count = counts[len-1];
+            counts = &mut counts[..len-1];
+            
+            let array = {
+                let array_class = vm.class_loader().for_name(*ty.field_type.clone()).unwrap();
+
+                // Need to null-init first. RefTo is really just a ptr, and a null ptr is 000000000, which is also the bit pattern
+                // for the numeric types. Thus, we can treat it as such(?)
+                let mut values: Vec<RefTo<Object>> = Vec::with_capacity(count as usize);
+                values.resize_with(count as usize, RefTo::null);
+
+                // Now we construct the array
+                Array::from_vec(array_class, values)
+            };
+
+            // If we can construct further layers, do so.
+            if !counts.is_empty() {
+                let next_layer_type = {
+                    // Go one level deeper
+                    let mut ty = ty.clone();
+                    ty.dimensions -= 1;
+                    ty
+                };
+
+                // Make all the subarrays
+                for i in 0..count {
+                    let next_layer = make_layers(next_layer_type.clone(), vm, counts);
+                    let slice = array.unwrap_mut().slice_mut();
+                    slice[i as usize] = next_layer;
+                }
+            }
+
+            // Otherwise, we are done. Return what will the first layer once the stack unwinds.
+            array.erase()
+        }
+
+        let array = make_layers(array_type, vm, &mut counts);
+        ctx.operands.push(RuntimeValue::Object(array));
 
         Ok(Progression::Next)
     }

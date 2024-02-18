@@ -538,7 +538,10 @@ pub fn decode_instruction(
 
             b(ops::Wide { format })
         }
-        //  0xc5 => Opcode::MULTIANEWARRAY,
+        0xc5 => b(ops::MultiANewArray {
+            type_index: bytes.try_get_u16()?,
+            dimensions: bytes.try_get_u8()?,
+        }),
         0xc6 => b(ops::IfNull {
             jump_to: bytes.try_get_i16()?,
         }),

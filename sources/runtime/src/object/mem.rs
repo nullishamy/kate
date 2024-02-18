@@ -139,6 +139,7 @@ impl<T: JavaObject<T>> RefTo<T> {
         }
     }
 
+    #[track_caller]
     pub fn with_lock<U>(&self, func: impl FnOnce(&mut T) -> U) -> U {
         if self.is_null() {
             panic!("attempted to lock null");
