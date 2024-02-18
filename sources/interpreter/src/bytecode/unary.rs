@@ -287,9 +287,7 @@ impl Instruction for InstanceOf {
         let ty_class_name = ty.name.resolve().string();
         let ty_class_name = FieldType::parse(ty_class_name.clone())
             .or_else(|_| FieldType::parse(format!("L{};", ty_class_name)))?;
-        let ty_class = vm
-            .class_loader()
-            .for_name(ty_class_name)?;
+        let ty_class = vm.class_loader().for_name(ty_class_name)?;
 
         let class = val.unwrap_ref().class.clone();
 
@@ -321,21 +319,30 @@ impl Instruction for CheckCast {
         }
 
         //  The run-time constant pool entry at the index must be a symbolic reference to a class, array, or interface type
-        let other: ConstantClass = ctx
-            .class
-            .unwrap_ref()
-            .class_file()
-            .constant_pool
-            .address(self.type_index)
-            .resolve();
+        let (other_class, other_class_name) = {
+            let other: ConstantClass = ctx
+                .class
+                .unwrap_ref()
+                .class_file()
+                .constant_pool
+                .address(self.type_index)
+                .resolve();
 
-        let other_class_name = other.name.resolve().string();
-        let other_class_name = FieldType::parse(other_class_name.clone())
-            .or_else(|_| FieldType::parse(format!("L{};", other_class_name)))?;
+            let other_class_name = other.name.resolve().string();
+            let other_class_name = FieldType::parse(other_class_name.clone())
+                .or_else(|_| FieldType::parse(format!("L{};", other_class_name)))?;
 
-        let other_class = vm.class_loader().for_name(other_class_name.clone())?;
+            (
+                vm.class_loader().for_name(other_class_name.clone())?,
+                other_class_name,
+            )
+        };
 
         let val_class = &val.unwrap_ref().class;
+        {
+            let from = val_class.unwrap_ref().name().clone();
+            let to = other_class_name.to_string();
+        }
 
         if Class::can_assign(val_class.clone(), other_class) {
             ctx.operands.push(RuntimeValue::Object(val.clone()));
@@ -343,7 +350,9 @@ impl Instruction for CheckCast {
             let from = val_class.unwrap_ref().name().clone();
             let to = other_class_name.to_string();
 
-            return Err(vm.try_make_error(VMError::ClassCastException { from, to })?);
+            return Ok(Progression::Throw(
+                vm.try_make_error(VMError::ClassCastException { from, to })?,
+            ));
         }
 
         Ok(Progression::Next)

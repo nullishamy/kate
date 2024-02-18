@@ -871,6 +871,49 @@ fn clone_args_from_operands(
     Ok(args)
 }
 
+fn do_java_call(vm: &mut Interpreter, ctx: Context) -> Result<Option<RuntimeValue>, Throwable> {
+    // The new frame is then made current, and the Java Virtual Machine pc is set
+    // to the opcode of the first instruction of the method to be invoked.
+    // Execution continues with the first instruction of the method.
+    let code = ctx.code.clone();
+    let class = ctx.class.clone();
+    let res = vm.run(ctx);
+
+    // See if this code threw a (runtime // java) exception
+    // If so, see if we (the caller) can handle it
+    if let Err((err, state)) = &res {
+        // Only try to catch runtime errors. Internal errors should never be caught by user code.
+        if let Throwable::Runtime(rte) = err {
+            if let Some(entry) = err.caught_by(vm, &code, state)? {
+                let re_enter_context = Context {
+                    code: code.clone(),
+                    class,
+                    is_reentry: true,
+                    pc: entry.handler_pc as i32,
+                    // Push the exception object as the first operand
+                    operands: vec![rte.obj.clone()],
+                    locals: state.locals.clone(),
+                };
+
+                info!("Re-entering at {}", re_enter_context.pc);
+
+                return do_java_call(vm, re_enter_context);
+            }
+        }
+
+        // We couldn't handle the exception
+
+        // Pop our frame, we are no longer part of the callstack.
+        // This is only to correctly handle the re-entry case, in which a caller catches the exception
+        // and adds new frames. The callstack is cloned when the exception is thrown, which will preserve
+        // the state at that point
+        vm.pop_frame();
+    }
+
+    // Pass the result to our caller
+    res.map_err(|e| e.0)
+}
+
 fn do_call(
     vm: &mut Interpreter,
     method: Method,
@@ -884,7 +927,7 @@ fn do_call(
             .attributes
             .known_attribute::<CodeAttribute>(&class.unwrap_ref().class_file().constant_pool)?;
 
-        let new_context = Context {
+        let ctx = Context {
             code: code.clone(),
             class: class.clone(),
             pc: 0,
@@ -893,44 +936,7 @@ fn do_call(
             locals: args.clone(),
         };
 
-        // The new frame is then made current, and the Java Virtual Machine pc is set
-        // to the opcode of the first instruction of the method to be invoked.
-        // Execution continues with the first instruction of the method.
-        let res = vm.run(new_context);
-
-        // See if this code threw a (runtime // java) exception
-        // If so, see if we (the caller) can handle it
-        if let Err((err, state)) = &res {
-            // Only try to catch runtime errors. Internal errors should never be caught by user code.
-            if let Throwable::Runtime(rte) = err {
-                if let Some(entry) = err.caught_by(vm, &code, state)? {
-                    let re_enter_context = Context {
-                        code: code.clone(),
-                        class,
-                        is_reentry: true,
-                        pc: entry.handler_pc as i32,
-                        // Push the exception object as the first operand
-                        operands: vec![rte.obj.clone()],
-                        locals: args.clone(),
-                    };
-
-                    info!("Re-entering at {}", re_enter_context.pc);
-
-                    return vm.run(re_enter_context).map_err(|e| e.0);
-                }
-            }
-
-            // We couldn't handle the exception
-
-            // Pop our frame, we are no longer part of the callstack.
-            // This is only to correctly handle the re-entry case, in which a caller catches the exception
-            // and adds new frames. The callstack is cloned when the exception is thrown, which will preserve
-            // the state at that point
-            vm.pop_frame();
-        }
-
-        // Pass the result to our caller
-        res.map_err(|e| e.0)
+        do_java_call(vm, ctx)
     } else {
         let method_name = method.name.resolve().string();
         let method_descriptor = method.descriptor.resolve().string();

@@ -187,3 +187,159 @@ fn multidimensional_arrays() {
     iassert_eq(3, captures.next());
     iassert_eq(3, captures.next());
 }
+
+#[test]
+fn throwing_exceptions() {
+    let compiled = java!(r#"
+        public class ThrowingExceptions {
+            static native void capture(int i);
+            static native void capture(String s);
+
+            private static void throwException() {
+                throw new IllegalStateException("die");
+            }
+
+            private static void nestedThrow() {
+                throwException();
+            }
+
+            private static String thrownWithinMethod() {
+                try {
+                    throw new IllegalStateException("die");
+                } catch (IllegalStateException e) {
+                    return "Caught";
+                }
+            }
+
+            private static String thrownOverMethod() {
+                try {
+                    throwException();
+                    return "Not thrown";
+                } catch (IllegalStateException e) {
+                    return "Caught";
+                }
+            }
+
+            private static String thrownOverManyMethods() {
+                try {
+                    nestedThrow();
+                    return "Not thrown";
+                } catch (IllegalStateException e) {
+                    return "Caught";
+                }
+            }
+
+            static void runTest0() {
+                String status = thrownWithinMethod();
+                capture(status);
+
+                capture(thrownOverMethod());
+                capture(thrownOverManyMethods());
+
+                try {
+                    status = "About to throw";
+                    throw new IllegalStateException();
+                } catch (IllegalStateException e) {
+                    status = "Caught in method";
+                }
+
+
+                capture(status);
+
+                // FIXME: We don't have the infra to assert exceptions thrown from tests yet.
+                // Just checking that it properly ignores exceptions that aren't caught
+                // throw new RuntimeException("thrown from main");
+            }
+
+            static void runTest() {
+                // FIXME: Add this functionality
+                // Move out of the entrypoint because we haven't setup reentry for test methods yet
+                runTest0();
+            }
+        }"#
+    );
+
+    let mut vm = make_vm();
+    let cls = load_test(&mut vm, compiled);
+    let capture_id = attach_utils(cls.clone());
+    let mut captures = execute_test(&mut vm, cls, capture_id);
+
+    sassert_eq("Caught", captures.next());
+    sassert_eq("Caught", captures.next());
+    sassert_eq("Caught", captures.next());
+    sassert_eq("Caught in method", captures.next());
+}
+
+#[test]
+fn cast_values() {
+    let compiled = java!(r#"
+        public class CastValues {
+            static native void capture(int i);
+            static native void capture(String s);
+
+            static void runTest0() {
+                Object o = "string";
+                String s = (String) o;
+                capture(s);
+
+                // We can re-erase it
+                Object o2 = (Object) s;
+                String s2 = (String) o2;
+                capture(s2);
+
+                // It doesn't mistake the component for the incoming type
+                try {
+                    String[] arr = (String[]) o;
+                    throw new IllegalStateException("string[] cast");
+                }
+                catch (ClassCastException cce) {
+                    capture("Caught String[] cce");
+                }
+
+                // It doesn't get confused with other object types
+                try {
+                    Class cls = (Class) o;
+                    throw new IllegalStateException("class cast");
+                }
+                catch (ClassCastException cce) {
+                    capture("Caught Class cce");
+                }
+                
+                // It doesn't get confused with primitive arrays
+                try {
+                    byte[] arr = (byte[]) o;
+                    throw new IllegalStateException("byte[] cast");
+                }
+                catch (ClassCastException cce) {
+                    capture("Caught byte[] cce");
+                }
+
+                // It doesn't get confused with primitives
+                try {
+                    byte arr = (byte) o;
+                    throw new IllegalStateException("primitive cast");
+                }
+                catch (ClassCastException cce) {
+                    capture("Caught byte cce");
+                }
+            }
+
+            static void runTest() {
+                runTest0();
+            }
+        }"#
+    );
+
+    let mut vm = make_vm();
+    let cls = load_test(&mut vm, compiled);
+    let capture_id = attach_utils(cls.clone());
+    let mut captures = execute_test(&mut vm, cls, capture_id);
+
+    sassert_eq("string", captures.next());
+    sassert_eq("string", captures.next());
+
+    sassert_eq("Caught String[] cce", captures.next());
+    sassert_eq("Caught Class cce", captures.next());
+    sassert_eq("Caught byte[] cce", captures.next());
+    sassert_eq("Caught byte cce", captures.next());
+}

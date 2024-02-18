@@ -25,6 +25,8 @@ use support::{
     descriptor::{FieldType, ObjectType},
     types::MethodDescriptor,
 };
+use tracing::Level;
+use tracing_subscriber::fmt;
 
 const SOURCE_DIR: &str = env!("CARGO_MANIFEST_DIR");
 
@@ -174,10 +176,48 @@ pub fn execute_test(vm: &mut Interpreter, cls: RefTo<Class>, capture_id: usize) 
         method_name: "runTest".to_string(),
     });
 
-    let res = vm.run(ctx);
-    res.expect("execution to not throw");
 
-    get_captures(capture_id)
+    let format = fmt::format()
+        .with_ansi(true)
+        .without_time()
+        .with_level(true)
+        .with_target(false)
+        .with_thread_names(false)
+        .with_source_location(true)
+        .compact();
+
+    let _ = tracing_subscriber::fmt()
+        .with_max_level(Level::INFO)
+        .event_format(format)
+        .with_writer(std::io::stderr)
+        .try_init();
+    
+    let res = vm.run(ctx);
+    let captures = get_captures(capture_id);
+    if let Err(e) = res {
+        eprintln!("Execution encountered error:");
+        eprintln!("{:#?}", e);
+        eprintln!("Captures:");
+        for capture in captures.values.iter() {
+            match capture {
+                RuntimeValue::Object(o) => {
+                    let cls = o.unwrap_ref().class();
+                    let name = cls.unwrap_ref().name();
+                    match name.as_str() {
+                        "java/lang/String" => {
+                            let str = unsafe { o.cast::<BuiltinString>() };
+                            eprintln!("\"{}\"", str.unwrap_ref().string().unwrap());
+                        }
+                        _ => eprintln!("{:#?}", o),
+                    }
+                },
+                v => eprintln!("{:?}", v)
+            }
+        }
+        panic!();
+    }
+
+    captures
 }
 
 #[track_caller]
