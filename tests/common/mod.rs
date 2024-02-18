@@ -72,6 +72,7 @@ pub struct TestCaptures {
 
 #[derive(Clone, Debug)]
 pub struct CapturedOutput {
+    cursor: usize,
     values: Vec<RuntimeValue>,
 }
 
@@ -81,6 +82,12 @@ impl CapturedOutput {
             .get(index)
             .cloned()
             .expect("index to be in range")
+    }
+
+    pub fn next(&mut self) -> RuntimeValue {
+        let cr = self.cursor;
+        self.cursor += 1;
+        self.values.get(cr).unwrap().clone()
     }
 }
 
@@ -150,7 +157,7 @@ pub fn attach_utils(class: RefTo<Class>) -> usize {
     let mut states = CAPTURE_STATE
         .lock()
         .expect("capture lock to not be poisoned");
-    states.insert(id, CapturedOutput { values: vec![] });
+    states.insert(id, CapturedOutput { cursor: 0, values: vec![] });
     class
         .unwrap_mut()
         .set_native_module(Box::new(RefCell::new(module)));

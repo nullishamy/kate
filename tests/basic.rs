@@ -50,21 +50,21 @@ fn reference_arrays() {
     let mut vm = make_vm();
     let cls = load_test(&mut vm, compiled);
     let capture_id = attach_utils(cls.clone());
-    let captures = execute_test(&mut vm, cls, capture_id);
+    let mut captures = execute_test(&mut vm, cls, capture_id);
 
-    iassert_eq(2, captures.get(0));
+    iassert_eq(2, captures.next());
 
-    sassert_eq("hello", captures.get(1));
-    sassert_eq("world", captures.get(2));
+    sassert_eq("hello", captures.next());
+    sassert_eq("world", captures.next());
 
-    sassert_eq("foo", captures.get(3));
-    sassert_eq("bar", captures.get(4));
+    sassert_eq("foo", captures.next());
+    sassert_eq("bar", captures.next());
 
-    sassert_eq("", captures.get(5));
-    sassert_eq("", captures.get(6));
+    sassert_eq("", captures.next());
+    sassert_eq("", captures.next());
 
-    assert_null(captures.get(7));
-    assert_null(captures.get(8));
+    assert_null(captures.next());
+    assert_null(captures.next());
 }
 
 #[test]
@@ -94,13 +94,13 @@ fn local_variables() {
     let mut vm = make_vm();
     let cls = load_test(&mut vm, compiled);
     let capture_id = attach_utils(cls.clone());
-    let captures = execute_test(&mut vm, cls, capture_id);
+    let mut captures = execute_test(&mut vm, cls, capture_id);
 
-    sassert_eq("hello", captures.get(0));
-    sassert_eq("world", captures.get(1));
-    sassert_eq("foo", captures.get(2));
-    sassert_eq("bar", captures.get(3));
-    sassert_eq("baz", captures.get(4));
+    sassert_eq("hello", captures.next());
+    sassert_eq("world", captures.next());
+    sassert_eq("foo", captures.next());
+    sassert_eq("bar", captures.next());
+    sassert_eq("baz", captures.next());
 }
 
 #[test]
@@ -128,10 +128,10 @@ fn static_functions() {
     let mut vm = make_vm();
     let cls = load_test(&mut vm, compiled);
     let capture_id = attach_utils(cls.clone());
-    let captures = execute_test(&mut vm, cls, capture_id);
+    let mut captures = execute_test(&mut vm, cls, capture_id);
 
-    sassert_eq("hello world", captures.get(0));
-    iassert_eq(1, captures.get(1));
+    sassert_eq("hello world", captures.next());
+    iassert_eq(1, captures.next());
 }
 
 #[test]
@@ -170,20 +170,20 @@ fn multidimensional_arrays() {
     let mut vm = make_vm();
     let cls = load_test(&mut vm, compiled);
     let capture_id = attach_utils(cls.clone());
-    let captures = execute_test(&mut vm, cls, capture_id);
+    let mut captures = execute_test(&mut vm, cls, capture_id);
 
-    iassert_eq(0, captures.get(0));
-    iassert_eq(0, captures.get(1));
-    iassert_eq(0, captures.get(2));
-    iassert_eq(0, captures.get(3));
+    iassert_eq(0, captures.next());
+    iassert_eq(0, captures.next());
+    iassert_eq(0, captures.next());
+    iassert_eq(0, captures.next());
 
-    iassert_eq(30, captures.get(4));
+    iassert_eq(30, captures.next());
 
-    iassert_eq(0, captures.get(5));
-    iassert_eq(0, captures.get(6));
-    iassert_eq(0, captures.get(7));
-    iassert_eq(0, captures.get(8));
+    iassert_eq(0, captures.next());
+    iassert_eq(0, captures.next());
+    iassert_eq(0, captures.next());
+    iassert_eq(0, captures.next());
 
-    iassert_eq(3, captures.get(9));
-    iassert_eq(3, captures.get(10));
+    iassert_eq(3, captures.next());
+    iassert_eq(3, captures.next());
 }
