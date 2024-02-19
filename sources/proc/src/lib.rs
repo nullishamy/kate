@@ -23,10 +23,9 @@ impl Parse for JavaInput {
     }
 }
 
-
 #[proc_macro]
 pub fn java(input: TokenStream) -> TokenStream {
-    let class_name_regex = Regex::new(r"(?:public)?\s+class\s+(\w+)\s+\{").unwrap();
+    let class_name_regex = Regex::new(r"public\s+class\s+(\w+)\s+\{").unwrap();
 
     let tmp_dir: PathBuf = env::var("CARGO_TARGET_TMPDIR")
         .expect("the tmp dir to be set")
@@ -73,6 +72,6 @@ pub fn java(input: TokenStream) -> TokenStream {
 
     let val = bytes.iter().map(|b| format!("{}_u8", b.to_string())).collect::<Vec<_>>();
 
-    let array_lit = format!("(&[{}], \"{}\".to_string())", val.join(", "), class_name);
+    let array_lit = format!("([{}], \"{}\".to_string(), r#\"{}\"#.to_string())", val.join(", "), class_name, code);
     array_lit.parse().unwrap()
 }

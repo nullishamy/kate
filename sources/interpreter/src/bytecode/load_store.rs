@@ -109,7 +109,6 @@ impl Instruction for Ldc {
             }
             ConstantEntry::Class(data) => {
                 let class_name = data.name.resolve().string();
-
                 let class_name = FieldType::parse(class_name.clone())
                     .or_else(|_| FieldType::parse(format!("L{};", class_name)))?;
 

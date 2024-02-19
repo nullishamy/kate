@@ -280,12 +280,6 @@ fn main() {
         class_loader.add_path(cp);
     }
 
-    // Init the natives that we declare in kate/Util
-    if args.has_option(opts::test::INIT) {
-        let kate_util = class_loader.for_name("Lkate/Util;".into()).unwrap();
-        test_init(kate_util)
-    }
-
     let bootstrapped_classes = class_loader.bootstrap().unwrap();
 
     let interner = StringInterner::new(
@@ -319,7 +313,6 @@ fn main() {
 
     for class_name in &args.classes {
         // FIXME: When we introduce threading this assertion will not hold :^)
-
         let res = panic::catch_unwind(AssertUnwindSafe(|| {
             if args.has_option(opts::test::PANIC_INTERNAL) {
                 panic!("Internal errors!");
@@ -332,6 +325,12 @@ fn main() {
 
             if args.has_option(opts::test::BOOT) {
                 boot_system(&mut vm, cls.clone());
+            }
+
+            // Init the print natives for integration tests (we assert the stdio outputs for these)
+            // Rather than the captured output as in the inline executed tests
+            if args.has_option(opts::test::INIT) {
+                test_init(cls.clone())
             }
 
             let string_array_ty = vm

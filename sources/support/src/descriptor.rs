@@ -189,6 +189,7 @@ impl FieldType {
                     field_type: Box::new(FieldType::parse_from_iterator(chars)?),
                 })
             }
+            // FIXME: This breaks on classes that start with 'L'. "LayoutBug1" fails.
             'L' => FieldType::Object(ObjectType {
                 class_name: chars.take_while(|c| *c != ';').collect::<String>(),
             }),
@@ -198,6 +199,15 @@ impl FieldType {
 
     pub fn parse(str: String) -> Result<Self> {
         let chars = str.chars();
-        FieldType::parse_from_iterator(&mut chars.peekable())
+        let mut chars = chars.peekable();
+        let res = FieldType::parse_from_iterator(&mut chars)?;
+
+        if chars.peek().is_some() {
+            // More chars to parse, error out so callers can reparse as class.
+            // FIXME: This is garbage
+            Err(anyhow!("probably needs reparsing"))
+        } else {
+            Ok(res)
+        }
     }
 }
